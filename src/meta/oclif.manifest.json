@@ -1,0 +1,4430 @@
+{
+  "version": "9.0.0-alpha.1",
+  "description": "The Heroku CLI is used to manage Heroku apps from the command line. It is built using [oclif](https://oclif.io).\nFor more about Heroku see <https://www.heroku.com/home>\nTo get started see <https://devcenter.heroku.com/start>",
+  "commands": {
+    "console": {
+      "id": "console",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "size": {
+          "name": "size",
+          "type": "option",
+          "char": "s",
+          "description": "dyno size",
+          "multiple": false
+        },
+        "env": {
+          "name": "env",
+          "type": "option",
+          "char": "e",
+          "description": "environment variables to set (use ';' to split multiple vars)",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "logs": {
+      "id": "logs",
+      "description": "display recent log output\ndisable colors with --no-color, HEROKU_LOGS_COLOR=0, or HEROKU_COLOR=0",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku logs --app=my-app",
+        "$ heroku logs --num=50",
+        "$ heroku logs --dyno=web --app=my-app",
+        "$ heroku logs --app=my-app --tail"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "num": {
+          "name": "num",
+          "type": "option",
+          "char": "n",
+          "description": "number of lines to display",
+          "multiple": false
+        },
+        "ps": {
+          "name": "ps",
+          "type": "option",
+          "char": "p",
+          "description": "hidden alias for dyno",
+          "hidden": true,
+          "multiple": false
+        },
+        "dyno": {
+          "name": "dyno",
+          "type": "option",
+          "char": "d",
+          "description": "only show output from this dyno type (such as \"web\" or \"worker\")",
+          "multiple": false
+        },
+        "source": {
+          "name": "source",
+          "type": "option",
+          "char": "s",
+          "description": "only show output from this source (such as \"app\" or \"heroku\")",
+          "multiple": false
+        },
+        "tail": {
+          "name": "tail",
+          "type": "boolean",
+          "char": "t",
+          "description": "continually stream logs",
+          "allowNo": false
+        },
+        "force-colors": {
+          "name": "force-colors",
+          "type": "boolean",
+          "description": "force use of colors (even on non-tty output)",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "rake": {
+      "id": "rake",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "parent app used by review apps",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "size": {
+          "name": "size",
+          "type": "option",
+          "char": "s",
+          "description": "dyno size",
+          "multiple": false
+        },
+        "exit-code": {
+          "name": "exit-code",
+          "type": "boolean",
+          "char": "x",
+          "description": "passthrough the exit code of the remote command",
+          "allowNo": false
+        },
+        "env": {
+          "name": "env",
+          "type": "option",
+          "char": "e",
+          "description": "environment variables to set (use ';' to split multiple vars)",
+          "multiple": false
+        },
+        "no-tty": {
+          "name": "no-tty",
+          "type": "boolean",
+          "description": "force the command to not run in a tty",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "regions": {
+      "id": "regions",
+      "description": "list available regions for deployment",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "private": {
+          "name": "private",
+          "type": "boolean",
+          "description": "show regions for private spaces",
+          "allowNo": false
+        },
+        "common": {
+          "name": "common",
+          "type": "boolean",
+          "description": "show regions for common runtime",
+          "allowNo": false
+        }
+      },
+      "args": {},
+      "topic": "regions"
+    },
+    "status": {
+      "id": "status",
+      "description": "display current status of the Heroku platform",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "apps:create": {
+      "id": "apps:create",
+      "description": "creates a new app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "create"
+      ],
+      "examples": [
+        "$ heroku apps:create\nCreating app... done, stack is heroku-22\nhttps://floating-dragon-42.heroku.com/ | https://git.heroku.com/floating-dragon-42.git\n\n# or just\n$ heroku create\n\n# use a heroku.yml manifest file\n$ heroku apps:create --manifest\n\n# specify a buildpack\n$ heroku apps:create --buildpack https://github.com/some/buildpack.git\n\n# specify a name\n$ heroku apps:create example\n\n# create a staging app\n$ heroku apps:create example-staging --remote staging\n\n# create an app in the eu region\n$ heroku apps:create --region eu"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "hidden": true,
+          "multiple": false
+        },
+        "addons": {
+          "name": "addons",
+          "type": "option",
+          "description": "comma-delimited list of addons to install",
+          "multiple": false
+        },
+        "buildpack": {
+          "name": "buildpack",
+          "type": "option",
+          "char": "b",
+          "description": "buildpack url to use for this app",
+          "multiple": false
+        },
+        "manifest": {
+          "name": "manifest",
+          "type": "boolean",
+          "char": "m",
+          "description": "use heroku.yml settings for this app",
+          "hidden": true,
+          "allowNo": false
+        },
+        "no-remote": {
+          "name": "no-remote",
+          "type": "boolean",
+          "char": "n",
+          "description": "do not create a git remote",
+          "allowNo": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "the git remote to create, default \"heroku\"",
+          "multiple": false,
+          "default": "heroku"
+        },
+        "stack": {
+          "name": "stack",
+          "type": "option",
+          "char": "s",
+          "description": "the stack to create the app on",
+          "multiple": false
+        },
+        "space": {
+          "name": "space",
+          "type": "option",
+          "description": "the private space to create the app in",
+          "multiple": false
+        },
+        "region": {
+          "name": "region",
+          "type": "option",
+          "description": "specify region for the app to run in",
+          "multiple": false
+        },
+        "internal-routing": {
+          "name": "internal-routing",
+          "type": "boolean",
+          "description": "private space-only. create as an Internal Web App that is only routable in the local network.",
+          "hidden": true,
+          "allowNo": false
+        },
+        "features": {
+          "name": "features",
+          "type": "option",
+          "hidden": true,
+          "multiple": false
+        },
+        "kernel": {
+          "name": "kernel",
+          "type": "option",
+          "hidden": true,
+          "multiple": false
+        },
+        "locked": {
+          "name": "locked",
+          "type": "boolean",
+          "hidden": true,
+          "allowNo": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "team": {
+          "name": "team",
+          "type": "option",
+          "char": "t",
+          "description": "team to use",
+          "multiple": false
+        }
+      },
+      "args": {
+        "apps": {
+          "name": "apps",
+          "description": "name of app to create",
+          "required": false
+        }
+      }
+    },
+    "apps:destroy": {
+      "id": "apps:destroy",
+      "description": "permanently destroy an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "destroy",
+        "apps:delete"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "confirm": {
+          "name": "confirm",
+          "type": "option",
+          "char": "c",
+          "multiple": false
+        }
+      },
+      "args": {
+        "app": {
+          "name": "app",
+          "hidden": true
+        }
+      },
+      "help": "This will also destroy all add-ons on the app."
+    },
+    "apps:errors": {
+      "id": "apps:errors",
+      "description": "view app errors",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "hours": {
+          "name": "hours",
+          "type": "option",
+          "description": "number of hours to look back (default 24)",
+          "multiple": false,
+          "default": "24"
+        },
+        "router": {
+          "name": "router",
+          "type": "boolean",
+          "description": "show only router errors",
+          "allowNo": false
+        },
+        "dyno": {
+          "name": "dyno",
+          "type": "boolean",
+          "description": "show only dyno errors",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "apps": {
+      "id": "apps",
+      "description": "list your apps",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "list",
+        "apps:list"
+      ],
+      "examples": [
+        "$ heroku apps"
+      ],
+      "flags": {
+        "all": {
+          "name": "all",
+          "type": "boolean",
+          "char": "A",
+          "description": "include apps in all teams",
+          "allowNo": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "space": {
+          "name": "space",
+          "type": "option",
+          "char": "s",
+          "description": "filter by space",
+          "multiple": false
+        },
+        "personal": {
+          "name": "personal",
+          "type": "boolean",
+          "char": "p",
+          "description": "list apps in personal account when a default team is set",
+          "allowNo": false
+        },
+        "internal-routing": {
+          "name": "internal-routing",
+          "type": "boolean",
+          "char": "i",
+          "description": "filter to Internal Web Apps",
+          "hidden": true,
+          "allowNo": false
+        },
+        "team": {
+          "name": "team",
+          "type": "option",
+          "char": "t",
+          "description": "team to use",
+          "multiple": false
+        }
+      },
+      "args": {},
+      "topic": "apps"
+    },
+    "apps:info": {
+      "id": "apps:info",
+      "description": "show detailed app information",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "info"
+      ],
+      "examples": [
+        "$ heroku apps:info",
+        "$ heroku apps:info --shell"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "shell": {
+          "name": "shell",
+          "type": "boolean",
+          "char": "s",
+          "description": "output more shell friendly key/value pairs",
+          "allowNo": false
+        },
+        "extended": {
+          "name": "extended",
+          "type": "boolean",
+          "char": "x",
+          "hidden": true,
+          "allowNo": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "app": {
+          "name": "app",
+          "hidden": true
+        }
+      },
+      "topic": "apps",
+      "help": "$ heroku apps:info\n=== example\nGit URL:   https://git.heroku.com/example.git\nRepo Size: 5M\n...\n\n$ heroku apps:info --shell\ngit_url=https://git.heroku.com/example.git\nrepo_size=5000000\n..."
+    },
+    "apps:open": {
+      "id": "apps:open",
+      "description": "open the app in a web browser",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "open"
+      ],
+      "examples": [
+        "$ heroku open -a myapp",
+        "$ heroku open -a myapp /foo"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "path": {
+          "name": "path",
+          "required": false
+        }
+      },
+      "topic": "apps"
+    },
+    "apps:rename": {
+      "id": "apps:rename",
+      "description": "rename an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "rename"
+      ],
+      "examples": [
+        "$ heroku apps:rename --app oldname newname"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "newname": {
+          "name": "newname",
+          "required": true
+        }
+      },
+      "help": "This will locally update the git remote if it is set to the old app.",
+      "topic": "apps"
+    },
+    "auth:login": {
+      "id": "auth:login",
+      "description": "login with your Heroku credentials",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "login"
+      ],
+      "flags": {
+        "browser": {
+          "name": "browser",
+          "type": "option",
+          "description": "browser to open SSO with (example: \"firefox\", \"safari\")",
+          "multiple": false
+        },
+        "sso": {
+          "name": "sso",
+          "type": "boolean",
+          "char": "s",
+          "description": "login for enterprise users under SSO",
+          "hidden": true,
+          "allowNo": false
+        },
+        "interactive": {
+          "name": "interactive",
+          "type": "boolean",
+          "char": "i",
+          "description": "login with username/password",
+          "allowNo": false
+        },
+        "expires-in": {
+          "name": "expires-in",
+          "type": "option",
+          "char": "e",
+          "description": "duration of token in seconds (default 30 days)",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "auth:logout": {
+      "id": "auth:logout",
+      "description": "clears local login credentials and invalidates API session",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "logout"
+      ],
+      "flags": {},
+      "args": {}
+    },
+    "auth:token": {
+      "id": "auth:token",
+      "description": "outputs current CLI authentication token.\nBy default, the CLI auth token is only valid for 1 year. To generate a long-lived token, use heroku authorizations:create",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "auth:whoami": {
+      "id": "auth:whoami",
+      "description": "display the current logged in user",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "whoami"
+      ],
+      "flags": {},
+      "args": {}
+    },
+    "authorizations:create": {
+      "id": "authorizations:create",
+      "description": "create a new OAuth authorization",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku authorizations:create --description \"For use with Anvil\""
+      ],
+      "flags": {
+        "description": {
+          "name": "description",
+          "type": "option",
+          "char": "d",
+          "description": "set a custom authorization",
+          "multiple": false
+        },
+        "short": {
+          "name": "short",
+          "type": "boolean",
+          "char": "S",
+          "description": "only output token",
+          "allowNo": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "option",
+          "char": "s",
+          "description": "set custom OAuth scopes",
+          "multiple": false
+        },
+        "expires-in": {
+          "name": "expires-in",
+          "type": "option",
+          "char": "e",
+          "description": "set expiration in seconds (default no expiration)",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "authorizations": {
+      "id": "authorizations",
+      "description": "list OAuth authorizations",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku authorizations"
+      ],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "authorizations:info": {
+      "id": "authorizations:info",
+      "description": "show an existing OAuth authorization",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "authorizations:revoke": {
+      "id": "authorizations:revoke",
+      "description": "revoke OAuth authorization",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "authorizations:revoke",
+        "authorizations:destroy"
+      ],
+      "examples": [
+        "$ heroku authorizations:revoke 105a7bfa-34c3-476e-873a-b1ac3fdc12fb"
+      ],
+      "flags": {},
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "authorizations:rotate": {
+      "id": "authorizations:rotate",
+      "description": "updates an OAuth authorization token",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {},
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "authorizations:update": {
+      "id": "authorizations:update",
+      "description": "updates an OAuth authorization",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "description": {
+          "name": "description",
+          "type": "option",
+          "char": "d",
+          "description": "set a custom authorization description",
+          "multiple": false
+        },
+        "client-id": {
+          "name": "client-id",
+          "type": "option",
+          "description": "identifier of OAuth client to set",
+          "multiple": false,
+          "dependsOn": [
+            "client-secret"
+          ]
+        },
+        "client-secret": {
+          "name": "client-secret",
+          "type": "option",
+          "description": "secret of OAuth client to set",
+          "multiple": false,
+          "dependsOn": [
+            "client-id"
+          ]
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "autocomplete:create": {
+      "id": "autocomplete:create",
+      "description": "create autocomplete setup scripts and completion functions",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "flags": {},
+      "args": {}
+    },
+    "autocomplete:doctor": {
+      "id": "autocomplete:doctor",
+      "description": "autocomplete diagnostic",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "flags": {
+        "verbose": {
+          "name": "verbose",
+          "type": "boolean",
+          "description": "list completable commands",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "shell": {
+          "name": "shell",
+          "description": "shell type",
+          "required": false
+        }
+      }
+    },
+    "autocomplete": {
+      "id": "autocomplete",
+      "description": "display autocomplete installation instructions",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku autocomplete",
+        "$ heroku autocomplete bash",
+        "$ heroku autocomplete zsh",
+        "$ heroku autocomplete --refresh-cache"
+      ],
+      "flags": {
+        "refresh-cache": {
+          "name": "refresh-cache",
+          "type": "boolean",
+          "char": "r",
+          "description": "refresh cache only (ignores displaying instructions)",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "shell": {
+          "name": "shell",
+          "description": "shell type",
+          "required": false
+        }
+      }
+    },
+    "autocomplete:options": {
+      "id": "autocomplete:options",
+      "description": "display arg or flag completion options (used internally by completion functions)",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "hidden": true,
+          "required": false,
+          "multiple": false
+        }
+      },
+      "args": {
+        "completion": {
+          "name": "completion"
+        }
+      }
+    },
+    "autocomplete:script": {
+      "id": "autocomplete:script",
+      "description": "display autocomplete setup script for shell",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "flags": {},
+      "args": {
+        "shell": {
+          "name": "shell",
+          "description": "shell type",
+          "required": false
+        }
+      }
+    },
+    "buildpacks:add": {
+      "id": "buildpacks:add",
+      "description": "add new app buildpack, inserting into list of buildpacks if necessary",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "index": {
+          "name": "index",
+          "type": "option",
+          "char": "i",
+          "description": "the 1-based index of the URL in the list of URLs",
+          "multiple": false
+        }
+      },
+      "args": {
+        "buildpack": {
+          "name": "buildpack",
+          "description": "namespace/name of the buildpack",
+          "required": true
+        }
+      }
+    },
+    "buildpacks:clear": {
+      "id": "buildpacks:clear",
+      "description": "clear all buildpacks set on the app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "buildpacks": {
+      "id": "buildpacks",
+      "description": "display the buildpacks for an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "buildpacks:info": {
+      "id": "buildpacks:info",
+      "description": "fetch info about a buildpack",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {},
+      "args": {
+        "buildpack": {
+          "name": "buildpack",
+          "description": "namespace/name of the buildpack",
+          "required": true
+        }
+      }
+    },
+    "buildpacks:remove": {
+      "id": "buildpacks:remove",
+      "description": "remove a buildpack set on the app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "index": {
+          "name": "index",
+          "type": "option",
+          "char": "i",
+          "description": "the 1-based index of the URL to remove from the list of URLs",
+          "multiple": false
+        }
+      },
+      "args": {
+        "buildpack": {
+          "name": "buildpack",
+          "description": "namespace/name of the buildpack"
+        }
+      }
+    },
+    "buildpacks:search": {
+      "id": "buildpacks:search",
+      "description": "search for buildpacks",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "namespace": {
+          "name": "namespace",
+          "type": "option",
+          "description": "buildpack namespaces to filter on using a comma separated list",
+          "multiple": false
+        },
+        "name": {
+          "name": "name",
+          "type": "option",
+          "description": "buildpack names to filter on using a comma separated list ",
+          "multiple": false
+        },
+        "description": {
+          "name": "description",
+          "type": "option",
+          "description": "buildpack description to filter on",
+          "multiple": false
+        }
+      },
+      "args": {
+        "term": {
+          "name": "term",
+          "description": "search term that searches across name, namespace, and description"
+        }
+      }
+    },
+    "buildpacks:set": {
+      "id": "buildpacks:set",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "index": {
+          "name": "index",
+          "type": "option",
+          "char": "i",
+          "description": "the 1-based index of the URL in the list of URLs",
+          "multiple": false
+        }
+      },
+      "args": {
+        "buildpack": {
+          "name": "buildpack",
+          "description": "namespace/name of the buildpack",
+          "required": true
+        }
+      }
+    },
+    "buildpacks:versions": {
+      "id": "buildpacks:versions",
+      "description": "list versions of a buildpack",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {},
+      "args": {
+        "buildpack": {
+          "name": "buildpack",
+          "description": "namespace/name of the buildpack",
+          "required": true
+        }
+      }
+    },
+    "ci:debug": {
+      "id": "ci:debug",
+      "description": "opens an interactive test debugging session with the contents of the current directory",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "no-cache": {
+          "name": "no-cache",
+          "type": "boolean",
+          "description": "start test run with an empty cache",
+          "allowNo": false
+        },
+        "no-setup": {
+          "name": "no-setup",
+          "type": "boolean",
+          "description": "start test dyno without running test-setup",
+          "allowNo": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "multiple": false
+        }
+      },
+      "args": {},
+      "help": "Example:\n\n    $ heroku ci:debug --pipeline PIPELINE\n    Preparing source... done\n    Creating test run... done\n    Running setup and attaching to test dyno...\n\n~ $\n",
+      "topic": "ci"
+    },
+    "ci": {
+      "id": "ci",
+      "description": "display the most recent CI runs for the given pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci --app murmuring-headland-14719\n"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app name",
+          "multiple": false
+        },
+        "watch": {
+          "name": "watch",
+          "type": "boolean",
+          "description": "keep running and watch for new and update tests",
+          "required": false,
+          "allowNo": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": false,
+          "multiple": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "required": false,
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "ci:info": {
+      "id": "ci:info",
+      "description": "show the status of a specific test run",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:info 1288 --app murmuring-headland-14719\n"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app name",
+          "multiple": false
+        },
+        "node": {
+          "name": "node",
+          "type": "option",
+          "description": "the node number to show its setup and output",
+          "required": false,
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": false,
+          "multiple": false
+        }
+      },
+      "args": {
+        "test-run": {
+          "name": "test-run",
+          "required": true
+        }
+      }
+    },
+    "ci:last": {
+      "id": "ci:last",
+      "description": "looks for the most recent run and returns the output of that run",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:last --pipeline=my-pipeline --node 100\n"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app name",
+          "multiple": false
+        },
+        "node": {
+          "name": "node",
+          "type": "option",
+          "description": "the node number to show its setup and output",
+          "required": false,
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": false,
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "ci:migrate-manifest": {
+      "id": "ci:migrate-manifest",
+      "description": "app-ci.json is deprecated. Run this command to migrate to app.json with an environments key.",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:migrate-manifest"
+      ],
+      "flags": {},
+      "args": {},
+      "topic": "ci"
+    },
+    "ci:open": {
+      "id": "ci:open",
+      "description": "open the Dashboard version of Heroku CI",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:open --app murmuring-headland-14719"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": false,
+          "multiple": false
+        }
+      },
+      "args": {},
+      "topic": "ci"
+    },
+    "ci:rerun": {
+      "id": "ci:rerun",
+      "description": "rerun tests against current directory",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:rerun 985 --app murmuring-headland-14719\n"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app name",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": false,
+          "multiple": false
+        }
+      },
+      "args": {
+        "number": {
+          "name": "number",
+          "required": false
+        }
+      }
+    },
+    "ci:run": {
+      "id": "ci:run",
+      "description": "run tests against current directory",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:run --app murmuring-headland-14719\n"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app name",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": false,
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "clients:create": {
+      "id": "clients:create",
+      "description": "create a new OAuth client",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku clients:create \"Amazing\" https://amazing-client.herokuapp.com/auth/heroku/callback"
+      ],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "shell": {
+          "name": "shell",
+          "type": "boolean",
+          "char": "s",
+          "description": "output in shell format",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "name": {
+          "name": "name",
+          "required": true
+        },
+        "redirect_uri": {
+          "name": "redirect_uri",
+          "required": true
+        }
+      }
+    },
+    "clients:destroy": {
+      "id": "clients:destroy",
+      "description": "delete client by ID",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {},
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "clients": {
+      "id": "clients",
+      "description": "list your OAuth clients",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "clients:info": {
+      "id": "clients:info",
+      "description": "show details of an oauth client",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku clients:info 36120128-fee7-455e-8b7f-807aee130946"
+      ],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "shell": {
+          "name": "shell",
+          "type": "boolean",
+          "char": "s",
+          "description": "output in shell format",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "clients:rotate": {
+      "id": "clients:rotate",
+      "description": "rotate OAuth client secret",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "shell": {
+          "name": "shell",
+          "type": "boolean",
+          "char": "s",
+          "description": "output in shell format",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "clients:update": {
+      "id": "clients:update",
+      "description": "update OAuth client",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku clients:update 3e304bda-d376-4278-bdea-6d6c08aa1359 --url https://amazing-client.herokuapp.com/auth/heroku/callback"
+      ],
+      "flags": {
+        "name": {
+          "name": "name",
+          "type": "option",
+          "char": "n",
+          "description": "change the client name",
+          "multiple": false
+        },
+        "url": {
+          "name": "url",
+          "type": "option",
+          "description": "change the client redirect URL",
+          "multiple": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "config:edit": {
+      "id": "config:edit",
+      "description": "interactively edit config vars\nThis command opens the app config in a text editor set by $VISUAL or $EDITOR.\nAny variables added/removed/changed will be updated on the app after saving and closing the file.",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "# edit with vim\n$ EDITOR=\"vim\" heroku config:edit",
+        "# edit with emacs\n$ EDITOR=\"emacs\" heroku config:edit",
+        "# edit with pico\n$ EDITOR=\"pico\" heroku config:edit",
+        "# edit with atom editor\n$ VISUAL=\"atom --wait\" heroku config:edit"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {
+        "key": {
+          "name": "key",
+          "description": "edit a single key"
+        }
+      }
+    },
+    "config:get": {
+      "id": "config:get",
+      "description": "display a single config value for an app",
+      "strict": false,
+      "usage": "config:get KEY...",
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": "$ heroku config:get RAILS_ENV\nproduction",
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "shell": {
+          "name": "shell",
+          "type": "boolean",
+          "char": "s",
+          "description": "output config vars in shell format",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "KEY": {
+          "name": "KEY",
+          "required": true
+        }
+      },
+      "example": "$ heroku config:get RAILS_ENV\nproduction"
+    },
+    "config": {
+      "id": "config",
+      "description": "display the config vars for an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "shell": {
+          "name": "shell",
+          "type": "boolean",
+          "char": "s",
+          "description": "output config vars in shell format",
+          "allowNo": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output config vars in json format",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "config:set": {
+      "id": "config:set",
+      "description": "set one or more config vars",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "config:add"
+      ],
+      "examples": [
+        "$ heroku config:set RAILS_ENV=staging\nSetting config vars and restarting example... done, v10\nRAILS_ENV: staging\n\n$ heroku config:set RAILS_ENV=staging RACK_ENV=staging\nSetting config vars and restarting example... done, v11\nRAILS_ENV: staging\nRACK_ENV:  staging"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "config:unset": {
+      "id": "config:unset",
+      "description": "unset one or more config vars",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "config:remove"
+      ],
+      "examples": [
+        "$ heroku config:unset RAILS_ENV\nUnsetting RAILS_ENV and restarting example... done, v10",
+        "$ heroku config:unset RAILS_ENV RACK_ENV\nUnsetting RAILS_ENV, RACK_ENV and restarting example... done, v10"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "domains:add": {
+      "id": "domains:add",
+      "description": "add a domain to an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "heroku domains:add www.example.com"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "cert": {
+          "name": "cert",
+          "type": "option",
+          "char": "c",
+          "description": "the name of the SSL cert you want to use for this domain",
+          "multiple": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "wait": {
+          "name": "wait",
+          "type": "boolean",
+          "allowNo": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {
+        "hostname": {
+          "name": "hostname",
+          "required": true
+        }
+      }
+    },
+    "domains:clear": {
+      "id": "domains:clear",
+      "description": "remove all domains from an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "heroku domains:clear"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "domains": {
+      "id": "domains",
+      "description": "list domains for an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku domains\n=== example Heroku Domain\nexample-xxxxxxxxxxxx.herokuapp.com\n\n=== example Custom Domains\nDomain Name      DNS Record Type  DNS Target\nwww.example.com  CNAME            www.example.herokudns.com\n",
+        "$ heroku domains --filter 'Domain Name=www.example.com'"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "columns": {
+          "name": "columns",
+          "type": "option",
+          "description": "only show provided columns (comma-separated)",
+          "multiple": false,
+          "exclusive": [
+            "extended"
+          ]
+        },
+        "sort": {
+          "name": "sort",
+          "type": "option",
+          "description": "property to sort by (prepend '-' for descending)",
+          "multiple": false
+        },
+        "filter": {
+          "name": "filter",
+          "type": "option",
+          "description": "filter property by partial string matching, ex: name=foo",
+          "multiple": false
+        },
+        "csv": {
+          "name": "csv",
+          "type": "boolean",
+          "description": "output is csv format [alias: --output=csv]",
+          "allowNo": false,
+          "exclusive": [
+            "no-truncate"
+          ]
+        },
+        "output": {
+          "name": "output",
+          "type": "option",
+          "description": "output in a more machine friendly format",
+          "multiple": false,
+          "options": [
+            "csv",
+            "json",
+            "yaml"
+          ],
+          "exclusive": [
+            "no-truncate",
+            "csv"
+          ]
+        },
+        "extended": {
+          "name": "extended",
+          "type": "boolean",
+          "char": "x",
+          "description": "show extra columns",
+          "allowNo": false,
+          "exclusive": [
+            "columns"
+          ]
+        },
+        "no-header": {
+          "name": "no-header",
+          "type": "boolean",
+          "description": "hide table header from output",
+          "allowNo": false,
+          "exclusive": [
+            "csv"
+          ]
+        }
+      },
+      "args": {}
+    },
+    "domains:info": {
+      "id": "domains:info",
+      "description": "show detailed information for a domain on an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku domains:info www.example.com"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {
+        "hostname": {
+          "name": "hostname",
+          "required": true
+        }
+      }
+    },
+    "domains:remove": {
+      "id": "domains:remove",
+      "description": "remove a domain from an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "heroku domains:remove www.example.com"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {
+        "hostname": {
+          "name": "hostname",
+          "required": true
+        }
+      }
+    },
+    "domains:update": {
+      "id": "domains:update",
+      "description": "update a domain to use a different SSL certificate on an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "heroku domains:update www.example.com --cert mycert"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "cert": {
+          "name": "cert",
+          "type": "option",
+          "description": "the name or id of the certificate you want to use for this domain",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "hostname": {
+          "name": "hostname",
+          "required": true
+        }
+      }
+    },
+    "domains:wait": {
+      "id": "domains:wait",
+      "description": "wait for domain to be active for an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {
+        "hostname": {
+          "name": "hostname"
+        }
+      }
+    },
+    "drains:add": {
+      "id": "drains:add",
+      "description": "adds a log drain to an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "url": {
+          "name": "url",
+          "required": true
+        }
+      }
+    },
+    "drains": {
+      "id": "drains",
+      "description": "display the log drains of an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "extended": {
+          "name": "extended",
+          "type": "boolean",
+          "char": "x",
+          "hidden": true,
+          "allowNo": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "drains:remove": {
+      "id": "drains:remove",
+      "description": "removes a log drain from an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": "drains:remove [URL|TOKEN]",
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "url": {
+          "name": "url",
+          "required": true
+        }
+      },
+      "example": "drains:remove [URL|TOKEN]"
+    },
+    "features:disable": {
+      "id": "features:disable",
+      "description": "disables an app feature",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "feature": {
+          "name": "feature",
+          "required": true
+        }
+      }
+    },
+    "features:enable": {
+      "id": "features:enable",
+      "description": "enables an app feature",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "feature": {
+          "name": "feature",
+          "required": true
+        }
+      }
+    },
+    "features": {
+      "id": "features",
+      "description": "list available app features",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "features:info": {
+      "id": "features:info",
+      "description": "display information about a feature",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "feature": {
+          "name": "feature",
+          "required": true
+        }
+      }
+    },
+    "git:clone": {
+      "id": "git:clone",
+      "description": "clones a heroku app to your local machine at DIRECTORY (defaults to app name)",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": "$ heroku git:clone -a example\nCloning into 'example'...\nremote: Counting objects: 42, done.\n...",
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "the Heroku app to use",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "the git remote to create, default \"heroku\"",
+          "multiple": false
+        }
+      },
+      "args": {
+        "DIRECTORY": {
+          "name": "DIRECTORY",
+          "description": "where to clone the app"
+        }
+      },
+      "example": "$ heroku git:clone -a example\nCloning into 'example'...\nremote: Counting objects: 42, done.\n..."
+    },
+    "git:credentials": {
+      "id": "git:credentials",
+      "description": "internal command for git-credentials",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "flags": {},
+      "args": {
+        "command": {
+          "name": "command",
+          "required": true
+        }
+      }
+    },
+    "git:remote": {
+      "id": "git:remote",
+      "description": "adds a git remote to an app repo\nextra arguments will be passed to git remote add\n",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": "# set git remote heroku to https://git.heroku.com/example.git\n    $ heroku git:remote -a example\n\n    # set git remote heroku-staging to https://git.heroku.com/example.git\n    $ heroku git:remote --remote heroku-staging -a example",
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "the Heroku app to use",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "the git remote to create",
+          "multiple": false
+        }
+      },
+      "args": {},
+      "example": "# set git remote heroku to https://git.heroku.com/example.git\n    $ heroku git:remote -a example\n\n    # set git remote heroku-staging to https://git.heroku.com/example.git\n    $ heroku git:remote --remote heroku-staging -a example"
+    },
+    "keys:clear": {
+      "id": "keys:clear",
+      "description": "remove all SSH keys for current user",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {},
+      "args": {}
+    },
+    "keys": {
+      "id": "keys",
+      "description": "display your SSH keys",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "long": {
+          "name": "long",
+          "type": "boolean",
+          "char": "l",
+          "description": "display full SSH keys",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "keys:remove": {
+      "id": "keys:remove",
+      "description": "remove an SSH key from the user",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": "$ heroku keys:remove email@example.com\nRemoving email@example.com SSH key... done",
+      "flags": {},
+      "args": {
+        "key": {
+          "name": "key",
+          "required": true
+        }
+      },
+      "example": "$ heroku keys:remove email@example.com\nRemoving email@example.com SSH key... done"
+    },
+    "labs:disable": {
+      "id": "labs:disable",
+      "description": "disables an experimental feature",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "confirm": {
+          "name": "confirm",
+          "type": "option",
+          "required": false,
+          "multiple": false
+        }
+      },
+      "args": {
+        "feature": {
+          "name": "feature",
+          "required": true
+        }
+      }
+    },
+    "local": {
+      "id": "local",
+      "description": "run heroku app locally\nStart the application specified by a Procfile (defaults to ./Procfile)",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "local:start"
+      ],
+      "examples": [
+        "$ heroku local\n$ heroku local web\n$ heroku local web=2\n$ heroku local web=1,worker=2"
+      ],
+      "flags": {
+        "procfile": {
+          "name": "procfile",
+          "type": "option",
+          "char": "f",
+          "description": "use a different Procfile",
+          "multiple": false
+        },
+        "env": {
+          "name": "env",
+          "type": "option",
+          "char": "e",
+          "description": "location of env file (defaults to .env)",
+          "multiple": false
+        },
+        "port": {
+          "name": "port",
+          "type": "option",
+          "char": "p",
+          "description": "port to listen on",
+          "multiple": false,
+          "default": "5001"
+        },
+        "restart": {
+          "name": "restart",
+          "type": "boolean",
+          "char": "r",
+          "description": "restart process if it dies",
+          "hidden": true,
+          "allowNo": false
+        },
+        "concurrency": {
+          "name": "concurrency",
+          "type": "option",
+          "char": "c",
+          "description": "number of processes to start",
+          "hidden": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "processname": {
+          "name": "processname",
+          "required": false
+        }
+      }
+    },
+    "local:run": {
+      "id": "local:run",
+      "description": "run a one-off command",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku local:run bin/migrate"
+      ],
+      "flags": {
+        "env": {
+          "name": "env",
+          "type": "option",
+          "char": "e",
+          "multiple": false
+        },
+        "port": {
+          "name": "port",
+          "type": "option",
+          "char": "p",
+          "multiple": false,
+          "default": "5001"
+        }
+      },
+      "args": {}
+    },
+    "local:version": {
+      "id": "local:version",
+      "description": "display node-foreman version",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {},
+      "args": {}
+    },
+    "maintenance:on": {
+      "id": "maintenance:on",
+      "description": "put the app into maintenance mode",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {},
+      "topic": "maintenance"
+    },
+    "pipelines:add": {
+      "id": "pipelines:add",
+      "description": "add this app to a pipeline\nThe app and pipeline names must be specified.\nThe stage of the app will be guessed based on its name if not specified.",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:add my-pipeline -a my-app -s production"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "stage": {
+          "name": "stage",
+          "type": "option",
+          "char": "s",
+          "description": "stage of first app in pipeline",
+          "multiple": false
+        }
+      },
+      "args": {
+        "pipeline": {
+          "name": "pipeline",
+          "description": "name of pipeline",
+          "required": true
+        }
+      }
+    },
+    "pipelines:connect": {
+      "id": "pipelines:connect",
+      "description": "connect a github repo to an existing pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:connect my-pipeline -r githuborg/reponame"
+      ],
+      "flags": {
+        "repo": {
+          "name": "repo",
+          "type": "option",
+          "char": "r",
+          "description": "the GitHub repository to connect to",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "name": {
+          "name": "name",
+          "description": "name of pipeline",
+          "required": true
+        }
+      }
+    },
+    "pipelines:create": {
+      "id": "pipelines:create",
+      "description": "create a new pipeline\n  An existing app must be specified as the first app in the pipeline.\n  The pipeline name will be inferred from the app name if not specified.\n  The stage of the app will be guessed based on its name if not specified.\n  The pipeline owner will be the user creating the pipeline if not specified with -t for teams or -o for orgs.",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:create -a my-app-staging",
+        "$ heroku pipelines:create my-pipeline -a my-app-staging"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "stage": {
+          "name": "stage",
+          "type": "option",
+          "char": "s",
+          "description": "stage of first app in pipeline",
+          "multiple": false
+        },
+        "team": {
+          "name": "team",
+          "type": "option",
+          "char": "t",
+          "description": "the team which will own the apps",
+          "multiple": false
+        }
+      },
+      "args": {
+        "name": {
+          "name": "name",
+          "description": "name of pipeline (defaults to basename of the app)",
+          "required": false
+        }
+      }
+    },
+    "pipelines:destroy": {
+      "id": "pipelines:destroy",
+      "description": "destroy a pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:destroy my-pipeline"
+      ],
+      "flags": {},
+      "args": {
+        "pipeline": {
+          "name": "pipeline",
+          "description": "name of pipeline",
+          "required": true
+        }
+      }
+    },
+    "pipelines:diff": {
+      "id": "pipelines:diff",
+      "description": "compares the latest release of this app to its downstream app(s)",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:diff -a my-app-staging"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "pipelines": {
+      "id": "pipelines",
+      "description": "list pipelines you have access to",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines"
+      ],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "pipelines:info": {
+      "id": "pipelines:info",
+      "description": "show list of apps in a pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:info my-pipeline"
+      ],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output in json format",
+          "allowNo": false
+        },
+        "with-owners": {
+          "name": "with-owners",
+          "type": "boolean",
+          "description": "shows owner of every app",
+          "hidden": true,
+          "allowNo": false
+        }
+      },
+      "args": {
+        "pipeline": {
+          "name": "pipeline",
+          "description": "pipeline to show list of apps for",
+          "required": true
+        }
+      }
+    },
+    "pipelines:open": {
+      "id": "pipelines:open",
+      "description": "open a pipeline in dashboard",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:open my-pipeline"
+      ],
+      "flags": {},
+      "args": {
+        "pipeline": {
+          "name": "pipeline",
+          "description": "name of pipeline",
+          "required": true
+        }
+      }
+    },
+    "pipelines:promote": {
+      "id": "pipelines:promote",
+      "description": "promote the latest release of this app to its downstream app(s)",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:promote -a my-app-staging"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "to": {
+          "name": "to",
+          "type": "option",
+          "char": "t",
+          "description": "comma separated list of apps to promote to",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "pipelines:remove": {
+      "id": "pipelines:remove",
+      "description": "remove this app from its pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:remove -a my-app"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "pipelines:rename": {
+      "id": "pipelines:rename",
+      "description": "rename a pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:rename my-pipeline new-pipeline-name"
+      ],
+      "flags": {},
+      "args": {
+        "pipeline": {
+          "name": "pipeline",
+          "description": "current name of pipeline",
+          "required": true
+        },
+        "name": {
+          "name": "name",
+          "description": "new name of pipeline",
+          "required": true
+        }
+      }
+    },
+    "pipelines:setup": {
+      "id": "pipelines:setup",
+      "description": "bootstrap a new pipeline with common settings and create a production and staging app (requires a fully formed app.json in the repo)",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:setup my-pipeline githuborg/reponame -t my-team"
+      ],
+      "flags": {
+        "team": {
+          "name": "team",
+          "type": "option",
+          "char": "t",
+          "description": "the team to assign pipeline ownership to (defaults to current user)",
+          "multiple": false
+        },
+        "yes": {
+          "name": "yes",
+          "type": "boolean",
+          "char": "y",
+          "description": "accept all default settings without prompting",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "name": {
+          "name": "name",
+          "description": "name of pipeline",
+          "required": false
+        },
+        "repo": {
+          "name": "repo",
+          "description": "a GitHub repository to connect the pipeline to",
+          "required": false
+        }
+      }
+    },
+    "pipelines:transfer": {
+      "id": "pipelines:transfer",
+      "description": "transfer ownership of a pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:transfer admin@example.com -p my-pipeline",
+        "$ heroku pipelines:transfer admin-team -p my-pipeline"
+      ],
+      "flags": {
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": true,
+          "multiple": false
+        },
+        "confirm": {
+          "name": "confirm",
+          "type": "option",
+          "char": "c",
+          "multiple": false
+        }
+      },
+      "args": {
+        "owner": {
+          "name": "owner",
+          "description": "the owner to transfer the pipeline to",
+          "required": true
+        }
+      }
+    },
+    "pipelines:update": {
+      "id": "pipelines:update",
+      "description": "update the app's stage in a pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku pipelines:update -s staging -a my-app"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "stage": {
+          "name": "stage",
+          "type": "option",
+          "char": "s",
+          "description": "new stage of app",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "ps:wait": {
+      "id": "ps:wait",
+      "description": "wait for all dynos to be running latest version after a release",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "type": {
+          "name": "type",
+          "type": "option",
+          "char": "t",
+          "description": "wait for one specific dyno type",
+          "multiple": false
+        },
+        "wait-interval": {
+          "name": "wait-interval",
+          "type": "option",
+          "char": "w",
+          "description": "how frequently to poll in seconds (to avoid hitting Heroku API rate limits)",
+          "multiple": false,
+          "default": 10
+        },
+        "with-run": {
+          "name": "with-run",
+          "type": "boolean",
+          "char": "R",
+          "description": "whether to wait for one-off run dynos",
+          "allowNo": false,
+          "exclusive": [
+            "type"
+          ]
+        }
+      },
+      "args": {}
+    },
+    "reviewapps:disable": {
+      "id": "reviewapps:disable",
+      "description": "disable review apps and/or settings on an existing pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku reviewapps:disable -p my-pipeline -a my-app --no-autodeploy"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "parent app used by review apps",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": true,
+          "multiple": false
+        },
+        "autodeploy": {
+          "name": "autodeploy",
+          "type": "boolean",
+          "description": "disable autodeployments",
+          "hidden": true,
+          "allowNo": false
+        },
+        "autodestroy": {
+          "name": "autodestroy",
+          "type": "boolean",
+          "description": "disable automatically destroying review apps",
+          "hidden": true,
+          "allowNo": false
+        },
+        "wait-for-ci": {
+          "name": "wait-for-ci",
+          "type": "boolean",
+          "description": "disable wait for CI",
+          "hidden": true,
+          "allowNo": false
+        },
+        "no-autodeploy": {
+          "name": "no-autodeploy",
+          "type": "boolean",
+          "description": "disable autodeployments",
+          "allowNo": false
+        },
+        "no-autodestroy": {
+          "name": "no-autodestroy",
+          "type": "boolean",
+          "description": "disable automatically destroying review apps",
+          "allowNo": false
+        },
+        "no-wait-for-ci": {
+          "name": "no-wait-for-ci",
+          "type": "boolean",
+          "description": "disable wait for CI",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "reviewapps:enable": {
+      "id": "reviewapps:enable",
+      "description": "enable review apps and/or settings on an existing pipeline",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku reviewapps:enable -p my-pipeline -a my-app --autodeploy --autodestroy"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "parent app used by review apps",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": true,
+          "multiple": false
+        },
+        "autodeploy": {
+          "name": "autodeploy",
+          "type": "boolean",
+          "description": "autodeploy the review app",
+          "allowNo": false
+        },
+        "autodestroy": {
+          "name": "autodestroy",
+          "type": "boolean",
+          "description": "autodestroy the review app",
+          "allowNo": false
+        },
+        "wait-for-ci": {
+          "name": "wait-for-ci",
+          "type": "boolean",
+          "description": "wait for CI to pass before deploying",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "run:detached": {
+      "id": "run:detached",
+      "description": "run a detached dyno, where output is sent to your logs",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku run:detached ls"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "env": {
+          "name": "env",
+          "type": "option",
+          "char": "e",
+          "description": "environment variables to set (use ';' to split multiple vars)",
+          "multiple": false
+        },
+        "size": {
+          "name": "size",
+          "type": "option",
+          "char": "s",
+          "description": "dyno size",
+          "multiple": false
+        },
+        "tail": {
+          "name": "tail",
+          "type": "boolean",
+          "char": "t",
+          "description": "continually stream logs",
+          "allowNo": false
+        },
+        "type": {
+          "name": "type",
+          "type": "option",
+          "description": "process type",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "run": {
+      "id": "run",
+      "description": "run a one-off process inside a heroku dyno\nShows a notification if the dyno takes more than 20 seconds to start.",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku run bash",
+        "$ heroku run -s standard-2x -- myscript.sh -a arg1 -s arg2"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "parent app used by review apps",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "size": {
+          "name": "size",
+          "type": "option",
+          "char": "s",
+          "description": "dyno size",
+          "multiple": false
+        },
+        "type": {
+          "name": "type",
+          "type": "option",
+          "description": "process type",
+          "multiple": false
+        },
+        "exit-code": {
+          "name": "exit-code",
+          "type": "boolean",
+          "char": "x",
+          "description": "passthrough the exit code of the remote command",
+          "allowNo": false
+        },
+        "env": {
+          "name": "env",
+          "type": "option",
+          "char": "e",
+          "description": "environment variables to set (use ';' to split multiple vars)",
+          "multiple": false
+        },
+        "no-tty": {
+          "name": "no-tty",
+          "type": "boolean",
+          "description": "force the command to not run in a tty",
+          "allowNo": false
+        },
+        "listen": {
+          "name": "listen",
+          "type": "boolean",
+          "description": "listen on a local port",
+          "hidden": true,
+          "allowNo": false
+        },
+        "no-notify": {
+          "name": "no-notify",
+          "type": "boolean",
+          "description": "disables notification when dyno is up (alternatively use HEROKU_NOTIFICATIONS=0)",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "run:inside": {
+      "id": "run:inside",
+      "description": "run a one-off process inside an existing heroku dyno",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "examples": [
+        "$ heroku run:inside web.1 bash"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "exit-code": {
+          "name": "exit-code",
+          "type": "boolean",
+          "char": "x",
+          "description": "passthrough the exit code of the remote command",
+          "allowNo": false
+        },
+        "env": {
+          "name": "env",
+          "type": "option",
+          "char": "e",
+          "description": "environment variables to set (use ';' to split multiple vars)",
+          "multiple": false
+        },
+        "listen": {
+          "name": "listen",
+          "type": "boolean",
+          "description": "listen on a local port",
+          "hidden": true,
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "sessions:destroy": {
+      "id": "sessions:destroy",
+      "description": "delete (logout) OAuth session by ID",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {},
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "sessions": {
+      "id": "sessions",
+      "description": "list your OAuth sessions",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "webhooks:add": {
+      "id": "webhooks:add",
+      "description": "add a webhook to an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks:add -i api:dyno -l notify -u https://example.com/hooks"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        },
+        "include": {
+          "name": "include",
+          "type": "option",
+          "char": "i",
+          "description": "comma delimited event types your server will receive ",
+          "required": true,
+          "multiple": false
+        },
+        "level": {
+          "name": "level",
+          "type": "option",
+          "char": "l",
+          "description": "notify does not retry, sync will retry until successful or timeout",
+          "required": true,
+          "multiple": false
+        },
+        "secret": {
+          "name": "secret",
+          "type": "option",
+          "char": "s",
+          "description": "value to sign delivery with in Heroku-Webhook-Hmac-SHA256 header",
+          "multiple": false
+        },
+        "authorization": {
+          "name": "authorization",
+          "type": "option",
+          "char": "t",
+          "description": "authorization header to send with webhooks",
+          "multiple": false
+        },
+        "url": {
+          "name": "url",
+          "type": "option",
+          "char": "u",
+          "description": "URL for receiver",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "webhooks": {
+      "id": "webhooks",
+      "description": "list webhooks on an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "webhooks:info": {
+      "id": "webhooks:info",
+      "description": "info for a webhook on an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks:info 99999999-9999-9999-9999-999999999999"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      },
+      "example": [
+        "$ heroku webhooks:info 99999999-9999-9999-9999-999999999999"
+      ]
+    },
+    "webhooks:remove": {
+      "id": "webhooks:remove",
+      "description": "removes a webhook from an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks:remove 99999999-9999-9999-9999-999999999999"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "description": "id of webhook to remove",
+          "required": true
+        }
+      }
+    },
+    "webhooks:update": {
+      "id": "webhooks:update",
+      "description": "updates a webhook in an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks:update 99999999-9999-9999-9999-999999999999 -i dyno -l notify -s 09928c40bf1b191b645174a19f7053d16a180da37332e719ef0998f4c0a2 -u https://example.com/hooks"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        },
+        "include": {
+          "name": "include",
+          "type": "option",
+          "char": "i",
+          "description": "comma delimited event types your server will receive ",
+          "required": true,
+          "multiple": false
+        },
+        "level": {
+          "name": "level",
+          "type": "option",
+          "char": "l",
+          "description": "notify does not retry, sync will retry until successful or timeout",
+          "required": true,
+          "multiple": false
+        },
+        "secret": {
+          "name": "secret",
+          "type": "option",
+          "char": "s",
+          "description": "value to sign delivery with in Heroku-Webhook-Hmac-SHA256 header",
+          "multiple": false
+        },
+        "authorization": {
+          "name": "authorization",
+          "type": "option",
+          "char": "t",
+          "description": "authorization header to send with webhooks",
+          "multiple": false
+        },
+        "url": {
+          "name": "url",
+          "type": "option",
+          "char": "u",
+          "description": "URL for receiver",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "apps:favorites:add": {
+      "id": "apps:favorites:add",
+      "description": "favorites an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {},
+      "topic": "apps"
+    },
+    "apps:favorites": {
+      "id": "apps:favorites",
+      "description": "list favorited apps",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "char": "j",
+          "description": "output in json format",
+          "allowNo": false
+        }
+      },
+      "args": {},
+      "topic": "apps"
+    },
+    "apps:favorites:remove": {
+      "id": "apps:favorites:remove",
+      "description": "unfavorites an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {},
+      "topic": "apps"
+    },
+    "apps:stacks": {
+      "id": "apps:stacks",
+      "description": "show the list of available stacks",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "stack"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {},
+      "topic": "apps"
+    },
+    "apps:stacks:set": {
+      "id": "apps:stacks:set",
+      "description": "set the stack of an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "stack:set"
+      ],
+      "examples": "$ heroku stack:set heroku-22 -a myapp\nSetting stack to heroku-22... done\nYou will need to redeploy myapp for the change to take effect.\nRun git push heroku main to trigger a new build on myapp.",
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {
+        "stack": {
+          "name": "stack",
+          "required": true
+        }
+      },
+      "example": "$ heroku stack:set heroku-22 -a myapp\nSetting stack to heroku-22... done\nYou will need to redeploy myapp for the change to take effect.\nRun git push heroku main to trigger a new build on myapp."
+    },
+    "auth:2fa:disable": {
+      "id": "auth:2fa:disable",
+      "description": "disables 2fa on account",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "twofactor:disable",
+        "2fa:disable"
+      ],
+      "examples": "$ heroku auth:2fa:disable",
+      "flags": {},
+      "args": {},
+      "example": "$ heroku auth:2fa:disable"
+    },
+    "auth:2fa": {
+      "id": "auth:2fa",
+      "description": "check 2fa status",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [
+        "2fa",
+        "twofactor"
+      ],
+      "flags": {},
+      "args": {}
+    },
+    "certs:auto:wait": {
+      "id": "certs:auto:wait",
+      "description": "waits for the certificate to be activated",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "hidden": true,
+      "aliases": [],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "ci:config:get": {
+      "id": "ci:config:get",
+      "description": "get a CI config var",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:config:get --pipeline=PIPELINE RAILS_ENV\n    test"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": false,
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": false,
+          "multiple": false
+        },
+        "shell": {
+          "name": "shell",
+          "type": "boolean",
+          "char": "s",
+          "description": "output config var in shell format",
+          "allowNo": false
+        }
+      },
+      "args": {
+        "key": {
+          "name": "key",
+          "required": true
+        }
+      },
+      "topic": "ci"
+    },
+    "ci:config": {
+      "id": "ci:config",
+      "description": "display CI config vars",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:config --app murmuring-headland-14719 --json\n"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app name",
+          "multiple": false
+        },
+        "shell": {
+          "name": "shell",
+          "type": "boolean",
+          "char": "s",
+          "description": "output config vars in shell format",
+          "allowNo": false
+        },
+        "json": {
+          "name": "json",
+          "type": "boolean",
+          "description": "output config vars in json format",
+          "allowNo": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "ci:config:set": {
+      "id": "ci:config:set",
+      "description": "set CI config vars",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:config:set --pipeline PIPELINE RAILS_ENV=test\n    Setting test config vars... done\n    RAILS_ENV: test"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": true,
+          "multiple": false
+        }
+      },
+      "args": {},
+      "topic": "ci"
+    },
+    "ci:config:unset": {
+      "id": "ci:config:unset",
+      "description": "unset CI config vars",
+      "strict": false,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku ci:config:unset RAILS_ENV"
+      ],
+      "flags": {
+        "help": {
+          "name": "help",
+          "type": "boolean",
+          "char": "h",
+          "description": "Show CLI help.",
+          "allowNo": false
+        },
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": false,
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "name of pipeline",
+          "required": false,
+          "multiple": false
+        }
+      },
+      "args": {},
+      "topic": "ci"
+    },
+    "ps:autoscale:disable": {
+      "id": "ps:autoscale:disable",
+      "description": "disable web dyno autoscaling",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "ps:autoscale:enable": {
+      "id": "ps:autoscale:enable",
+      "description": "enable web dyno autoscaling",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "required": true,
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "min": {
+          "name": "min",
+          "type": "option",
+          "description": "minimum number of dynos",
+          "required": true,
+          "multiple": false
+        },
+        "max": {
+          "name": "max",
+          "type": "option",
+          "description": "maximum number of dynos",
+          "required": true,
+          "multiple": false
+        },
+        "p95": {
+          "name": "p95",
+          "type": "option",
+          "description": "desired p95 response time",
+          "multiple": false
+        },
+        "notifications": {
+          "name": "notifications",
+          "type": "boolean",
+          "description": "receive email notifications when the max dyno limit is reached",
+          "allowNo": false
+        }
+      },
+      "args": {}
+    },
+    "webhooks:deliveries": {
+      "id": "webhooks:deliveries",
+      "description": "list webhook deliveries on an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks:deliveries"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "status": {
+          "name": "status",
+          "type": "option",
+          "char": "s",
+          "description": "filter deliveries by status",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "webhooks:deliveries:info": {
+      "id": "webhooks:deliveries:info",
+      "description": "info for a webhook event on an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks:deliveries:info 99999999-9999-9999-9999-999999999999"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    },
+    "webhooks:events": {
+      "id": "webhooks:events",
+      "description": "list webhook events on an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks:events"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        }
+      },
+      "args": {}
+    },
+    "webhooks:events:info": {
+      "id": "webhooks:events:info",
+      "description": "info for a webhook event on an app",
+      "strict": true,
+      "pluginName": "heroku",
+      "pluginAlias": "heroku",
+      "pluginType": "core",
+      "aliases": [],
+      "examples": [
+        "$ heroku webhooks:events:info 99999999-9999-9999-9999-999999999999"
+      ],
+      "flags": {
+        "app": {
+          "name": "app",
+          "type": "option",
+          "char": "a",
+          "description": "app to run command against",
+          "multiple": false
+        },
+        "remote": {
+          "name": "remote",
+          "type": "option",
+          "char": "r",
+          "description": "git remote of app to use",
+          "multiple": false
+        },
+        "pipeline": {
+          "name": "pipeline",
+          "type": "option",
+          "char": "p",
+          "description": "pipeline on which to list",
+          "hidden": true,
+          "multiple": false
+        }
+      },
+      "args": {
+        "id": {
+          "name": "id",
+          "required": true
+        }
+      }
+    }
+  }
+}

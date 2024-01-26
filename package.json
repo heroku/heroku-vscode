@@ -1,0 +1,50 @@
+{
+  "name": "heroku",
+  "displayName": "heroku",
+  "description": "Heroku AI VSCode extension",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:shellscript"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "capabilities": {
+      "hoverProvider": true
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@oclif/config": "^1.18.17",
+    "@types/mocha": "^10.0.6",
+    "@types/mvdan-sh": "^0.10.9",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.56.0",
+    "eslint-config-salesforce-typescript": "3.2.3",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "3.2.4",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "mvdan-sh": "^0.10.1"
+  }
+}
