@@ -39,7 +39,8 @@
     "@vscode/test-electron": "^2.3.8",
     "eslint": "^8.56.0",
     "eslint-config-salesforce-typescript": "3.2.3",
-    "husky": "^8.0.3",
+    "git-format-staged": "^3.0.0",
+    "husky": "^8.0.0",
     "lint-staged": "^15.2.0",
     "prettier": "3.2.4",
     "typescript": "^5.3.3"
