@@ -228,9 +228,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "create"
-      ],
+      "aliases": ["create"],
       "examples": [
         "$ heroku apps:create\nCreating app... done, stack is heroku-22\nhttps://floating-dragon-42.heroku.com/ | https://git.heroku.com/floating-dragon-42.git\n\n# or just\n$ heroku create\n\n# use a heroku.yml manifest file\n$ heroku apps:create --manifest\n\n# specify a buildpack\n$ heroku apps:create --buildpack https://github.com/some/buildpack.git\n\n# specify a name\n$ heroku apps:create example\n\n# create a staging app\n$ heroku apps:create example-staging --remote staging\n\n# create an app in the eu region\n$ heroku apps:create --region eu"
       ],
@@ -350,10 +348,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "destroy",
-        "apps:delete"
-      ],
+      "aliases": ["destroy", "apps:delete"],
       "flags": {
         "app": {
           "name": "app",
@@ -429,13 +424,8 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "list",
-        "apps:list"
-      ],
-      "examples": [
-        "$ heroku apps"
-      ],
+      "aliases": ["list", "apps:list"],
+      "examples": ["$ heroku apps"],
       "flags": {
         "all": {
           "name": "all",
@@ -491,13 +481,8 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "info"
-      ],
-      "examples": [
-        "$ heroku apps:info",
-        "$ heroku apps:info --shell"
-      ],
+      "aliases": ["info"],
+      "examples": ["$ heroku apps:info", "$ heroku apps:info --shell"],
       "flags": {
         "app": {
           "name": "app",
@@ -544,13 +529,8 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "open"
-      ],
-      "examples": [
-        "$ heroku open -a myapp",
-        "$ heroku open -a myapp /foo"
-      ],
+      "aliases": ["open"],
+      "examples": ["$ heroku open -a myapp", "$ heroku open -a myapp /foo"],
       "flags": {
         "app": {
           "name": "app",
@@ -576,12 +556,8 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "rename"
-      ],
-      "examples": [
-        "$ heroku apps:rename --app oldname newname"
-      ],
+      "aliases": ["rename"],
+      "examples": ["$ heroku apps:rename --app oldname newname"],
       "flags": {
         "app": {
           "name": "app",
@@ -608,9 +584,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "login"
-      ],
+      "aliases": ["login"],
       "flags": {
         "browser": {
           "name": "browser",
@@ -650,9 +624,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "logout"
-      ],
+      "aliases": ["logout"],
       "flags": {},
       "args": {}
     },
@@ -682,9 +654,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "whoami"
-      ],
+      "aliases": ["whoami"],
       "flags": {},
       "args": {}
     },
@@ -696,9 +666,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku authorizations:create --description \"For use with Anvil\""
-      ],
+      "examples": ["$ heroku authorizations:create --description \"For use with Anvil\""],
       "flags": {
         "description": {
           "name": "description",
@@ -746,9 +714,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku authorizations"
-      ],
+      "examples": ["$ heroku authorizations"],
       "flags": {
         "json": {
           "name": "json",
@@ -791,13 +757,8 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "authorizations:revoke",
-        "authorizations:destroy"
-      ],
-      "examples": [
-        "$ heroku authorizations:revoke 105a7bfa-34c3-476e-873a-b1ac3fdc12fb"
-      ],
+      "aliases": ["authorizations:revoke", "authorizations:destroy"],
+      "examples": ["$ heroku authorizations:revoke 105a7bfa-34c3-476e-873a-b1ac3fdc12fb"],
       "flags": {},
       "args": {
         "id": {
@@ -843,18 +804,14 @@
           "type": "option",
           "description": "identifier of OAuth client to set",
           "multiple": false,
-          "dependsOn": [
-            "client-secret"
-          ]
+          "dependsOn": ["client-secret"]
         },
         "client-secret": {
           "name": "client-secret",
           "type": "option",
           "description": "secret of OAuth client to set",
           "multiple": false,
-          "dependsOn": [
-            "client-id"
-          ]
+          "dependsOn": ["client-id"]
         }
       },
       "args": {
@@ -1265,9 +1222,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci --app murmuring-headland-14719\n"
-      ],
+      "examples": ["$ heroku ci --app murmuring-headland-14719\n"],
       "flags": {
         "app": {
           "name": "app",
@@ -1309,9 +1264,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:info 1288 --app murmuring-headland-14719\n"
-      ],
+      "examples": ["$ heroku ci:info 1288 --app murmuring-headland-14719\n"],
       "flags": {
         "app": {
           "name": "app",
@@ -1351,9 +1304,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:last --pipeline=my-pipeline --node 100\n"
-      ],
+      "examples": ["$ heroku ci:last --pipeline=my-pipeline --node 100\n"],
       "flags": {
         "app": {
           "name": "app",
@@ -1388,9 +1339,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:migrate-manifest"
-      ],
+      "examples": ["$ heroku ci:migrate-manifest"],
       "flags": {},
       "args": {},
       "topic": "ci"
@@ -1403,9 +1352,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:open --app murmuring-headland-14719"
-      ],
+      "examples": ["$ heroku ci:open --app murmuring-headland-14719"],
       "flags": {
         "help": {
           "name": "help",
@@ -1442,9 +1389,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:rerun 985 --app murmuring-headland-14719\n"
-      ],
+      "examples": ["$ heroku ci:rerun 985 --app murmuring-headland-14719\n"],
       "flags": {
         "app": {
           "name": "app",
@@ -1477,9 +1422,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:run --app murmuring-headland-14719\n"
-      ],
+      "examples": ["$ heroku ci:run --app murmuring-headland-14719\n"],
       "flags": {
         "app": {
           "name": "app",
@@ -1507,9 +1450,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku clients:create \"Amazing\" https://amazing-client.herokuapp.com/auth/heroku/callback"
-      ],
+      "examples": ["$ heroku clients:create \"Amazing\" https://amazing-client.herokuapp.com/auth/heroku/callback"],
       "flags": {
         "json": {
           "name": "json",
@@ -1580,9 +1521,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku clients:info 36120128-fee7-455e-8b7f-807aee130946"
-      ],
+      "examples": ["$ heroku clients:info 36120128-fee7-455e-8b7f-807aee130946"],
       "flags": {
         "json": {
           "name": "json",
@@ -1798,9 +1737,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "config:add"
-      ],
+      "aliases": ["config:add"],
       "examples": [
         "$ heroku config:set RAILS_ENV=staging\nSetting config vars and restarting example... done, v10\nRAILS_ENV: staging\n\n$ heroku config:set RAILS_ENV=staging RACK_ENV=staging\nSetting config vars and restarting example... done, v11\nRAILS_ENV: staging\nRACK_ENV:  staging"
       ],
@@ -1823,9 +1760,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "config:remove"
-      ],
+      "aliases": ["config:remove"],
       "examples": [
         "$ heroku config:unset RAILS_ENV\nUnsetting RAILS_ENV and restarting example... done, v10",
         "$ heroku config:unset RAILS_ENV RACK_ENV\nUnsetting RAILS_ENV, RACK_ENV and restarting example... done, v10"
@@ -1857,9 +1792,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "heroku domains:add www.example.com"
-      ],
+      "examples": ["heroku domains:add www.example.com"],
       "flags": {
         "help": {
           "name": "help",
@@ -1918,9 +1851,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "heroku domains:clear"
-      ],
+      "examples": ["heroku domains:clear"],
       "flags": {
         "help": {
           "name": "help",
@@ -1994,9 +1925,7 @@
           "type": "option",
           "description": "only show provided columns (comma-separated)",
           "multiple": false,
-          "exclusive": [
-            "extended"
-          ]
+          "exclusive": ["extended"]
         },
         "sort": {
           "name": "sort",
@@ -2015,24 +1944,15 @@
           "type": "boolean",
           "description": "output is csv format [alias: --output=csv]",
           "allowNo": false,
-          "exclusive": [
-            "no-truncate"
-          ]
+          "exclusive": ["no-truncate"]
         },
         "output": {
           "name": "output",
           "type": "option",
           "description": "output in a more machine friendly format",
           "multiple": false,
-          "options": [
-            "csv",
-            "json",
-            "yaml"
-          ],
-          "exclusive": [
-            "no-truncate",
-            "csv"
-          ]
+          "options": ["csv", "json", "yaml"],
+          "exclusive": ["no-truncate", "csv"]
         },
         "extended": {
           "name": "extended",
@@ -2040,18 +1960,14 @@
           "char": "x",
           "description": "show extra columns",
           "allowNo": false,
-          "exclusive": [
-            "columns"
-          ]
+          "exclusive": ["columns"]
         },
         "no-header": {
           "name": "no-header",
           "type": "boolean",
           "description": "hide table header from output",
           "allowNo": false,
-          "exclusive": [
-            "csv"
-          ]
+          "exclusive": ["csv"]
         }
       },
       "args": {}
@@ -2064,9 +1980,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku domains:info www.example.com"
-      ],
+      "examples": ["$ heroku domains:info www.example.com"],
       "flags": {
         "help": {
           "name": "help",
@@ -2106,9 +2020,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "heroku domains:remove www.example.com"
-      ],
+      "examples": ["heroku domains:remove www.example.com"],
       "flags": {
         "help": {
           "name": "help",
@@ -2148,9 +2060,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "heroku domains:update www.example.com --cert mycert"
-      ],
+      "examples": ["heroku domains:update www.example.com --cert mycert"],
       "flags": {
         "help": {
           "name": "help",
@@ -2596,12 +2506,8 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "local:start"
-      ],
-      "examples": [
-        "$ heroku local\n$ heroku local web\n$ heroku local web=2\n$ heroku local web=1,worker=2"
-      ],
+      "aliases": ["local:start"],
+      "examples": ["$ heroku local\n$ heroku local web\n$ heroku local web=2\n$ heroku local web=1,worker=2"],
       "flags": {
         "procfile": {
           "name": "procfile",
@@ -2657,9 +2563,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku local:run bin/migrate"
-      ],
+      "examples": ["$ heroku local:run bin/migrate"],
       "flags": {
         "env": {
           "name": "env",
@@ -2717,9 +2621,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:add my-pipeline -a my-app -s production"
-      ],
+      "examples": ["$ heroku pipelines:add my-pipeline -a my-app -s production"],
       "flags": {
         "app": {
           "name": "app",
@@ -2760,9 +2662,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:connect my-pipeline -r githuborg/reponame"
-      ],
+      "examples": ["$ heroku pipelines:connect my-pipeline -r githuborg/reponame"],
       "flags": {
         "repo": {
           "name": "repo",
@@ -2840,9 +2740,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:destroy my-pipeline"
-      ],
+      "examples": ["$ heroku pipelines:destroy my-pipeline"],
       "flags": {},
       "args": {
         "pipeline": {
@@ -2860,9 +2758,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:diff -a my-app-staging"
-      ],
+      "examples": ["$ heroku pipelines:diff -a my-app-staging"],
       "flags": {
         "app": {
           "name": "app",
@@ -2890,9 +2786,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines"
-      ],
+      "examples": ["$ heroku pipelines"],
       "flags": {
         "json": {
           "name": "json",
@@ -2911,9 +2805,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:info my-pipeline"
-      ],
+      "examples": ["$ heroku pipelines:info my-pipeline"],
       "flags": {
         "json": {
           "name": "json",
@@ -2945,9 +2837,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:open my-pipeline"
-      ],
+      "examples": ["$ heroku pipelines:open my-pipeline"],
       "flags": {},
       "args": {
         "pipeline": {
@@ -2965,9 +2855,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:promote -a my-app-staging"
-      ],
+      "examples": ["$ heroku pipelines:promote -a my-app-staging"],
       "flags": {
         "app": {
           "name": "app",
@@ -3002,9 +2890,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:remove -a my-app"
-      ],
+      "examples": ["$ heroku pipelines:remove -a my-app"],
       "flags": {
         "app": {
           "name": "app",
@@ -3032,9 +2918,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:rename my-pipeline new-pipeline-name"
-      ],
+      "examples": ["$ heroku pipelines:rename my-pipeline new-pipeline-name"],
       "flags": {},
       "args": {
         "pipeline": {
@@ -3057,9 +2941,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:setup my-pipeline githuborg/reponame -t my-team"
-      ],
+      "examples": ["$ heroku pipelines:setup my-pipeline githuborg/reponame -t my-team"],
       "flags": {
         "team": {
           "name": "team",
@@ -3133,9 +3015,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku pipelines:update -s staging -a my-app"
-      ],
+      "examples": ["$ heroku pipelines:update -s staging -a my-app"],
       "flags": {
         "app": {
           "name": "app",
@@ -3208,9 +3088,7 @@
           "char": "R",
           "description": "whether to wait for one-off run dynos",
           "allowNo": false,
-          "exclusive": [
-            "type"
-          ]
+          "exclusive": ["type"]
         }
       },
       "args": {}
@@ -3223,9 +3101,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku reviewapps:disable -p my-pipeline -a my-app --no-autodeploy"
-      ],
+      "examples": ["$ heroku reviewapps:disable -p my-pipeline -a my-app --no-autodeploy"],
       "flags": {
         "app": {
           "name": "app",
@@ -3299,9 +3175,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku reviewapps:enable -p my-pipeline -a my-app --autodeploy --autodestroy"
-      ],
+      "examples": ["$ heroku reviewapps:enable -p my-pipeline -a my-app --autodeploy --autodestroy"],
       "flags": {
         "app": {
           "name": "app",
@@ -3354,9 +3228,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku run:detached ls"
-      ],
+      "examples": ["$ heroku run:detached ls"],
       "flags": {
         "app": {
           "name": "app",
@@ -3411,10 +3283,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku run bash",
-        "$ heroku run -s standard-2x -- myscript.sh -a arg1 -s arg2"
-      ],
+      "examples": ["$ heroku run bash", "$ heroku run -s standard-2x -- myscript.sh -a arg1 -s arg2"],
       "flags": {
         "app": {
           "name": "app",
@@ -3489,9 +3358,7 @@
       "pluginType": "core",
       "hidden": true,
       "aliases": [],
-      "examples": [
-        "$ heroku run:inside web.1 bash"
-      ],
+      "examples": ["$ heroku run:inside web.1 bash"],
       "flags": {
         "app": {
           "name": "app",
@@ -3575,9 +3442,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku webhooks:add -i api:dyno -l notify -u https://example.com/hooks"
-      ],
+      "examples": ["$ heroku webhooks:add -i api:dyno -l notify -u https://example.com/hooks"],
       "flags": {
         "app": {
           "name": "app",
@@ -3650,9 +3515,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku webhooks"
-      ],
+      "examples": ["$ heroku webhooks"],
       "flags": {
         "app": {
           "name": "app",
@@ -3687,9 +3550,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku webhooks:info 99999999-9999-9999-9999-999999999999"
-      ],
+      "examples": ["$ heroku webhooks:info 99999999-9999-9999-9999-999999999999"],
       "flags": {
         "app": {
           "name": "app",
@@ -3720,9 +3581,7 @@
           "required": true
         }
       },
-      "example": [
-        "$ heroku webhooks:info 99999999-9999-9999-9999-999999999999"
-      ]
+      "example": ["$ heroku webhooks:info 99999999-9999-9999-9999-999999999999"]
     },
     "webhooks:remove": {
       "id": "webhooks:remove",
@@ -3732,9 +3591,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku webhooks:remove 99999999-9999-9999-9999-999999999999"
-      ],
+      "examples": ["$ heroku webhooks:remove 99999999-9999-9999-9999-999999999999"],
       "flags": {
         "app": {
           "name": "app",
@@ -3916,9 +3773,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "stack"
-      ],
+      "aliases": ["stack"],
       "flags": {
         "app": {
           "name": "app",
@@ -3939,9 +3794,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "stack:set"
-      ],
+      "aliases": ["stack:set"],
       "examples": "$ heroku stack:set heroku-22 -a myapp\nSetting stack to heroku-22... done\nYou will need to redeploy myapp for the change to take effect.\nRun git push heroku main to trigger a new build on myapp.",
       "flags": {
         "app": {
@@ -3975,10 +3828,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "twofactor:disable",
-        "2fa:disable"
-      ],
+      "aliases": ["twofactor:disable", "2fa:disable"],
       "examples": "$ heroku auth:2fa:disable",
       "flags": {},
       "args": {},
@@ -3991,10 +3841,7 @@
       "pluginName": "heroku",
       "pluginAlias": "heroku",
       "pluginType": "core",
-      "aliases": [
-        "2fa",
-        "twofactor"
-      ],
+      "aliases": ["2fa", "twofactor"],
       "flags": {},
       "args": {}
     },
@@ -4026,9 +3873,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:config:get --pipeline=PIPELINE RAILS_ENV\n    test"
-      ],
+      "examples": ["$ heroku ci:config:get --pipeline=PIPELINE RAILS_ENV\n    test"],
       "flags": {
         "help": {
           "name": "help",
@@ -4077,9 +3922,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:config --app murmuring-headland-14719 --json\n"
-      ],
+      "examples": ["$ heroku ci:config --app murmuring-headland-14719 --json\n"],
       "flags": {
         "app": {
           "name": "app",
@@ -4150,9 +3993,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku ci:config:unset RAILS_ENV"
-      ],
+      "examples": ["$ heroku ci:config:unset RAILS_ENV"],
       "flags": {
         "help": {
           "name": "help",
@@ -4269,9 +4110,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku webhooks:deliveries"
-      ],
+      "examples": ["$ heroku webhooks:deliveries"],
       "flags": {
         "app": {
           "name": "app",
@@ -4313,9 +4152,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku webhooks:deliveries:info 99999999-9999-9999-9999-999999999999"
-      ],
+      "examples": ["$ heroku webhooks:deliveries:info 99999999-9999-9999-9999-999999999999"],
       "flags": {
         "app": {
           "name": "app",
@@ -4355,9 +4192,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku webhooks:events"
-      ],
+      "examples": ["$ heroku webhooks:events"],
       "flags": {
         "app": {
           "name": "app",
@@ -4392,9 +4227,7 @@
       "pluginAlias": "heroku",
       "pluginType": "core",
       "aliases": [],
-      "examples": [
-        "$ heroku webhooks:events:info 99999999-9999-9999-9999-999999999999"
-      ],
+      "examples": ["$ heroku webhooks:events:info 99999999-9999-9999-9999-999999999999"],
       "flags": {
         "app": {
           "name": "app",

@@ -5,22 +5,14 @@
     "ecmaVersion": 6,
     "sourceType": "module"
   },
-  "plugins": [
-    "@typescript-eslint"
-  ],
-  "extends": [
-    "eslint-config-salesforce-typescript",
-    "prettier"
-  ],
+  "plugins": ["@typescript-eslint"],
+  "extends": ["eslint-config-salesforce-typescript", "prettier"],
   "rules": {
     "@typescript-eslint/naming-convention": [
       "warn",
       {
         "selector": "import",
-        "format": [
-          "camelCase",
-          "PascalCase"
-        ]
+        "format": ["camelCase", "PascalCase"]
       }
     ],
     "@typescript-eslint/semi": "warn",
@@ -29,9 +21,5 @@
     "no-throw-literal": "warn",
     "semi": "off"
   },
-  "ignorePatterns": [
-    "out",
-    "dist",
-    "**/*.d.ts"
-  ]
+  "ignorePatterns": ["out", "dist", "**/*.d.ts"]
 }
