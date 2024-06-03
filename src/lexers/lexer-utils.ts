@@ -1,27 +1,29 @@
-import sh from "mvdan-sh";
-import * as vscode from "vscode";
+import sh from 'mvdan-sh';
+import * as vscode from 'vscode';
 
 /**
  * Determines if the specified node is a heroku
  * command call expression. This test is true
  * if the node is a sh.CallExpr and contains the
  * "heroku" string literal as the first argument.
- * 
+ *
  * @param node The node to test.
  * @returns boolean
  */
 export function isHerokuCallExpression(node: sh.Node | undefined): node is sh.CallExpr {
-  return !!node
-    && isCallExpr(node)
-    && !!node.Args.length
-    && !!node.Args[0]?.Parts?.length
-    && isLiteral(node.Args[0].Parts[0])
-    && node.Args[0].Parts[0].Value === 'heroku';
+  return (
+    !!node &&
+    isCallExpr(node) &&
+    !!node.Args.length &&
+    !!node.Args[0]?.Parts?.length &&
+    isLiteral(node.Args[0].Parts[0]) &&
+    node.Args[0].Parts[0].Value === 'heroku'
+  );
 }
 
 /**
  * Determines if the specified node is a sh.CallExpr.
- * 
+ *
  * @param node The node to test.
  * @returns boolean
  */
@@ -31,7 +33,7 @@ export function isCallExpr(node: sh.Node): node is sh.CallExpr {
 
 /**
  * Determines if the specified node is a sh.Lit
- * 
+ *
  * @param node The node to test.
  * @returns boolean
  */
@@ -42,7 +44,7 @@ export function isLiteral(node: sh.Node): node is sh.Lit {
 /**
  * Determines if the specified position occurs
  * within the provided sh.Node range boundary.
- * 
+ *
  * @param node The node to test.
  * @param position The target position to determine if it occurs in the specified node.
  * @returns boolean
@@ -52,8 +54,8 @@ export function isInsideRangeBoundary(node: sh.Node | null, position: vscode.Pos
     return false;
   }
 
-  const begin = {line: node.Pos().Line(), character: node.Pos().Col()};
-  const end = {line: node.End().Line(), character: node.End().Col()};
+  const begin = { line: node.Pos().Line(), character: node.Pos().Col() };
+  const end = { line: node.End().Line(), character: node.End().Col() };
   const line = position.line + 1;
   const character = position.character;
 

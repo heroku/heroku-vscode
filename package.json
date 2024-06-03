@@ -2,6 +2,7 @@
   "name": "heroku",
   "displayName": "heroku",
   "description": "Heroku AI VSCode extension",
+  "repository": "https://github.com/heroku/heroku-vscode",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.85.0"
@@ -25,7 +26,8 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "format": "prettier . --write --config ./.prettier.mjs"
   },
   "devDependencies": {
     "@oclif/config": "^1.18.17",
@@ -46,6 +48,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "mvdan-sh": "^0.10.1"
+    "mvdan-sh": "^0.10.1",
+    "tslib": "2.6.2"
   }
 }

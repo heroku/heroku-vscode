@@ -1,17 +1,17 @@
-import * as vscode from "vscode";
+import * as vscode from 'vscode';
 
-import {Hover, Position, ProviderResult, TextDocument} from "vscode";
-import type {Command, Manifest} from "@oclif/config";
-import sh from "mvdan-sh";
-import {ShellScriptLexer} from "../lexers/shell-script-lexer";
-import {isHerokuCallExpression, isInsideRangeBoundary} from "../lexers/lexer-utils";
-import manifest from '../meta/oclif.manifest.json';
+import { Hover, Position, ProviderResult, TextDocument } from 'vscode';
+import type { Command, Manifest } from '@oclif/config';
+import sh from 'mvdan-sh';
+import { ShellScriptLexer } from '../lexers/shell-script-lexer.js';
+import { isHerokuCallExpression, isInsideRangeBoundary } from '../lexers/lexer-utils.js';
+import * as manifest from '../meta/oclif.manifest.json';
 
 /**
  * The ManifestMeta interface describes the
  * oclif manifest properties with the added
- * 'description' field and is used to satisfy 
- * strong typing for the json used for 
+ * 'description' field and is used to satisfy
+ * strong typing for the json used for
  * hover data.
  */
 interface ManifestMeta extends Manifest {
@@ -22,11 +22,11 @@ interface ManifestMeta extends Manifest {
 }
 
 type CorrectedCommand = Command & {
-  args: Record<string, Command.Arg>
+  args: Record<string, Command.Arg>;
 };
 
 /**
- * The ShellScriptHoverProvider is responisble for 
+ * The ShellScriptHoverProvider is responsible for
  * building the markdown to be displayed by
  * VSCode when a targeted node is hovered.
  */
@@ -54,10 +54,10 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
     commandName: string,
     description: string | undefined,
     flags: Record<string, Command.Flag>,
-    examples: string[] | undefined,
+    examples: string[] | undefined
   ): string {
     const [herokuStr, , optionsStr, examplesStr] = parts;
-    let output = `## ${herokuStr} ${commandName}\n${description}\n` ?? "";
+    let output = `## ${herokuStr} ${commandName}\n${description}\n` ?? '';
 
     // Build out each line of the Options section
     const flagKeys: Array<keyof typeof flags> = Object.keys(flags).filter((key) => !flags[key].hidden);
@@ -66,15 +66,15 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
 
       // format is:
       // -char, --name=name
-      output += "\n```";
+      output += '\n```';
       for (const flagName of flagKeys) {
-        output += `\n${this.buidlHoverMarkdowFromFlagMeta(flags[flagName]).value}\n`;
+        output += `\n${this.buildHoverMarkdownFromFlagMeta(flags[flagName]).value}\n`;
       }
-      output += "\n```\n";
+      output += '\n```\n';
     }
 
     if (examples?.length) {
-      output += `\n${examplesStr}\n \`\`\`bash \n${examples.join("\n")}\n\`\`\``;
+      output += `\n${examplesStr}\n \`\`\`bash \n${examples.join('\n')}\n\`\`\``;
     }
 
     return output;
@@ -83,7 +83,7 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
   /**
    * Builds the markdown for a command to display on hover.
    *
-   * @param meta The json meta data describing the command details.
+   * @param meta The json metadata describing the command details.
    * @returns vscode.MarkdownString
    */
   private static buildHoverMarkdownFromCommandMeta(meta: Command | undefined | null): vscode.MarkdownString {
@@ -92,7 +92,7 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
     }
     const { description, flags, examples, id } = meta;
     const md = new vscode.MarkdownString(
-      this.commandHoverTag`heroku${id}${description}### Options:\n${flags}### Examples:${examples}`,
+      this.commandHoverTag`heroku${id}${description}### Options:\n${flags}### Examples:${examples}`
     );
     md.supportHtml = true;
     return md;
@@ -105,27 +105,27 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
    * @param asCodeBlock boolean indidating whether this should be formatted as a code block
    * @returns vscode.MarkdownString
    */
-  private static buidlHoverMarkdowFromFlagMeta(
+  private static buildHoverMarkdownFromFlagMeta(
     meta: Command.Flag | undefined | null,
-    asCodeBlock = false,
+    asCodeBlock = false
   ): vscode.MarkdownString {
     if (!meta) {
       return new vscode.MarkdownString();
     }
-    let output = asCodeBlock ? "```\n" : "";
+    let output = asCodeBlock ? '```\n' : '';
     const { description: flagDescription, type, name, char } = meta;
 
     // format is:
     // # <description
     // -<char>, --<name>=the name
-    output += `# ${flagDescription ?? ""}\n`;
+    output += `# ${flagDescription ?? ''}\n`;
     // char is optional but not expected to be falsy
-    let line = char ? `-${char}, ` : "";
+    let line = char ? `-${char}, ` : '';
 
-    line += `--${name}${type === "option" ? `=the-${name}` : ""}`;
+    line += `--${name}${type === 'option' ? `=the-${name}` : ''}`;
     output += `${line}`;
 
-    output += asCodeBlock ? "\n```" : "";
+    output += asCodeBlock ? '\n```' : '';
 
     return new vscode.MarkdownString(output);
   }
@@ -139,15 +139,15 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
    */
   private static buildHoverMarkdowFromArgMeta(
     meta: Command.Arg | undefined | null,
-    asCodeBlock = false,
+    asCodeBlock = false
   ): vscode.MarkdownString {
     if (!meta) {
       return new vscode.MarkdownString();
     }
-    let output = asCodeBlock ? "```\n" : "";
+    let output = asCodeBlock ? '```\n' : '';
     const { name, description } = meta;
-    output += `# ${name}\n${description ?? ""}`;
-    output += asCodeBlock ? "\n```" : "";
+    output += `# ${name}\n${description ?? ''}`;
+    output += asCodeBlock ? '\n```' : '';
     return new vscode.MarkdownString(output);
   }
 
@@ -204,9 +204,9 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
     const commandMeta = ShellScriptHoverProvider.getCommandMetaByCommandNode(command);
     if (commandMeta) {
       const id = targetFlagOrArg.Lit();
-      let flagKey: string = "";
+      let flagKey: string = '';
       // This is either a command argument or a flag value.
-      if (!id.startsWith("-")) {
+      if (!id.startsWith('-')) {
         const idx = flagsOrArgs.indexOf(targetFlagOrArg);
         // back up in the list of flags or args
         // until we find the associated flag or
@@ -214,9 +214,9 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
         let i = idx;
         while (i-- > -1) {
           const maybeFlag = flagsOrArgs[i];
-          const maybeFladId = maybeFlag?.Lit() ?? "";
-          if (maybeFladId.startsWith("-")) {
-            flagKey = maybeFladId.replace(/^[-]+/, "");
+          const maybeFladId = maybeFlag?.Lit() ?? '';
+          if (maybeFladId.startsWith('-')) {
+            flagKey = maybeFladId.replace(/^[-]+/, '');
             break;
           }
         }
@@ -231,14 +231,14 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
           const commandArg = commandArgs[commndArgKey];
           return new vscode.Hover(ShellScriptHoverProvider.buildHoverMarkdowFromArgMeta(commandArg, true));
         }
-      } else if (id.startsWith("-")) {
+      } else if (id.startsWith('-')) {
         // might be in the format --flag=flag-value
-        const [flagId] = id.split("=");
-        flagKey = flagId.replace(/^[-]+/, "");
+        const [flagId] = id.split('=');
+        flagKey = flagId.replace(/^[-]+/, '');
       }
       const { flags: flagsMeta } = commandMeta;
       const targetFlag = flagsMeta[flagKey];
-      return new vscode.Hover(ShellScriptHoverProvider.buidlHoverMarkdowFromFlagMeta(targetFlag, true));
+      return new vscode.Hover(ShellScriptHoverProvider.buildHoverMarkdownFromFlagMeta(targetFlag, true));
     }
 
     return null;
