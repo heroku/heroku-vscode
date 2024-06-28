@@ -16,6 +16,11 @@
       }
     ],
     "@typescript-eslint/semi": "warn",
+    "class-methods-use-this": [true,
+      {
+        "exceptMethods": ["run"]
+      }
+    ],
     "curly": "warn",
     "eqeqeq": "warn",
     "no-throw-literal": "warn",

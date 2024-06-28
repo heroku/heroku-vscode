@@ -11,10 +11,42 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:shellscript"
+    "onStartupFinished",
+    "onLanguage:shellscript",
+    "onAuthenticationRequest:<Heroku>"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsWelcome": [
+      {
+        "view": "heroku:auth:login",
+        "contents": "%heroku:auth:login:contents%"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "heroku",
+          "title": "%view.heroku.name%",
+          "icon": "/resources/heroku.svg"
+        }
+      ]
+    },
+    "views": {
+      "heroku": [
+        {
+          "id": "heroku:auth:login",
+          "name": "Heroku",
+          "when": "!heroku.authenticated"
+        },
+        {
+          "type": "webview",
+          "id": "herokuai:geoff",
+          "name": "Geoff",
+          "when": "heroku.authenticated"
+        }
+      ]
+    },
     "capabilities": {
       "hoverProvider": true
     }
@@ -37,6 +69,7 @@
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/l10n-dev": "0.0.x",
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.8",
     "eslint": "^8.56.0",
@@ -45,9 +78,13 @@
     "husky": "^8.0.0",
     "lint-staged": "^15.2.0",
     "prettier": "3.2.4",
-    "typescript": "^5.3.3"
+    "typescript": "5.x"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.36",
+    "@vscode/l10n": "0.0.x",
+    "@vscode/webview-ui-toolkit": "^1.4.0",
+    "marked": "^13.0.1",
     "mvdan-sh": "^0.10.1",
     "tslib": "2.6.2"
   }

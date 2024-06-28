@@ -1,20 +1,19 @@
 import vscode from 'vscode';
 import { DocumentSelector } from 'vscode';
-import pjson from '../package.json';
 
-import { ShellScriptHoverProvider } from './providers/shell-script-hover-provider.js';
-Reflect.defineProperty(pjson.contributes, 'commands', {
-  value: [
-    {
-      title: 'Heroku:command',
-      command: 'heroku:command'
-    }
-  ]
-});
+import { ShellScriptHoverProvider } from './providers/shell-script-hover-provider';
+import { AuthenticationProvider } from './providers/authentication-provider';
+import { WebviewProvider } from './providers/webview-provider';
+
+export * from './commands/auth/welcome-view-sign-in';
 
 export function activate(context: vscode.ExtensionContext): void {
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
-  context.subscriptions.push(vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()));
+  context.subscriptions.push(
+    vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
+    vscode.authentication.registerAuthenticationProvider('heroku:auth:login', 'Heroku', new AuthenticationProvider(context)),
+    vscode.window.registerWebviewViewProvider("herokuai:geoff", new WebviewProvider(context))
+  );
 }
 
 export function deactivate(): void {}
