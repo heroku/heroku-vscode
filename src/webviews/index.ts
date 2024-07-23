@@ -1,16 +1,15 @@
-import { geoffStyles, codeIcons } from "./styles.js";
 import { provideVSCodeDesignSystem, vsCodeTextField, vsCodeButton } from "@vscode/webview-ui-toolkit";
 import { marked } from 'marked';
+import { geoffStyles, codeIcons } from "./styles.js";
 
 provideVSCodeDesignSystem().register(vsCodeTextField(), vsCodeButton());
 const vscode = acquireVsCodeApi();
 class Geoff extends HTMLElement {
-  #messageInput;
-  #sendMessageButton;
-  #chatMessagesElement;
-  #formElement;
+  #messageInput: HTMLInputElement;
+  #sendMessageButton: HTMLButtonElement;
+  #chatMessagesElement: HTMLUListElement;
 
-  constructor() {
+  public constructor() {
     super();
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [geoffStyles, codeIcons];
@@ -24,27 +23,24 @@ class Geoff extends HTMLElement {
       </form>
     `;
 
-    this.onSendMessageSubmit = this.onSendMessageSubmit.bind(this);
+    this.#messageInput = shadow.querySelector('vscode-text-field') as HTMLInputElement;
+    this.#sendMessageButton = shadow.querySelector('vscode-button') as HTMLButtonElement;
+    this.#chatMessagesElement = shadow.querySelector('#chat > ul') as HTMLUListElement;
   }
 
-  connectedCallback() {
-    this.#messageInput = this.shadowRoot.querySelector('vscode-text-field');
-    this.#sendMessageButton = this.shadowRoot.querySelector('vscode-button');
-    this.#chatMessagesElement = this.shadowRoot.querySelector('#chat > ul');
-    this.#formElement = this.shadowRoot.querySelector('form');
+  public connectedCallback(): void {
+    this.#sendMessageButton?.addEventListener('click', this.onSendMessageSubmit);
 
-    this.#sendMessageButton.addEventListener('click', this.onSendMessageSubmit);
-
-
-    window.addEventListener('message', event => {
+    window.addEventListener('message', (event: MessageEvent<{message:{content: string}}>) => {
       const htmlLiElement = document.createElement('li');
       htmlLiElement.classList.add('assistant');
-      htmlLiElement.innerHTML = marked.parse(event.data.message.content);
-      this.#chatMessagesElement.appendChild(htmlLiElement);
+      htmlLiElement.innerHTML = marked.parse(event.data.message.content, {async: false}) as string;
+      this.#chatMessagesElement?.appendChild(htmlLiElement);
     });
   }
 
-  async onSendMessageSubmit(event) {
+  private onSendMessageSubmit = (event: SubmitEvent | MouseEvent): void => {
+    event.preventDefault();
     const {value} = this.#messageInput;
     if (value) {
       vscode.postMessage(value);
@@ -55,7 +51,6 @@ class Geoff extends HTMLElement {
       this.#chatMessagesElement.appendChild(htmlLiElement);
       this.#messageInput.value = '';
     }
-  }
-
+  };
 }
 customElements.define('heroku-geoff', Geoff);

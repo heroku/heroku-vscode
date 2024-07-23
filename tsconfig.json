@@ -1,16 +1,15 @@
 {
   "compilerOptions": {
-    "module": "NodeNext",
-    "target": "es2022",
-    "outDir": "out",
     "lib": ["ESNext"],
-    "sourceMap": true,
-    "rootDir": "src",
     "strict": true,
     "noImplicitReturns": true,
     "noUnusedParameters": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true,
     "importHelpers": true,
+    "sourceMap": true,
+    "inlineSourceMap": false,
+    "inlineSources": true,
+    "removeComments": false,
+    "noImplicitAny": false
   }
 }

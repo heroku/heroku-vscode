@@ -57,4 +57,4 @@ export const initCodeIcons = async (uri) => {
     const stylesText = await result.text();
     codeIcons.replaceSync(stylesText);
   }
-}
+};

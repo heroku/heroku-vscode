@@ -1,0 +1,17 @@
+{
+  "imports": {
+    "typescript": "node_modules/typescript/lib/typescript.js",
+    "tslib": "node_modules/tslib/tslib.es6.mjs",
+    "@microsoft/fast-element": "node_modules/@microsoft/fast-element/dist/esm/index.js",
+    "@microsoft/fast-web-utilities": "node_modules/@microsoft/fast-web-utilities/dist/index.js",
+    "exenv-es6": "node_modules/exenv-es6/dist/index.js",
+    "@microsoft/fast-foundation": "node_modules/@microsoft/fast-foundation/dist/esm/index.js",
+    "tabbable": "node_modules/tabbable/dist/index.esm.js",
+    "@vscode/webview-ui-toolkit": "node_modules/@vscode/webview-ui-toolkit/dist/index.js",
+    "@microsoft/fast-react-wrapper": "node_modules/@microsoft/fast-react-wrapper/dist/esm/index.js",
+    "marked": "node_modules/marked/lib/marked.esm.js",
+    "buffer": "node_modules/buffer/index.js",
+    "base64-js": "node_modules/base64-js/index.js",
+    "ieee754": "node_modules/ieee754/index.js"
+  }
+}

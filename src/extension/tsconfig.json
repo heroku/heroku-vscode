@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "es2022",
+    "outDir": "../../out/extension",
+  },
+  "exclude": [
+    "src/**/*.spec.ts"
+  ]
+}

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { HerokuCommand } from '../heroku-command';
 import { herokuCommand } from '../../meta/command';
 
-@herokuCommand
+@herokuCommand()
 export class WatchNetrc extends HerokuCommand<AsyncIterable<FileChangeInfo<string>>> {
   public static COMMAND_ID = 'heroku:watchnetrc' as const;
 
