@@ -1,0 +1,49 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "extends": [
+    "eslint-config-salesforce-typescript",
+    "prettier"
+  ],
+  "rules": {
+    "@typescript-eslint/naming-convention": [
+      "warn",
+      {
+        "selector": "import",
+        "format": [
+          "camelCase",
+          "PascalCase"
+        ]
+      }
+    ],
+    "@typescript-eslint/semi": "warn",
+    "@typescript-eslint/return-await": "error",
+    "no-await-in-loop": "off",
+    "no-return-await": "off",
+    "class-methods-use-this": [
+      "warn",
+      {
+        "exceptMethods": [
+          "run"
+        ]
+      }
+    ],
+    "curly": "warn",
+    "eqeqeq": "warn",
+    "no-throw-literal": "warn",
+    "semi": "off"
+  },
+  "ignorePatterns": [
+    "out",
+    "dist",
+    "**/*.spec.ts",
+    "**/*.d.ts"
+  ]
+}

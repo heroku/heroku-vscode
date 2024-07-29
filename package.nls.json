@@ -1,0 +1,9 @@
+{
+  "heroku:auth:login:contents": {
+    "message": "Sign in to your Heroku account\n[Sign in](command:heroku:welcome:signin)"
+  },
+
+  "view.heroku.name": {
+    "message": "Heroku"
+  }
+}

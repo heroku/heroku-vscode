@@ -14,12 +14,12 @@ import * as manifest from '../meta/oclif.manifest.json';
  * strong typing for the json used for
  * hover data.
  */
-interface ManifestMeta extends Manifest {
+type ManifestMeta = {
   description: string;
   commands: {
     [id: string]: CorrectedCommand;
   };
-}
+} & Manifest;
 
 type CorrectedCommand = Command & {
   args: Record<string, Command.Arg>;
@@ -157,9 +157,9 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
    * @param commandNode The sh.Word node representing the command to retrieve the metata for.
    * @returns Command or null if none found.
    */
-  private static getCommandMetaByCommandNode(commandNode: sh.Word | null | undefined): CorrectedCommand | null {
+  private static getCommandMetaByCommandNode(commandNode?: sh.Word | undefined | null): CorrectedCommand | null {
     const { commands } = manifest as unknown as ManifestMeta;
-    const commandName = commandNode ? commandNode.Lit() : null;
+    const commandName = commandNode?.Lit();
     return commandName ? commands[commandName] : null;
   }
 

@@ -1,0 +1,34 @@
+name: Node CI Suite
+
+on:
+  push
+
+jobs:
+  test:
+
+    runs-on: ${{ matrix.os }}
+    name: Node Tests
+
+    strategy:
+      matrix:
+        node-version: [ 22.x ]
+        os: [ sfdc-hk-ubuntu-22.04-arm-xlarge ]
+
+    steps:
+      - name: Set up Xorg Server
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xorg xserver-xorg
+
+      - name: Start Xvfb
+        run: |
+          Xvfb :99 -ac &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm test

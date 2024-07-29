@@ -1,7 +1,7 @@
 {
   "name": "heroku",
   "displayName": "heroku",
-  "description": "Heroku AI VSCode extension",
+  "description": "Heroku VSCode extension",
   "repository": "https://github.com/heroku/heroku-vscode",
   "version": "0.0.1",
   "engines": {
@@ -11,20 +11,55 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:shellscript"
+    "onStartupFinished",
+    "onLanguage:shellscript",
+    "onAuthenticationRequest:<Heroku>"
   ],
-  "main": "./out/extension.js",
+  "main": "./out/extension/index.js",
   "contributes": {
+    "viewsWelcome": [
+      {
+        "view": "heroku:auth:login",
+        "contents": "%heroku:auth:login:contents%"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "heroku",
+          "title": "%view.heroku.name%",
+          "icon": "/resources/heroku.svg"
+        }
+      ]
+    },
+    "views": {
+      "heroku": [
+        {
+          "id": "heroku:auth:login",
+          "name": "Heroku",
+          "when": "!heroku.authenticated"
+        },
+        {
+          "type": "webview",
+          "id": "herokuai:geoff",
+          "name": "Geoff",
+          "when": "heroku.authenticated"
+        }
+      ]
+    },
     "capabilities": {
       "hoverProvider": true
     }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "compile": "tsc -p ./src/extension/tsconfig.json & tsc -p ./src/webviews/tsconfig.json",
+    "compile:tests": "tsc -p ./src/extension/tsconfig.spec.json",
+    "watch:extension": "node scripts/import-map-builder.mjs && tsc -watch -p ./src/extension/tsconfig.json",
+    "watch:webviews": "tsc -watch -p ./src/webviews/tsconfig.json",
+    "watch": "npm run watch:extension & npm run watch:webviews",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "lint": "cd src/extension && eslint ./ --ext ts",
     "test": "vscode-test",
     "prepare": "husky install",
     "format": "prettier . --write --config ./.prettier.mjs"
@@ -34,21 +69,32 @@
     "@types/mocha": "^10.0.6",
     "@types/mvdan-sh": "^0.10.9",
     "@types/node": "18.x",
+    "@types/sinon": "^17.0.3",
     "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
-    "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.3.8",
+    "@types/vscode-webview": "1.57.5",
+    "@typescript-eslint/eslint-plugin": "7.17.0",
+    "@typescript-eslint/parser": "7.17.0",
+    "@vscode/l10n-dev": "0.0.x",
+    "@vscode/test-cli": "0.0.10",
+    "@vscode/test-electron": "2.4.1",
     "eslint": "^8.56.0",
-    "eslint-config-salesforce-typescript": "3.2.3",
+    "eslint-config-salesforce-typescript": "3.3.1",
     "git-format-staged": "^3.0.0",
     "husky": "^8.0.0",
     "lint-staged": "^15.2.0",
+    "mocha": "10.7.0",
     "prettier": "3.2.4",
-    "typescript": "^5.3.3"
+    "rewire": "^7.0.0",
+    "sinon": "^18.0.0",
+    "typescript": "5.x"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.36",
+    "@vscode/l10n": "0.0.x",
+    "@vscode/webview-ui-toolkit": "^1.4.0",
+    "marked": "^13.0.1",
     "mvdan-sh": "^0.10.1",
+    "resolve.exports": "^2.0.2",
     "tslib": "2.6.2"
   }
 }

@@ -1,0 +1,105 @@
+import vscode from 'vscode';
+import { GetLLMUrl } from '../commands/config/get-llm-url';
+import importMap from '../importmap.json';
+
+type Reply = {
+  content: string;
+  role: string;
+};
+
+export class WebviewProvider implements vscode.WebviewViewProvider {
+
+  private baseURL: string | undefined;
+  private apiKey: string | undefined;
+  private chatContext: Array<{role: string, content: string}> = [];
+
+  public constructor(private context: vscode.ExtensionContext) {}
+
+  public async resolveWebviewView(webviewView: vscode.WebviewView): Promise<void> {
+    const {webview} = webviewView;
+    const onDiskPath = vscode.Uri.joinPath(this.context.extensionUri, 'out/webviews', 'index.js');
+    const indexPath = webview.asWebviewUri(onDiskPath);
+    const stylesPath = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webviews', 'styles.js'));
+
+    webview.options = { enableScripts: true, localResourceRoots: [
+      vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webviews'),
+      vscode.Uri.joinPath(this.context.extensionUri, 'node_modules')
+    ]};
+
+    const codiconsUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css'));
+    const webViewImportMap = {...importMap, imports: this.convertImportMapPathsToUris(webview, importMap.imports)};
+
+    webview.html = `
+    <html style="height: 100%;" lang="en">
+    <head>
+      <script type="importmap">
+      ${JSON.stringify(webViewImportMap)}
+      </script>
+
+      <script type="module">
+        import {initCodeIcons} from '${stylesPath.toString()}';
+        void initCodeIcons("${codiconsUri.toString()}");
+      </script>
+
+      <script type="module" src="${indexPath.toString()}"></script><title></title>
+    </head>
+      <body style="min-height: 100%; display: flex;">
+        <heroku-geoff>Geoff is not loaded.</heroku-geoff>
+      </body>
+    </html>`;
+
+    const llmInfo = await vscode.commands.executeCommand<{apiKey: string, baseURL: string} | null>(GetLLMUrl.COMMAND_ID, "boiling-eyrie-93427");
+    this.apiKey = llmInfo?.apiKey;
+    this.baseURL = llmInfo?.baseURL;
+    this.watchWebViewForMessages(webviewView.webview);
+  }
+
+  public watchWebViewForMessages(webview: vscode.Webview): void {
+    webview.onDidReceiveMessage(async (message: string) => {
+      const response = await this.postToGeoff(message);
+      const [reply] = response?.choices ?? [];
+      if (reply){
+        this.chatContext.push(reply.message);
+        void webview.postMessage(reply);
+      }
+    });
+  }
+
+  public async postToGeoff(message: string): Promise<{ choices: Array<{ message: Reply }> } | null> {
+    const headers = new Headers();
+    headers.append('Authorization', `Bearer ${this.apiKey}`);
+
+    this.chatContext.push({
+      role: 'user',
+      content: message
+    });
+
+    const response = await fetch(`${this.baseURL}/chat/completions`, {
+      headers,
+      method: 'POST',
+      body: JSON.stringify({
+        model: "mixtral-8x7b",
+        // "max_tokens": 1400,
+        messages: this.chatContext,
+      })
+    });
+
+    if (response.ok) {
+      return await response.json() as { choices: Array<{message: Reply}> };
+    }
+
+    return null;
+  }
+
+  private convertImportMapPathsToUris<T extends object = typeof importMap.imports>(webviewView: vscode.Webview, imports: T): T {
+    const convertedImports = { ...imports };
+    for (const moduleSpecifier in convertedImports) {
+      if (!Reflect.has(convertedImports, moduleSpecifier)) {
+        continue;
+      }
+      const moduleEntryPath = convertedImports[moduleSpecifier as keyof T] as string;
+      Reflect.set(convertedImports, moduleSpecifier, webviewView.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, moduleEntryPath)).toString());
+    }
+    return convertedImports;
+  }
+}
