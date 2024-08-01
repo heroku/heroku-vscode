@@ -30,11 +30,11 @@ suite('The TokenCommand', () => {
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const tokenCommand = commands.find(command => command === TokenCommand.COMMAND_ID);
-    assert.ok(!!tokenCommand, 'The TokenCommand is not registered');
+    const command = commands.find(command => command === TokenCommand.COMMAND_ID);
+    assert.ok(!!command, 'The TokenCommand is not registered');
   });
 
-  test('uccessfully returns the auth token', async () => {
+  test('successfully returns the auth token', async () => {
     const result = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
     assert.equal(result, 'abc-123', `Output was ${result} but expected abc-123`);
   });

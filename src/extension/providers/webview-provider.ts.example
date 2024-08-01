@@ -51,44 +51,6 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
     const llmInfo = await vscode.commands.executeCommand<{apiKey: string, baseURL: string} | null>(GetLLMUrl.COMMAND_ID, "boiling-eyrie-93427");
     this.apiKey = llmInfo?.apiKey;
     this.baseURL = llmInfo?.baseURL;
-    this.watchWebViewForMessages(webviewView.webview);
-  }
-
-  public watchWebViewForMessages(webview: vscode.Webview): void {
-    webview.onDidReceiveMessage(async (message: string) => {
-      const response = await this.postToGeoff(message);
-      const [reply] = response?.choices ?? [];
-      if (reply){
-        this.chatContext.push(reply.message);
-        void webview.postMessage(reply);
-      }
-    });
-  }
-
-  public async postToGeoff(message: string): Promise<{ choices: Array<{ message: Reply }> } | null> {
-    const headers = new Headers();
-    headers.append('Authorization', `Bearer ${this.apiKey}`);
-
-    this.chatContext.push({
-      role: 'user',
-      content: message
-    });
-
-    const response = await fetch(`${this.baseURL}/chat/completions`, {
-      headers,
-      method: 'POST',
-      body: JSON.stringify({
-        model: "mixtral-8x7b",
-        // "max_tokens": 1400,
-        messages: this.chatContext,
-      })
-    });
-
-    if (response.ok) {
-      return await response.json() as { choices: Array<{message: Reply}> };
-    }
-
-    return null;
   }
 
   private convertImportMapPathsToUris<T extends object = typeof importMap.imports>(webviewView: vscode.Webview, imports: T): T {

@@ -9,6 +9,10 @@ import { WatchNetrc } from '../commands/auth/watch-netrc';
 import { HerokuCommandCompletionInfo } from '../commands/heroku-command';
 import { HerokuOutputChannel, getOutputChannel } from '../meta/command';
 
+/**
+ * The AuthenticationProvider is used to manage authentication
+ * for the Heroku Extension.
+ */
 export class AuthenticationProvider
   extends EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
   implements vscode.AuthenticationProvider
@@ -17,11 +21,25 @@ export class AuthenticationProvider
   public onDidChangeSessions = this.event;
   private netRcAbortController: AbortController | undefined;
 
+  /**
+   * Constructs a new AuthenticationProvider
+   *
+   * @param context The ExtensionContext provded by VSCode.
+   */
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();
     void this.watchNetrc();
   }
 
+  /**
+   * Create an AuthenticationSession object with
+   * the specified details.
+   *
+   * @param whoami The identify of the current user
+   * @param accessToken The auth token for the current user.
+   * @param scopes Scopes, if any that are relevant to the session.
+   * @returns AuthenticationSession
+   */
   private static createSessionObject(whoami: string, accessToken: string, scopes: readonly string[]): vscode.AuthenticationSession {
     return {
       account: {
@@ -34,6 +52,9 @@ export class AuthenticationProvider
     };
   }
 
+  /**
+   * @inheritdoc
+   */
   public async getSessions(scopes?: readonly string[] | undefined): Promise<readonly vscode.AuthenticationSession[]> {
     const sessionJson = await this.context.secrets.get(AuthenticationProvider.SESSION_KEY);
     let accessToken: string | undefined;
@@ -66,6 +87,9 @@ export class AuthenticationProvider
     return [session];
   }
 
+  /**
+   * @inheritdoc
+   */
   public async createSession(scopes: readonly string[]): Promise<vscode.AuthenticationSession> {
     this.netRcAbortController?.abort();
     const {errorMessage, exitCode} = await vscode.commands.executeCommand<HerokuCommandCompletionInfo>(LoginCommand.COMMAND_ID);
@@ -90,6 +114,9 @@ export class AuthenticationProvider
     return session;
   }
 
+  /**
+   * @inheritdoc
+   */
   public async removeSession(sessionId: string): Promise<void> {
     this.netRcAbortController?.abort();
     await vscode.commands.executeCommand<string>(LogoutCommand.COMMAND_ID);
@@ -105,12 +132,25 @@ export class AuthenticationProvider
     await vscode.commands.executeCommand('setContext', 'heroku.authenticated', false);
   }
 
+  /**
+   * @inheritdoc
+   */
   public async dispose(): Promise<void> {
     await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
     this.netRcAbortController?.abort();
     super.dispose();
   }
 
+  /**
+   * Watches the .netrc for changes that may
+   * affect the authentication state of the
+   * Heroku Extension. This generally happens
+   * when the user uses a separate terminal to
+   * authenticate or sign out.
+   *
+   * This watcher allows the Extension to maintain
+   * synchronicity with the auth state of the Heroku CLI.
+   */
   private async watchNetrc(): Promise<void> {
     this.netRcAbortController = new AbortController();
     const watcher = await vscode.commands.executeCommand<AsyncIterable<FileChangeInfo<string>>>(WatchNetrc.COMMAND_ID, this.netRcAbortController.signal);

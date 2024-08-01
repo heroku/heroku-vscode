@@ -33,9 +33,11 @@ suite('The LoginCommand', () => {
   })
 
   test('is registered', async () => {
+    const allCommands = (await vscode.commands.getCommands()).filter(cmd => cmd.includes('git'));
+    debugger
     const commands = await vscode.commands.getCommands(true);
-    const login = commands.find(command => command === LoginCommand.COMMAND_ID);
-    assert.ok(!!login, 'The LoginCommand is not registered.');
+    const command = commands.find(command => command === LoginCommand.COMMAND_ID);
+    assert.ok(!!command, 'The LoginCommand is not registered.');
   });
 
   test('authenticates successfully using the happy path', async () => {
