@@ -76,7 +76,7 @@ web_modules/
 .node_repl_history
 
 # Output of 'npm pack'
-*.tgz
+# *.tgz <--- Uncommnt when the heroku SDK is available.
 
 # Yarn Integrity file
 .yarn-integrity

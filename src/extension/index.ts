@@ -3,17 +3,27 @@ import { DocumentSelector } from 'vscode';
 
 import { ShellScriptHoverProvider } from './providers/shell-script-hover-provider';
 import { AuthenticationProvider } from './providers/authentication-provider';
-import { WebviewProvider } from './providers/webview-provider';
+import { HerokuResourceExplorerProvider } from './providers/heroku-resource-explorer-provider';
 
-export * from './commands/auth/welcome-view-sign-in';
+import './commands/auth/welcome-view-sign-in';
+import './commands/dyno/restart-dyno';
+import './commands/dyno/stop-dyno';
 
+/**
+ * Called when the extension is activated by VSCode
+ *
+ * @param context The extension context provided by VSCode
+ */
 export function activate(context: vscode.ExtensionContext): void {
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
   context.subscriptions.push(
     vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
     vscode.authentication.registerAuthenticationProvider('heroku:auth:login', 'Heroku', new AuthenticationProvider(context)),
-    vscode.window.registerWebviewViewProvider("herokuai:geoff", new WebviewProvider(context))
+    vscode.window.registerTreeDataProvider('heroku:resource-explorer:treeview', new HerokuResourceExplorerProvider(context)),
   );
 }
 
+/**
+ * Called when the extension is deactivated.
+ */
 export function deactivate(): void {}

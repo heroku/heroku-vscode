@@ -6,10 +6,12 @@
     "sourceType": "module"
   },
   "plugins": [
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "eslint-plugin-jsdoc"
   ],
   "extends": [
     "eslint-config-salesforce-typescript",
+    "plugin:jsdoc/recommended-typescript-error",
     "prettier"
   ],
   "rules": {
@@ -23,18 +25,20 @@
         ]
       }
     ],
+    "require-jsdoc": ["error", {
+      "require": {
+        "FunctionDeclaration": true,
+        "MethodDefinition": true,
+        "ClassDeclaration": true,
+        "ArrowFunctionExpression": false,
+        "FunctionExpression": false
+      }
+    }],
     "@typescript-eslint/semi": "warn",
     "@typescript-eslint/return-await": "error",
     "no-await-in-loop": "off",
     "no-return-await": "off",
-    "class-methods-use-this": [
-      "warn",
-      {
-        "exceptMethods": [
-          "run"
-        ]
-      }
-    ],
+    "class-methods-use-this": "off",
     "curly": "warn",
     "eqeqeq": "warn",
     "no-throw-literal": "warn",

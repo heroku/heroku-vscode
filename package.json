@@ -15,6 +15,9 @@
     "onLanguage:shellscript",
     "onAuthenticationRequest:<Heroku>"
   ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "main": "./out/extension/index.js",
   "contributes": {
     "viewsWelcome": [
@@ -28,7 +31,7 @@
         {
           "id": "heroku",
           "title": "%view.heroku.name%",
-          "icon": "/resources/heroku.svg"
+          "icon": "/resources/heroku.png"
         }
       ]
     },
@@ -40,13 +43,38 @@
           "when": "!heroku.authenticated"
         },
         {
-          "type": "webview",
-          "id": "herokuai:geoff",
-          "name": "Geoff",
+          "id": "heroku:resource-explorer:treeview",
+          "name": "Heroku Resource Explorer",
           "when": "heroku.authenticated"
         }
       ]
     },
+    "menus": {
+      "view/item/context": [
+        {
+          "when": "viewItem === dyno:up",
+          "command": "heroku:dyno:stop",
+          "group": "inline"
+        },
+        {
+          "when": "viewItem === dyno:up || viewItem === dyno:down || viewItem === dyno:crashed",
+          "command": "heroku:dyno:restart",
+          "group": "inline"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "heroku:dyno:restart",
+        "title": "Restart",
+        "icon": "$(timeline-refresh)"
+      },
+      {
+        "command": "heroku:dyno:stop",
+        "title": "Stop",
+        "icon": "$(debug-stop)"
+      }
+    ],
     "capabilities": {
       "hoverProvider": true
     }
@@ -66,11 +94,11 @@
   },
   "devDependencies": {
     "@oclif/config": "^1.18.17",
-    "@types/mocha": "^10.0.6",
+    "@types/mocha": "^10.0.7",
     "@types/mvdan-sh": "^0.10.9",
     "@types/node": "18.x",
     "@types/sinon": "^17.0.3",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "1.91.0",
     "@types/vscode-webview": "1.57.5",
     "@typescript-eslint/eslint-plugin": "7.17.0",
     "@typescript-eslint/parser": "7.17.0",
@@ -79,6 +107,7 @@
     "@vscode/test-electron": "2.4.1",
     "eslint": "^8.56.0",
     "eslint-config-salesforce-typescript": "3.3.1",
+    "eslint-plugin-jsdoc": "^48.11.0",
     "git-format-staged": "^3.0.0",
     "husky": "^8.0.0",
     "lint-staged": "^15.2.0",
@@ -86,15 +115,16 @@
     "prettier": "3.2.4",
     "rewire": "^7.0.0",
     "sinon": "^18.0.0",
-    "typescript": "5.x"
+    "typescript": "5.5.4"
   },
   "dependencies": {
+    "@heroku-cli/schema": "file:heroku-cli-schema-1.0.25.tgz",
     "@vscode/codicons": "^0.0.36",
     "@vscode/l10n": "0.0.x",
     "@vscode/webview-ui-toolkit": "^1.4.0",
-    "marked": "^13.0.1",
+    "marked": "^13.0.3",
     "mvdan-sh": "^0.10.1",
     "resolve.exports": "^2.0.2",
-    "tslib": "2.6.2"
+    "tslib": "2.6.3"
   }
 }

@@ -4,17 +4,20 @@ import * as childProcess from 'node:child_process';
 
 import * as vscode from 'vscode';
 import { HerokuCommand } from '../heroku-command';
-import { LogoutCommand } from './logout';
 import { EventEmitter } from 'node:stream';
+import { WhoAmI } from './whoami';
 
-suite('The LogoutCommand', () => {
+suite('The WhoamiCommand', () => {
   let execStub: sinon.SinonStub;
 
   setup(() => {
     execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
       const cp = new class extends EventEmitter {
-        public [Symbol.dispose](){}
+        public stdout = new EventEmitter();
+
+        public [Symbol.dispose]() { }
       }() as childProcess.ChildProcess;
+      setTimeout(() => cp.stdout?.emit('data', 'tester-321@heroku.com'))
       setTimeout(() => cp.emit('exit', 0));
       return cp;
     });
@@ -26,12 +29,12 @@ suite('The LogoutCommand', () => {
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const command = commands.find(command => command === LogoutCommand.COMMAND_ID);
-    assert.ok(command, 'The LogoutCommand is not registered.');
+    const tokenCommand = commands.find(command => command === WhoAmI.COMMAND_ID);
+    assert.ok(!!tokenCommand, 'The WhoamI command is not registered');
   });
 
-  test('logs out successfully using the happy path', async () => {
-    const result = await vscode.commands.executeCommand<{ exitCode: number }>(LogoutCommand.COMMAND_ID);
-    assert.equal(result?.exitCode, 0, 'The LogoutCommand did not complete successfully.');
+  test('successfully returns the user', async () => {
+    const result = await vscode.commands.executeCommand<string>(WhoAmI.COMMAND_ID);
+    assert.equal(result, 'tester-321@heroku.com', `Output was ${result} but expected abc-123`);
   });
 });

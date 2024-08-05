@@ -47,7 +47,7 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
    * @param description The description of the command provided in the second template expression.
    * @param flags An object whose keys are command flag names and value is the Command.Flag object.
    * @param examples An array of strings that represent various command examples.
-   * @returns
+   * @returns string The tagged string
    */
   private static commandHoverTag(
     parts: TemplateStringsArray,
