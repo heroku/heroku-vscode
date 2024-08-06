@@ -18,7 +18,7 @@ export class StopDynoCommand extends AbortController implements RunnableCommand<
    * @returns void
    */
   public async run(dyno: Dyno): Promise<void> {
-    const confirmation = await vscode.window.showWarningMessage(`This action will scae the ${dyno.name} dyno to zero.`, {modal: true}, 'Cancel', 'Stop Dyno');
+    const confirmation = await vscode.window.showWarningMessage(`This action will scale the ${dyno.name} dyno to zero.`, {modal: true}, 'Stop Dyno');
     if (confirmation !== 'Stop Dyno') {
       return;
     }
