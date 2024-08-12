@@ -54,7 +54,7 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
   /**
    * @inheritdoc
    */
-  public getTreeItem(element: T): vscode.TreeItem {
+  public async getTreeItem(element: T): Promise<vscode.TreeItem> {
     switch(this.elementTypeMap.get(element)) {
       case 'AddOn':
         return this.getAddOnTreeItem(element as AddOn);
@@ -88,6 +88,9 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
 
           case 'ADDONS':
             return await this.getAddonsForApp(appIdentifier) as T[];
+
+          case 'SETTINGS':
+            return this.getSettingsCategories(appIdentifier) as T[];
 
           default:
             return [];
@@ -172,7 +175,7 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
   /**
    * Gets the main tree nodes for the resource explorer.
    *
-   * @param appIdentifier The app
+   * @param appIdentifier The app id or name
    * @returns an array of TreeItem
    */
   private getAppCategories(appIdentifier: string): vscode.TreeItem[] {
@@ -192,6 +195,37 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
         label: 'SETTINGS',
         collapsibleState: TreeItemCollapsibleState.Expanded
       }
+    ];
+  }
+
+  /**
+   * Gets the categories for the settings section.
+   *
+   * @param appIdentifier The app id or name
+   * @returns vscode.TreeItem[]
+   */
+  private getSettingsCategories(appIdentifier: string): vscode.TreeItem[] {
+    return [
+      {
+        id: appIdentifier + ':app-info',
+        label: 'App Information',
+      },
+      {
+        id: appIdentifier + ':config-vars',
+        label: 'Config Vars',
+      },
+      {
+        id: appIdentifier + ':buildpacks',
+        label: 'Buildpacks',
+      },
+      {
+        id: appIdentifier + ':ssl-certs',
+        label: 'SSL Certificates',
+      },
+      {
+        id: appIdentifier + ':domains',
+        label: 'Domains',
+      },
     ];
   }
 
@@ -234,12 +268,22 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
    * @param addOn The AddOn to convert to a TreeItem
    * @returns The TreeItem from the specified Dyno
    */
-  private getAddOnTreeItem(addOn: AddOn): vscode.TreeItem {
+  private async getAddOnTreeItem(addOn: AddOn): Promise<vscode.TreeItem> {
+    // Grab the icon from https://addons.heroku.com
+    let iconUrl: string | undefined;
+    try {
+      const addonsApiResponse = await fetch(`https://addons.heroku.com/api/v2/addons/${addOn.addon_service.id}`);
+      const json = await addonsApiResponse.json() as {addon:{icon_url: string}};
+      iconUrl = json.addon.icon_url;
+    } catch {
+      // no-op - don't worry, this won't break things too badly.
+    }
     return {
       id: addOn.id,
-      label: addOn.name,
-      description: addOn.plan.name,
+      label: addOn.addon_service.name,
+      description: `(${addOn.name})`,
       tooltip: `${addOn.app.name} - ${addOn.state}`,
+      iconPath: iconUrl ? vscode.Uri.parse(`https://addons.heroku.com/${iconUrl}`) : undefined
     } as vscode.TreeItem;
   }
 }

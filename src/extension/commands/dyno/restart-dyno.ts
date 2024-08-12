@@ -20,7 +20,7 @@ export class RestartDynoCommand extends AbortController implements RunnableComma
    * @returns void
    */
   public async run(dyno: Dyno): Promise<void> {
-    const confirmation = await vscode.window.showWarningMessage(`This action will restart the ${dyno.name} dyno`, {modal: true, detail:'This action may interupt traffic to your Dyno'}, 'Cancel', 'Restart');
+    const confirmation = await vscode.window.showWarningMessage(`This action will restart the ${dyno.name} dyno`, {modal: true, detail:'This action may interupt traffic to your Dyno'}, 'Restart');
     if (confirmation !== 'Restart') {
       return;
     }
@@ -29,12 +29,28 @@ export class RestartDynoCommand extends AbortController implements RunnableComma
     const requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${accessToken}` } };
 
     try {
-      const { state } = await this.dynoService.info(dyno.app.id as string, dyno.id, requestInit);
+      let state: string;
+      let id: string;
+      ({ state } = await this.dynoService.info(dyno.app.id as string, dyno.id, requestInit));
       if (state !== 'starting') {
+        Reflect.set(dyno, 'state', 'restarting');
+        vscode.window.setStatusBarMessage(`${dyno.name} is restarting...`);
         await this.dynoService.restart(dyno.app.id as string, dyno.id, requestInit);
       }
-      vscode.window.setStatusBarMessage(`${dyno.name} is restarting...`);
-    } catch {
+
+      let retries = 120;
+      while (!this.signal.aborted) {
+        ({ state, id } = await this.dynoService.info(dyno.app.id as string, dyno.name, requestInit));
+        vscode.window.setStatusBarMessage(`${dyno.name} is ${state}`);
+        Reflect.set(dyno, 'state', state);
+        Reflect.set(dyno, 'id', id);
+        retries--;
+        if (!retries || dyno.state === 'up' || dyno.state === 'crashed') {
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    } catch(e) {
       await vscode.window.showErrorMessage(`Could not restart ${dyno.name}.`);
     }
   }

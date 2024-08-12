@@ -70,13 +70,17 @@ suite('The RestartDynoCommand', () => {
   });
 
   test('restarts the dyno', async () => {
-    fetchStub.callsFake(async () => {
-      return new Response('{}');
+    fetchStub.onFirstCall().callsFake(async () => {
+      return new Response(JSON.stringify({id: '1234', state: 'starting'} as Dyno));
+    });
+
+    fetchStub.onSecondCall().callsFake(async () => {
+      return new Response(JSON.stringify({ id: '1234', state: 'up' } as Dyno));
     });
 
     await vscode.commands.executeCommand<string>(RestartDynoCommand.COMMAND_ID, dyno);
     assert.ok(!!getSessionStub.exceptions.length);
-    assert.ok(setStatusBarMessageStub.calledWith(`${dyno.name} is restarting...`));
+    assert.ok(setStatusBarMessageStub.calledWith('tester-dyno is up'));
   });
 
   test('shows appropriate status message when restarting fails', async () => {
