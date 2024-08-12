@@ -6,11 +6,26 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Watch HTML & CSS",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/scripts/css-html-copy-watcher.mjs",
+      "request": "launch",
+      "runtimeVersion": "22",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "node"
+    },
+    {
       "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/out/**/*.js"
+      ],
       "preLaunchTask": "watch"
     }
   ]

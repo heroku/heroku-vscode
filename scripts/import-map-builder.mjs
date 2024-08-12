@@ -2,7 +2,7 @@ import { exec } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as resolve from 'resolve.exports';
-import packageLock from '../package-lock.json' assert {type:'json'}
+import packageLock from '../package-lock.json' with {type:'json'}
 
 /**
  * Finds the ESM entry point for a package based

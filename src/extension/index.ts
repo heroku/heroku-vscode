@@ -7,7 +7,7 @@ import { HerokuResourceExplorerProvider } from './providers/heroku-resource-expl
 
 import './commands/auth/welcome-view-sign-in';
 import './commands/dyno/restart-dyno';
-import './commands/dyno/stop-dyno';
+import './commands/dyno/scale-formation';
 
 /**
  * Called when the extension is activated by VSCode

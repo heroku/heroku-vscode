@@ -71,10 +71,14 @@ suite('The RestartDynoCommand', () => {
 
   test('restarts the dyno', async () => {
     fetchStub.onFirstCall().callsFake(async () => {
-      return new Response(JSON.stringify({id: '1234', state: 'starting'} as Dyno));
+      return new Response(JSON.stringify({id: '1234', state: 'up'} as Dyno));
     });
 
     fetchStub.onSecondCall().callsFake(async () => {
+      return new Response(JSON.stringify({ id: '1234', state: 'restarting' } as Dyno));
+    });
+
+    fetchStub.onThirdCall().callsFake(async () => {
       return new Response(JSON.stringify({ id: '1234', state: 'up' } as Dyno));
     });
 
