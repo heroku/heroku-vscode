@@ -8,7 +8,8 @@ import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { getHerokuAppNames } from '../utils/get-heroku-app-name';
 import { propertyChangeNotifierFactory, Bindable, PropertyChangedEvent } from '../meta/property-change-notfier';
 import { RestartDynoCommand } from '../commands/dyno/restart-dyno';
-import { ShowAddonsViewCommand } from '../commands/show-addons-view';
+import { ShowAddonsViewCommand } from '../commands/add-on/show-addons-view';
+import { PollAddOnState } from '../commands/add-on/poll-state';
 
 const dynoIconsBySize = {
   Free: '/resources/dyno/dynomite-free-16.png',
@@ -25,14 +26,19 @@ const dynoIconsBySize = {
   'Performance-L': '/resources/dyno/dynomite-pl-16.png',
   'Performance-L-RAM': '/resources/dyno/dynomite-pl-16.png',
   'Performance-XL': '/resources/dyno/dynomite-px-pl.png',
-  'Performance-2XL': '/resources/dyno/dynomite-px-pl.png',
+  'Performance-2XL': '/resources/dyno/dynomite-px-pl.png'
 };
 
 /**
  * The HerokuResourceExplorerProvider is the main entity for
  * managing the Heroku Resource Explorer tree view.
  */
-export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bindable<Formation> | Bindable<AddOn | vscode.TreeItem>)> extends vscode.EventEmitter<T> implements vscode.TreeDataProvider<T> {
+export class HerokuResourceExplorerProvider<
+    T extends App | Bindable<Dyno> | Bindable<Formation> | Bindable<AddOn | vscode.TreeItem>
+  >
+  extends vscode.EventEmitter<T>
+  implements vscode.TreeDataProvider<T>
+{
   public onDidChangeTreeData: vscode.Event<T | T[]> = this.event;
 
   protected dynoService = new DynoService(fetch, 'https://api.heroku.com');
@@ -41,9 +47,6 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
   protected formationService = new FormationService(fetch, 'https://api.heroku.com');
 
   protected apps: App[] = [];
-  protected dynos: Array<Bindable<Dyno>> = [];
-  protected addOns: Array<Bindable<AddOn>> = [];
-  protected formations: Array<Bindable<Formation>> = [];
 
   protected requestInit = { headers: {} };
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
@@ -104,13 +107,13 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
 
         switch ((element as vscode.TreeItem).label) {
           case 'FORMATIONS':
-            return await this.getFormationsForApp(appIdentifier, element) as T[];
+            return (await this.getFormationsForApp(appIdentifier, element)) as T[];
 
           case 'DYNOS':
-            return await this.getDynosForApp(appIdentifier, element) as T[];
+            return (await this.getDynosForApp(appIdentifier, element)) as T[];
 
           case 'ADD-ONS':
-            return await this.getAddonsForApp(appIdentifier, element) as T[];
+            return (await this.getAddonsForApp(appIdentifier, element)) as T[];
 
           case 'SETTINGS':
             return this.getSettingsCategories(appIdentifier, element) as T[];
@@ -128,9 +131,12 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
     }
 
     try {
-      const { accessToken } = await vscode.authentication.getSession('heroku:auth:login', []) as AuthenticationSession;
+      const { accessToken } = (await vscode.authentication.getSession(
+        'heroku:auth:login',
+        []
+      )) as AuthenticationSession;
       Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
-      const appNames = getHerokuAppNames();
+      const appNames = await getHerokuAppNames();
 
       for (const appName of appNames) {
         const appInfo = await this.appService.info(appName, this.requestInit);
@@ -165,24 +171,19 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
    * @returns An array of Bindable<Formation>
    */
   private async getFormationsForApp(appIdentifier: string, parent: T): Promise<Formation[]> {
-    if (this.formations.length) {
-      return this.formations;
-    }
-
     const formations = await this.formationService.list(appIdentifier, this.requestInit);
-    this.formations = formations.map(propertyChangeNotifierFactory);
-    this.formations.forEach(formation => {
+    const boundFormations = formations.map(propertyChangeNotifierFactory);
+    boundFormations.forEach((formation) => {
       this.elementTypeMap.set(formation as T, 'Formation');
       this.childParentMap.set(formation as T, parent);
       formation.addListener('propertyChanged', (event: PropertyChangedEvent<Formation>) => {
         if (event.property === 'quantity') {
           this.fire(this.getParent(event.target as unknown as T) as T);
-          this.dynos.length = 0;
         }
         this.fire(formation as T);
       });
     });
-    return this.formations;
+    return boundFormations;
   }
 
   /**
@@ -194,11 +195,7 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
    * @returns An array of Bindable<Dyno>.
    */
   private async getDynosForApp(appIdentifier: string, parent: T): Promise<Array<Bindable<Dyno>>> {
-    if (this.dynos.length) {
-      return this.dynos;
-    }
     const dynos = await this.dynoService.list(appIdentifier, this.requestInit);
-
     if (!dynos.length) {
       const empty = {
         type: 'empty'
@@ -207,8 +204,8 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
       return [empty];
     }
 
-    this.dynos = dynos.map(propertyChangeNotifierFactory);
-    this.dynos.forEach(dyno => {
+    const boundDynos = dynos.map(propertyChangeNotifierFactory);
+    boundDynos.forEach((dyno) => {
       this.elementTypeMap.set(dyno as T, 'Dyno');
       this.childParentMap.set(dyno as T, parent);
       dyno.addListener('propertyChanged', () => this.fire(dyno as T));
@@ -216,7 +213,7 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
         void vscode.commands.executeCommand(RestartDynoCommand.COMMAND_ID, dyno, true);
       }
     });
-    return this.dynos;
+    return boundDynos;
   }
 
   /**
@@ -228,47 +225,49 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
    * @returns an array of Bindable<AddOn>
    */
   private async getAddonsForApp(appIdentifier: string, parent: T): Promise<Array<Bindable<AddOn>>> {
-    if (this.addOns.length) {
-      return this.addOns;
-    }
-    const addOns: AddOn[] = [{
-      id: randomUUID(),
-      app: {
-        id: appIdentifier
-      },
-      name: 'Search Elements Marketplace'
-    } as AddOn];
+    const addOns: AddOn[] = [
+      {
+        id: randomUUID(),
+        app: {
+          id: appIdentifier
+        },
+        name: 'Search Elements Marketplace'
+      } as AddOn
+    ];
     try {
-      addOns.push(...await this.addOnService.listByApp(appIdentifier, this.requestInit));
+      addOns.push(...(await this.addOnService.listByApp(appIdentifier, this.requestInit)));
     } catch {
       // no-op
     }
-    this.addOns = addOns.map(propertyChangeNotifierFactory);
-    this.addOns.forEach(addOn => {
+    const boundAddons = addOns.map(propertyChangeNotifierFactory);
+    boundAddons.forEach((addOn) => {
       this.elementTypeMap.set(addOn as T, 'AddOn');
       this.childParentMap.set(addOn as T, parent);
+      if (addOn.state === 'provisioning') {
+        void vscode.commands.executeCommand(PollAddOnState.COMMAND_ID, addOn);
+      }
       addOn.addListener('propertyChanged', () => this.fire(addOn as T));
     });
-    return this.addOns;
+    return boundAddons;
   }
 
   /**
    * Gets the main tree nodes for the resource explorer.
    *
-   * @param appIdentifier The app id or name
-   * @returns an array of TreeItem
+   * @param appIdentifier The app id or name.
+   * @returns an array of TreeItem.
    */
   private getAppCategories(appIdentifier: string): vscode.TreeItem[] {
-    return [
+    const appCategories = [
       {
         id: appIdentifier + ':formations',
         label: 'FORMATIONS',
-        collapsibleState: TreeItemCollapsibleState.Expanded,
+        collapsibleState: TreeItemCollapsibleState.Expanded
       },
       {
         id: appIdentifier + ':dynos',
         label: 'DYNOS',
-        collapsibleState: TreeItemCollapsibleState.Expanded,
+        collapsibleState: TreeItemCollapsibleState.Expanded
       },
       {
         id: appIdentifier + ':addons',
@@ -280,7 +279,9 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
         label: 'SETTINGS',
         collapsibleState: TreeItemCollapsibleState.Expanded
       }
-    ];
+    ].map((cat) => propertyChangeNotifierFactory(cat));
+    appCategories.forEach((cat) => cat.addListener('propertyChanged', () => this.fire(cat as T)));
+    return appCategories;
   }
 
   /**
@@ -295,26 +296,26 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
     const categories = [
       {
         id: appIdentifier + ':app-info',
-        label: 'App Information',
+        label: 'App Information'
       },
       {
         id: appIdentifier + ':config-vars',
-        label: 'Config Vars',
+        label: 'Config Vars'
       },
       {
         id: appIdentifier + ':buildpacks',
-        label: 'Buildpacks',
+        label: 'Buildpacks'
       },
       {
         id: appIdentifier + ':ssl-certs',
-        label: 'SSL Certificates',
+        label: 'SSL Certificates'
       },
       {
         id: appIdentifier + ':domains',
-        label: 'Domains',
-      },
+        label: 'Domains'
+      }
     ];
-    categories.forEach(cat => this.childParentMap.set(cat as T, parent));
+    categories.forEach((cat) => this.childParentMap.set(cat as T, parent));
     return categories;
   }
 
@@ -349,7 +350,8 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
    * @returns The TreeItem from the specified Formation
    */
   private getFormationTreeItem(formation: Formation): vscode.TreeItem {
-    const canIncreaseDynoCount = (!/(Free|Eco|Hobby|Basic|)/.test(formation.size) && formation.quantity < 100) || !formation.quantity;
+    const canIncreaseDynoCount =
+      (!/(Free|Eco|Hobby|Basic|)/.test(formation.size) && formation.quantity < 100) || !formation.quantity;
     let contextValue = `formation`;
     if (canIncreaseDynoCount) {
       contextValue += ':scale-up';
@@ -392,6 +394,7 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
    */
   private async getAddOnTreeItem(addOn: AddOn): Promise<vscode.TreeItem> {
     if (addOn.name === 'Search Elements Marketplace') {
+      const categoryNode = this.getParent(addOn as T);
       return {
         id: addOn.id,
         label: addOn.name,
@@ -399,7 +402,7 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
         command: {
           command: ShowAddonsViewCommand.COMMAND_ID,
           title: 'Find more add-ons',
-          arguments: [addOn.app.id, this.context.extensionUri]
+          arguments: [addOn.app.id, this.context.extensionUri, categoryNode]
         }
       };
     }
@@ -407,17 +410,19 @@ export class HerokuResourceExplorerProvider<T extends (App | Bindable<Dyno> | Bi
     let iconUrl: string = '';
     try {
       const addonsApiResponse = await fetch(`https://addons.heroku.com/api/v2/addons/${addOn.addon_service.id}`);
-      const json = await addonsApiResponse.json() as { addon: { icon_url: string } };
-      iconUrl = URL.canParse(json.addon.icon_url) ? json.addon.icon_url : `https://addons.heroku.com/${json.addon.icon_url}`;
+      const json = (await addonsApiResponse.json()) as { addon: { icon_url: string } };
+      iconUrl = URL.canParse(json.addon.icon_url)
+        ? json.addon.icon_url
+        : `https://addons.heroku.com/${json.addon.icon_url}`;
     } catch {
       // no-op - don't worry, this won't break things too badly.
     }
     return {
       id: addOn.id,
       label: addOn.addon_service.name,
-      description: `(${addOn.name})`,
-      tooltip: `${addOn.app.name} - ${addOn.state}`,
-      iconPath: vscode.Uri.parse(iconUrl)
+      description: `- ${addOn.state}`,
+      tooltip: `${addOn.name}`,
+      iconPath: addOn.state === 'provisioning' ? new vscode.ThemeIcon('loading~spin') : vscode.Uri.parse(iconUrl)
     } as vscode.TreeItem;
   }
 }

@@ -12,12 +12,12 @@ suite('The WhoamiCommand', () => {
 
   setup(() => {
     execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
-      const cp = new class extends EventEmitter {
+      const cp = new (class extends EventEmitter {
         public stdout = new EventEmitter();
 
-        public [Symbol.dispose]() { }
-      }() as childProcess.ChildProcess;
-      setTimeout(() => cp.stdout?.emit('data', 'tester-321@heroku.com'))
+        public [Symbol.dispose]() {}
+      })() as childProcess.ChildProcess;
+      setTimeout(() => cp.stdout?.emit('data', 'tester-321@heroku.com'));
       setTimeout(() => cp.emit('exit', 0));
       return cp;
     });
@@ -29,7 +29,7 @@ suite('The WhoamiCommand', () => {
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const tokenCommand = commands.find(command => command === WhoAmI.COMMAND_ID);
+    const tokenCommand = commands.find((command) => command === WhoAmI.COMMAND_ID);
     assert.ok(!!tokenCommand, 'The WhoamI command is not registered');
   });
 

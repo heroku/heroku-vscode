@@ -2,7 +2,8 @@ import vscode from 'vscode';
 
 export type RunnableCommand<T, Args extends unknown[] = unknown[]> = {
   run(...args: Args): T | PromiseLike<T>;
-} & AbortController & Disposable;
+} & AbortController &
+  Disposable;
 
 export type RunnableCommandCtor<T = unknown> = {
   COMMAND_ID: string;
@@ -10,12 +11,12 @@ export type RunnableCommandCtor<T = unknown> = {
 };
 
 export type CommandDecoratorConfig = {
-  outputChannelId?: HerokuOutputChannel
+  outputChannelId?: HerokuOutputChannel;
 };
 
 export enum HerokuOutputChannel {
   Authentication = 'Heroku Authentication',
-  CommandOutput = 'Heroku Command Output',
+  CommandOutput = 'Heroku Command Output'
 }
 
 const commandOutputChannels = new Map<string, vscode.OutputChannel>();
@@ -57,13 +58,10 @@ export function herokuCommand<const C extends RunnableCommandCtor>(config?: Comm
         outputChannel = getOutputChannel(config.outputChannelId);
       }
 
-      vscode.commands.registerCommand(
-        target.COMMAND_ID,
-        async (...args: unknown[]): Promise<unknown> => {
-          using runnableCommand = new target(outputChannel);
-          return await (runnableCommand.run(...args) as Promise<unknown>);
-        }
-      );
+      vscode.commands.registerCommand(target.COMMAND_ID, async (...args: unknown[]): Promise<unknown> => {
+        using runnableCommand = new target(outputChannel);
+        return await (runnableCommand.run(...args) as Promise<unknown>);
+      });
       registeredCommands.add(target.COMMAND_ID);
     });
   };

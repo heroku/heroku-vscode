@@ -3,8 +3,8 @@ import path from 'node:path';
 
 const dir = path.resolve('./src/webviews');
 const target = /(html|css)$/;
-const files = await readdir(dir, { recursive: true});
-files.forEach(file => {
+const files = await readdir(dir, { recursive: true });
+files.forEach((file) => {
   if (target.test(file)) {
     void cp(`./src/webviews/${file}`, `./out/webviews/${file}`);
   }

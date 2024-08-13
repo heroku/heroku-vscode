@@ -5,36 +5,29 @@
     "ecmaVersion": 2022,
     "sourceType": "module"
   },
-  "plugins": [
-    "@typescript-eslint",
-    "eslint-plugin-jsdoc"
-  ],
-  "extends": [
-    "eslint-config-salesforce-typescript",
-    "plugin:jsdoc/recommended-typescript-error",
-    "prettier"
-  ],
+  "plugins": ["@typescript-eslint", "eslint-plugin-jsdoc"],
+  "extends": ["eslint-config-salesforce-typescript", "plugin:jsdoc/recommended-typescript-error", "prettier"],
   "rules": {
     "@typescript-eslint/naming-convention": [
       "warn",
       {
         "selector": "import",
-        "format": [
-          "camelCase",
-          "PascalCase"
-        ]
+        "format": ["camelCase", "PascalCase"]
       }
     ],
-    "require-jsdoc": ["error", {
-      "require": {
-        "FunctionDeclaration": true,
-        "MethodDefinition": true,
-        "ClassDeclaration": true,
-        "ArrowFunctionExpression": false,
-        "FunctionExpression": false
+    "require-jsdoc": [
+      "error",
+      {
+        "require": {
+          "FunctionDeclaration": true,
+          "MethodDefinition": true,
+          "ClassDeclaration": true,
+          "ArrowFunctionExpression": false,
+          "FunctionExpression": false
+        }
       }
-    }],
-    "@typescript-eslint/semi": "warn",
+    ],
+    "@typescript-eslint/semi": "error",
     "@typescript-eslint/return-await": "error",
     "no-await-in-loop": "off",
     "no-return-await": "off",
@@ -44,10 +37,5 @@
     "no-throw-literal": "warn",
     "semi": "off"
   },
-  "ignorePatterns": [
-    "out",
-    "dist",
-    "**/*.spec.ts",
-    "**/*.d.ts"
-  ]
+  "ignorePatterns": ["out", "dist", "**/*.spec.ts", "**/*.d.ts"]
 }

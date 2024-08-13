@@ -12,9 +12,9 @@ suite('The LogoutCommand', () => {
 
   setup(() => {
     execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
-      const cp = new class extends EventEmitter {
-        public [Symbol.dispose](){}
-      }() as childProcess.ChildProcess;
+      const cp = new (class extends EventEmitter {
+        public [Symbol.dispose]() {}
+      })() as childProcess.ChildProcess;
       setTimeout(() => cp.emit('exit', 0));
       return cp;
     });
@@ -26,7 +26,7 @@ suite('The LogoutCommand', () => {
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const command = commands.find(command => command === LogoutCommand.COMMAND_ID);
+    const command = commands.find((command) => command === LogoutCommand.COMMAND_ID);
     assert.ok(command, 'The LogoutCommand is not registered.');
   });
 

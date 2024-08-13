@@ -29,7 +29,6 @@ export type PropertyChangedEventMap<T> = {
  * ```
  */
 export class PropertyChangeNotifier<T extends object> extends EventEmitter implements ProxyHandler<T> {
-
   /**
    * Constructs a new PropertyChangeNotifier
    *
@@ -45,21 +44,30 @@ export class PropertyChangeNotifier<T extends object> extends EventEmitter imple
   /**
    * @inheritdoc
    */
-  public addListener<K extends keyof PropertyChangedEventMap<T>>(eventName: K, listener: (event: PropertyChangedEventMap<T>[K]) => void): this {
+  public addListener<K extends keyof PropertyChangedEventMap<T>>(
+    eventName: K,
+    listener: (event: PropertyChangedEventMap<T>[K]) => void
+  ): this {
     return super.addListener(eventName, listener);
   }
 
   /**
    * @inheritdoc
    */
-  public on<K extends keyof PropertyChangedEventMap<T>>(eventName: K, listener: (event: PropertyChangedEventMap<T>[K]) => void): this {
+  public on<K extends keyof PropertyChangedEventMap<T>>(
+    eventName: K,
+    listener: (event: PropertyChangedEventMap<T>[K]) => void
+  ): this {
     return super.on(eventName, listener);
   }
 
   /**
    * @inheritdoc
    */
-  public once<K extends keyof PropertyChangedEventMap<T>>(eventName: K, listener: (event: PropertyChangedEventMap<T>[K]) => void): this {
+  public once<K extends keyof PropertyChangedEventMap<T>>(
+    eventName: K,
+    listener: (event: PropertyChangedEventMap<T>[K]) => void
+  ): this {
     return super.once(eventName, listener);
   }
 
@@ -85,7 +93,10 @@ export class PropertyChangeNotifier<T extends object> extends EventEmitter imple
       return true;
     }
     Reflect.set(target, prop, newValue);
-    this.emit(PropertyChangedEvent.PROPERTY_CHANGED, new PropertyChangedEvent<T>(prop as keyof T, newValue, oldValue, target));
+    this.emit(
+      PropertyChangedEvent.PROPERTY_CHANGED,
+      new PropertyChangedEvent<T>(prop as keyof T, newValue, oldValue, target)
+    );
     return true;
   }
 
@@ -95,7 +106,12 @@ export class PropertyChangeNotifier<T extends object> extends EventEmitter imple
   public deleteProperty(target: T, prop: string | symbol): boolean {
     const oldValue = target[prop as keyof T];
     const deleted = Reflect.deleteProperty(target, prop);
-    return deleted ? this.emit(PropertyChangedEvent.PROPERTY_CHANGED, new PropertyChangedEvent<T>(prop as keyof T, undefined, oldValue, target)) : deleted;
+    return deleted
+      ? this.emit(
+          PropertyChangedEvent.PROPERTY_CHANGED,
+          new PropertyChangedEvent<T>(prop as keyof T, undefined, oldValue, target)
+        )
+      : deleted;
   }
 }
 
@@ -114,7 +130,12 @@ export class PropertyChangedEvent<T> extends Event {
    * @param oldValue The old value prior to the change.
    * @param source The source object. This is the unproxied source object.
    */
-  public constructor(public property: keyof T, public newValue: unknown, public oldValue: unknown, public source: T) {
+  public constructor(
+    public property: keyof T,
+    public newValue: unknown,
+    public oldValue: unknown,
+    public source: T
+  ) {
     super(PropertyChangedEvent.PROPERTY_CHANGED, { cancelable: false });
   }
 }

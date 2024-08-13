@@ -35,16 +35,14 @@ suite('The ScaleFormationCommand', () => {
   };
 
   setup(() => {
-    showInputBoxStub = sinon.stub(vscode.window, 'showInputBox')
-    .callsFake(async () => '5');
+    showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').callsFake(async () => '5');
 
-    getSessionStub = sinon.stub(vscode.authentication, 'getSession')
-      .callsFake(async (providerId: string) => {
-        if (providerId === 'heroku:auth:login') {
-          return sessionObject;
-        }
-        return undefined;
-      });
+    getSessionStub = sinon.stub(vscode.authentication, 'getSession').callsFake(async (providerId: string) => {
+      if (providerId === 'heroku:auth:login') {
+        return sessionObject;
+      }
+      return undefined;
+    });
 
     showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
 
@@ -62,7 +60,7 @@ suite('The ScaleFormationCommand', () => {
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const command = commands.find(command => command === ScaleFormationCommand.COMMAND_ID);
+    const command = commands.find((command) => command === ScaleFormationCommand.COMMAND_ID);
     assert.ok(!!command, 'The ScaleFormationCommand command is not registered');
   });
 

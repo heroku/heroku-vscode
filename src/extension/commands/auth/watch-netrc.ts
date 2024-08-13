@@ -24,7 +24,10 @@ export class WatchNetrc extends HerokuCommand<AsyncIterable<FileChangeInfo<strin
   protected static async getNetrcFileLocation(): Promise<string> {
     let home: string | undefined = '';
     if (os.platform() === 'win32') {
-      home = process.env.HOME ?? (process.env.HOMEDRIVE && process.env.HOMEPATH && path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)) ?? process.env.USERPROFILE;
+      home =
+        process.env.HOME ??
+        (process.env.HOMEDRIVE && process.env.HOMEPATH && path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)) ??
+        process.env.USERPROFILE;
     }
     if (!home) {
       home = os.homedir() ?? os.tmpdir();
@@ -33,7 +36,7 @@ export class WatchNetrc extends HerokuCommand<AsyncIterable<FileChangeInfo<strin
 
     try {
       await stat(file + '.gpg');
-      return file += '.gpg';
+      return (file += '.gpg');
     } catch {
       return file;
     }
@@ -51,6 +54,6 @@ export class WatchNetrc extends HerokuCommand<AsyncIterable<FileChangeInfo<strin
    */
   public async run(signal: AbortSignal): Promise<AsyncIterable<FileChangeInfo<string>>> {
     const file = await WatchNetrc.getNetrcFileLocation();
-    return watch(file, {signal});
+    return watch(file, { signal });
   }
 }

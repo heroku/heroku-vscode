@@ -33,9 +33,7 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
    * @param childProcess The child process to wait on.
    * @returns HerokuCommandCompletionInfo
    */
-  protected static async waitForCompletion(
-    childProcess: ChildProcess
-  ): Promise<HerokuCommandCompletionInfo> {
+  protected static async waitForCompletion(childProcess: ChildProcess): Promise<HerokuCommandCompletionInfo> {
     let output = '';
     let errorMessage = '';
     childProcess.stdout?.addListener('data', (data) => (output += data));
@@ -46,13 +44,11 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
         childProcess.once('exit', (code: number, signal: string) => {
           resolve(code ?? signal);
         });
-
       }),
       new Promise<number>((resolve) => {
         childProcess.once('close', (code: number, signal: string) => {
           resolve(code ?? signal);
         });
-
       }),
       new Promise<string>((resolve) => {
         childProcess.once('error', (error: Error) => {

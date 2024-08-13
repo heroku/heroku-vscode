@@ -1,8 +1,8 @@
-import { exec } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { exec } from 'node:child_process';
+import { readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import * as resolve from 'resolve.exports';
-import packageLock from '../package-lock.json' with {type:'json'}
+import packageLock from '../package-lock.json' with { type: 'json' };
 
 /**
  * Finds the ESM entry point for a package based
@@ -24,7 +24,7 @@ async function findEsmEntry(pjsonRootPath) {
       return path.join(pjsonRootPath, result[0]);
     }
   }
-  return pjson.module ?? pjson.main ? path.join(pjsonRootPath, pjson.module ?? pjson.main) : null;
+  return (pjson.module ?? pjson.main) ? path.join(pjsonRootPath, pjson.module ?? pjson.main) : null;
 }
 
 /**
@@ -82,7 +82,7 @@ async function addImportMapEntry(resolvedFilePath) {
   importMap.set(moduleSpecifier, packageInfo);
   if (dependencies) {
     for (const dependency in dependencies) {
-      await addImportMapEntry(`node_modules/${dependency}`)
+      await addImportMapEntry(`node_modules/${dependency}`);
     }
   }
 }
@@ -93,7 +93,7 @@ async function addImportMapEntry(resolvedFilePath) {
  *
  * @see https://www.typescriptlang.org/tsconfig/#listFiles
  */
-const tscOutput = await new Promise(resolve => {
+const tscOutput = await new Promise((resolve) => {
   let buffer = '';
   const tscProcess = exec('tsc --listFiles -p src/webviews/tsconfig.json');
   tscProcess.stdout.addListener('data', (data) => {
@@ -101,14 +101,15 @@ const tscOutput = await new Promise(resolve => {
   });
 
   tscProcess.addListener('exit', () => {
-    resolve(buffer)
+    resolve(buffer);
   });
 });
 
 const importMap = new Map();
-const files = tscOutput.split('\n')
-  .filter(fileName => fileName.startsWith(process.cwd()))
-  .map(fileName => fileName.substring(process.cwd().length + 1));
+const files = tscOutput
+  .split('\n')
+  .filter((fileName) => fileName.startsWith(process.cwd()))
+  .map((fileName) => fileName.substring(process.cwd().length + 1));
 
 for (const fileName of files) {
   if (fileName.includes('@types')) {
@@ -116,9 +117,9 @@ for (const fileName of files) {
   }
   await addImportMapEntry(fileName);
 }
-const importMapJson = {imports: {}}
+const importMapJson = { imports: {} };
 for (const importEntry of importMap) {
-  const [moduleSpecifier, {esmEntry}] = importEntry;
+  const [moduleSpecifier, { esmEntry }] = importEntry;
   importMapJson.imports[moduleSpecifier] = esmEntry;
 }
 await writeFile(path.join('src', 'extension', 'importmap.json'), JSON.stringify(importMapJson, undefined, 2));

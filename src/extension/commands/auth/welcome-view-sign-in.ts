@@ -28,11 +28,11 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
         this.outputChannel?.appendLine(`Successfully authenticated as ${session.account.label}`);
       }
     } catch {
-      const affirmative = 'Try again?';
+      const affirmative = 'Retry';
       const action = await vscode.window.showErrorMessage(
         'Authentication was unsucessful. Try again?',
         affirmative,
-        'skip'
+        'Not now'
       );
       if (action === affirmative) {
         return this.run();
