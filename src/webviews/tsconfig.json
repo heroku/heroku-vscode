@@ -6,10 +6,11 @@
     "resolveJsonModule": false,
     "module": "ES2022",
     "moduleResolution": "Node",
-    "target": "ESNext",
+    "target": "ES2022",
     "lib": [
       "ESNext",
       "DOM"
-    ]
+    ],
+
   }
 }

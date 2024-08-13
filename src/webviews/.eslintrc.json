@@ -8,6 +8,18 @@
   "plugins": ["@typescript-eslint"],
   "extends": ["eslint-config-salesforce-typescript", "prettier"],
   "rules": {
+    "require-jsdoc": [
+      "error",
+      {
+        "require": {
+          "FunctionDeclaration": true,
+          "MethodDefinition": true,
+          "ClassDeclaration": true,
+          "ArrowFunctionExpression": false,
+          "FunctionExpression": false
+        }
+      }
+    ],
     "@typescript-eslint/naming-convention": [
       "warn",
       {

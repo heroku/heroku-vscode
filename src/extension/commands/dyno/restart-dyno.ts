@@ -17,12 +17,15 @@ export class RestartDynoCommand extends AbortController implements RunnableComma
    * with the user.
    *
    * @param dyno The Dyno object represeting the Dyno to restart.
+   * @param pollStateOnly Boolean indicating whether to just poll the state of the dyno
    * @returns void
    */
-  public async run(dyno: Dyno): Promise<void> {
-    const confirmation = await vscode.window.showWarningMessage(`This action will restart the ${dyno.name} dyno`, {modal: true, detail:'This action may interupt traffic to your Dyno'}, 'Restart');
-    if (confirmation !== 'Restart') {
-      return;
+  public async run(dyno: Dyno, pollStateOnly?: boolean): Promise<void> {
+    if (!pollStateOnly) {
+      const confirmation = await vscode.window.showWarningMessage(`This action will restart the ${dyno.name} dyno`, { modal: true, detail: 'This action may interupt traffic to your Dyno' }, 'Restart');
+      if (confirmation !== 'Restart') {
+        return;
+      }
     }
 
     const { accessToken } = await vscode.authentication.getSession('heroku:auth:login', []) as AuthenticationSession;
@@ -33,15 +36,17 @@ export class RestartDynoCommand extends AbortController implements RunnableComma
       let id: string;
       ({ state } = await this.dynoService.info(dyno.app.id as string, dyno.id, requestInit));
       if (state !== 'starting') {
-        Reflect.set(dyno, 'state', 'restarting');
-        vscode.window.setStatusBarMessage(`${dyno.name} is restarting...`);
+        const disposable = vscode.window.setStatusBarMessage(`${dyno.name} is restarting...`);
+        setTimeout(() => { disposable.dispose(); }, 4000);
         await this.dynoService.restart(dyno.app.id as string, dyno.id, requestInit);
       }
 
       let retries = 120;
       while (!this.signal.aborted) {
         ({ state, id } = await this.dynoService.info(dyno.app.id as string, dyno.name, requestInit));
-        vscode.window.setStatusBarMessage(`${dyno.name} is ${state}`);
+        // Remove this message after 4 seconds
+        const disposable = vscode.window.setStatusBarMessage(`${dyno.name} is ${state}`);
+        setTimeout(() => { disposable.dispose(); }, 4000);
         Reflect.set(dyno, 'state', state);
         Reflect.set(dyno, 'id', id);
         retries--;
@@ -50,7 +55,7 @@ export class RestartDynoCommand extends AbortController implements RunnableComma
         }
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-    } catch(e) {
+    } catch (e) {
       await vscode.window.showErrorMessage(`Could not restart ${dyno.name}.`);
     }
   }
