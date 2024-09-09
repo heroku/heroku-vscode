@@ -105,7 +105,7 @@
     "@oclif/config": "^1.18.17",
     "@types/mocha": "^10.0.7",
     "@types/mvdan-sh": "^0.10.9",
-    "@types/node": "18.x",
+    "@types/node": "22.x",
     "@types/sinon": "^17.0.3",
     "@types/vscode": "1.92.0",
     "@types/vscode-webview": "1.57.5",
