@@ -10,6 +10,7 @@
     "inlineSourceMap": false,
     "inlineSources": true,
     "removeComments": false,
-    "noImplicitAny": true
+    "noImplicitAny": true,
+    "noUncheckedSideEffectImports": true
   }
 }

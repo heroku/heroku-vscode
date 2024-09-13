@@ -34,7 +34,6 @@ suite('The LoginCommand', () => {
 
   test('is registered', async () => {
     const allCommands = (await vscode.commands.getCommands()).filter((cmd) => cmd.includes('git'));
-    debugger;
     const commands = await vscode.commands.getCommands(true);
     const command = commands.find((command) => command === LoginCommand.COMMAND_ID);
     assert.ok(!!command, 'The LoginCommand is not registered.');
