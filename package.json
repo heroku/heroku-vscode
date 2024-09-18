@@ -25,6 +25,10 @@
       {
         "view": "heroku:auth:login",
         "contents": "%heroku:auth:login:contents%"
+      },
+      {
+        "view": "heroku:getting-started",
+        "contents": "%heroku:getting-started:contents%"
       }
     ],
     "viewsContainers": {
@@ -40,13 +44,18 @@
       "heroku": [
         {
           "id": "heroku:auth:login",
-          "name": "Heroku",
+          "name": "%view.heroku.name%",
           "when": "!heroku.authenticated"
         },
         {
           "id": "heroku:resource-explorer:treeview",
-          "name": "Heroku Resource Explorer",
-          "when": "heroku.authenticated"
+          "name": "%view.heroku.resourceExplorer%",
+          "when": "heroku.authenticated && heroku.app-found"
+        },
+        {
+          "id": "heroku:getting-started",
+          "name": "%view.heroku.name%",
+          "when": "heroku.authenticated && !heroku.app-found"
         }
       ]
     },
@@ -187,6 +196,7 @@
     "@types/mocha": "^10.0.7",
     "@types/mvdan-sh": "^0.10.9",
     "@types/node": "18.x",
+    "@types/proxyquire": "^1.3.31",
     "@types/sinon": "^17.0.3",
     "@types/vscode": "1.92.0",
     "@types/vscode-webview": "1.57.5",
@@ -203,6 +213,7 @@
     "lint-staged": "^15.2.0",
     "mocha": "10.7.0",
     "prettier": "3.3.3",
+    "proxyquire": "^2.1.3",
     "rewire": "^7.0.0",
     "sinon": "^18.0.0",
     "typescript": "~5.6.2"

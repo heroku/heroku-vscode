@@ -1,6 +1,7 @@
 import vscode from 'vscode';
 import { HerokuCommand } from '../heroku-command';
 import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
+import { LoginCommand } from './login';
 
 @herokuCommand({
   outputChannelId: HerokuOutputChannel.Authentication
@@ -23,7 +24,7 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
    */
   public async run(): Promise<void> {
     try {
-      const session = await vscode.authentication.getSession('heroku:auth:login', [], { createIfNone: true });
+      const session = await vscode.authentication.getSession(LoginCommand.COMMAND_ID, [], { createIfNone: true });
       if (session?.accessToken) {
         this.outputChannel?.appendLine(`Successfully authenticated as ${session.account.label}`);
       }

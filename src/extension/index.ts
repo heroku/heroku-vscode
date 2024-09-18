@@ -6,8 +6,6 @@ import { AuthenticationProvider } from './providers/authentication-provider';
 import { HerokuResourceExplorerProvider } from './providers/heroku-resource-explorer-provider';
 
 import './commands/auth/welcome-view-sign-in';
-import './commands/dyno/restart-dyno';
-import './commands/dyno/scale-formation';
 
 /**
  * Called when the extension is activated by VSCode
@@ -28,6 +26,8 @@ export function activate(context: vscode.ExtensionContext): void {
       new HerokuResourceExplorerProvider(context)
     )
   );
+
+  void vscode.commands.executeCommand('setContext', 'heroku.app-found', true);
 }
 
 /**

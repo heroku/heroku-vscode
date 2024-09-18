@@ -3,7 +3,15 @@
     "message": "Sign in to your Heroku account\n[Sign in](command:heroku:welcome:signin)"
   },
 
+  "heroku:getting-started:contents": {
+    "message": "It looks like this project is not a Heroku app.\n[Get started on Heroku](https://devcenter.heroku.com/start)"
+  },
+
   "view.heroku.name": {
     "message": "Heroku"
+  },
+
+  "view.heroku.resourceExplorer": {
+    "message": "Heroku Resource Explorer"
   }
 }

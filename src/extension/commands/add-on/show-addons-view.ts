@@ -54,8 +54,11 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
     extensionUri: vscode.Uri,
     addonTreeItem: Bindable<vscode.TreeItem>
   ): Promise<void> {
-    this.appIdentifier = appIdentifier;
-    this.addonTreeItem = addonTreeItem;
+    if (this.appIdentifier !== appIdentifier) {
+      ShowAddonsViewCommand.addonsPanel?.dispose();
+      ShowAddonsViewCommand.addonsPanel = undefined;
+    }
+
     if (ShowAddonsViewCommand.addonsPanel) {
       try {
         return ShowAddonsViewCommand.addonsPanel.reveal();
@@ -63,7 +66,8 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
         // panel is disposed.
       }
     }
-
+    this.appIdentifier = appIdentifier;
+    this.addonTreeItem = addonTreeItem;
     const panel = vscode.window.createWebviewPanel('Addons', 'Elements Marketplace', vscode.ViewColumn.One, {
       enableScripts: true
     });
