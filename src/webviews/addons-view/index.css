@@ -1,7 +1,75 @@
+:host {
+  display: flex;
+  width: 100%;
+}
+
+section {
+  width: 100%;
+
+  > header {
+    display: flex;
+    align-items: center;
+    > div {
+      display: flex;
+      align-items: center;
+    }
+    > h1 {
+      width: 100%;
+    }
+  }
+
+  div {
+    label {
+      white-space: nowrap;
+      margin-right: 0.5rem;
+      color: var(--vscode-foreground);
+      cursor: pointer;
+      font-size: var(--vscode-font-size);
+    }
+  }
+}
+
 ul {
   display: flex;
+  flex-direction: column;
   list-style: none;
+  padding: 0;
+
   li {
-    display: block;
+    border-top: 1px solid var(--vscode-menu-border);
+
+    &:last-child {
+      border-bottom: 1px solid var(--vscode-menu-border);
+    }
+
+    > .card {
+      display: flex;
+      padding: 1rem 0 1rem;
+
+      > img {
+        margin-right: 1rem;
+        height: 3rem;
+        width: 3rem;
+      }
+
+      > div {
+        width: 100%;
+
+        > h2 {
+          margin: 0 0 0.5rem;
+        }
+      }
+
+      > vscode-button,
+      vscode-progress-ring {
+        align-self: center;
+        margin-left: 0.5rem;
+      }
+    }
+
+    vscode-dropdown {
+      min-width: 100%;
+      margin-bottom: 0.5rem;
+    }
   }
 }

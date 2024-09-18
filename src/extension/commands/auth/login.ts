@@ -43,7 +43,7 @@ export class LoginCommand extends HerokuCommand<HerokuCommandCompletionInfo> {
    * @returns The result of the Heroku CLI command
    */
   public async run(): Promise<HerokuCommandCompletionInfo> {
-    using cliAuthProcess = HerokuCommand.exec('heroku auth:login', {signal: this.signal, timeout: 120 * 1000});
+    using cliAuthProcess = HerokuCommand.exec('heroku auth:login', { signal: this.signal, timeout: 120 * 1000 });
 
     cliAuthProcess.stderr?.once('data', (data: string) => LoginCommand.onData(data, cliAuthProcess));
 

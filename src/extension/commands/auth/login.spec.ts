@@ -15,11 +15,11 @@ suite('The LoginCommand', () => {
 
   setup(() => {
     execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
-      using cp = new class extends EventEmitter {
+      using cp = new (class extends EventEmitter {
         public stderr = new EventEmitter();
         public stdout = new EventEmitter();
-        public [Symbol.dispose]() { }
-      }() as childProcess.ChildProcess;
+        public [Symbol.dispose]() {}
+      })() as childProcess.ChildProcess;
 
       setTimeout(() => cp.stderr?.emit('data', 'Press any key to open up the browser to login or q to exit:'));
       setTimeout(() => cp.stdout?.emit('data', 'Logged in as'));
@@ -30,18 +30,18 @@ suite('The LoginCommand', () => {
 
   teardown(() => {
     execStub.restore();
-  })
+  });
 
   test('is registered', async () => {
-    const allCommands = (await vscode.commands.getCommands()).filter(cmd => cmd.includes('git'));
-    debugger
+    const allCommands = (await vscode.commands.getCommands()).filter((cmd) => cmd.includes('git'));
+    debugger;
     const commands = await vscode.commands.getCommands(true);
-    const command = commands.find(command => command === LoginCommand.COMMAND_ID);
+    const command = commands.find((command) => command === LoginCommand.COMMAND_ID);
     assert.ok(!!command, 'The LoginCommand is not registered.');
   });
 
   test('authenticates successfully using the happy path', async () => {
-    const result = await vscode.commands.executeCommand<{exitCode: number}>(LoginCommand.COMMAND_ID);
+    const result = await vscode.commands.executeCommand<{ exitCode: number }>(LoginCommand.COMMAND_ID);
     assert.equal(result?.exitCode, 0, 'The LoginCommand did not complete successfully.');
   });
 });

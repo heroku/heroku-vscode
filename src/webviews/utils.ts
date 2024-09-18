@@ -1,5 +1,5 @@
-import type { ElementViewTemplate, ComposableStyles } from "@microsoft/fast-element";
-import { css, html } from "@microsoft/fast-element";
+import type { ElementViewTemplate, ComposableStyles } from '@microsoft/fast-element';
+import { css, html } from '@microsoft/fast-element';
 
 /**
  * Loads the specified html from a file and
@@ -31,9 +31,17 @@ export async function loadHtmlTemplate(templatePath: string): Promise<ElementVie
  */
 export async function loadCss(cssPath: string | string[]): Promise<ComposableStyles[]> {
   const cssPaths = Array.isArray(cssPath) ? cssPath : [cssPath];
-  const requests = cssPaths.map(path => fetch(path));
+  const requests = cssPaths.map((path) => fetch(path));
   const results = await Promise.allSettled(requests);
-  const cssResults = await Promise.all(results.filter(result => result.status === 'fulfilled').map(fulfilled => fulfilled.value.text()));
+  const cssResults = await Promise.all(
+    results.filter((result) => result.status === 'fulfilled').map((fulfilled) => fulfilled.value.text())
+  );
 
-  return cssResults.map(cssText => css`${cssText}`);
+  return cssResults.map(
+    (cssText) => css`
+      ${cssText}
+    `
+  );
 }
+
+export const vscode = acquireVsCodeApi();

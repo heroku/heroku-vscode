@@ -13,12 +13,12 @@ suite('The TokenCommand', () => {
 
   setup(() => {
     execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
-      const cp = new class extends EventEmitter {
+      const cp = new (class extends EventEmitter {
         public stdout = new EventEmitter();
 
-        public [Symbol.dispose]() { }
-      }() as childProcess.ChildProcess;
-      setTimeout(() => cp.stdout?.emit('data', 'abc-123'))
+        public [Symbol.dispose]() {}
+      })() as childProcess.ChildProcess;
+      setTimeout(() => cp.stdout?.emit('data', 'abc-123'));
       setTimeout(() => cp.emit('exit', 0));
       return cp;
     });
@@ -30,7 +30,7 @@ suite('The TokenCommand', () => {
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const command = commands.find(command => command === TokenCommand.COMMAND_ID);
+    const command = commands.find((command) => command === TokenCommand.COMMAND_ID);
     assert.ok(!!command, 'The TokenCommand is not registered');
   });
 

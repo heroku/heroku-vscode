@@ -20,7 +20,7 @@ suite('The RestartDynoCommand', () => {
     created_at: '',
     id: '',
     release: {},
-    app: {id: '1234'},
+    app: { id: '1234' },
     size: '',
     state: '',
     type: '',
@@ -38,15 +38,14 @@ suite('The RestartDynoCommand', () => {
   };
 
   setup(() => {
-    getSessionStub = sinon.stub(vscode.authentication, 'getSession')
-    .callsFake(async (providerId: string) => {
+    getSessionStub = sinon.stub(vscode.authentication, 'getSession').callsFake(async (providerId: string) => {
       if (providerId === 'heroku:auth:login') {
         return sessionObject;
       }
       return undefined;
     });
 
-    showWarningMessageStub = sinon.stub(vscode.window, 'showWarningMessage')
+    showWarningMessageStub = sinon.stub(vscode.window, 'showWarningMessage');
     showWarningMessageStub.callsFake(async () => 'Restart');
 
     showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
@@ -65,13 +64,13 @@ suite('The RestartDynoCommand', () => {
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const command = commands.find(command => command === RestartDynoCommand.COMMAND_ID);
+    const command = commands.find((command) => command === RestartDynoCommand.COMMAND_ID);
     assert.ok(!!command, 'The RestartDynoCommand command is not registered');
   });
 
   test('restarts the dyno', async () => {
     fetchStub.onFirstCall().callsFake(async () => {
-      return new Response(JSON.stringify({id: '1234', state: 'up'} as Dyno));
+      return new Response(JSON.stringify({ id: '1234', state: 'up' } as Dyno));
     });
 
     fetchStub.onSecondCall().callsFake(async () => {
@@ -89,10 +88,10 @@ suite('The RestartDynoCommand', () => {
 
   test('shows appropriate status message when restarting fails', async () => {
     fetchStub.onFirstCall().callsFake(async () => {
-      return new Response(JSON.stringify({state: 'up'}));
+      return new Response(JSON.stringify({ state: 'up' }));
     });
     fetchStub.onSecondCall().callsFake(async () => {
-      return new Response(JSON.stringify({ }), {status: 401});
+      return new Response(JSON.stringify({}), { status: 401 });
     });
     await vscode.commands.executeCommand<string>(RestartDynoCommand.COMMAND_ID, dyno);
     assert.ok(showErrorMessageStub.calledWith(`Could not restart ${dyno.name}.`));

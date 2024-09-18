@@ -20,6 +20,8 @@
         }
       }
     ],
+    "no-shadow": "off",
+    "@typescript-eslint/no-shadow": "off",
     "@typescript-eslint/naming-convention": [
       "warn",
       {
@@ -27,9 +29,10 @@
         "format": ["camelCase", "PascalCase"]
       }
     ],
-    "@typescript-eslint/semi": "warn",
+    "@typescript-eslint/semi": "error",
     "no-return-await": "off",
-    "class-methods-use-this": ["warn",
+    "class-methods-use-this": [
+      "warn",
       {
         "exceptMethods": ["run"]
       }

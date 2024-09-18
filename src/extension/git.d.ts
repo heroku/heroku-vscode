@@ -17,7 +17,7 @@ export interface InputBox {
 export const enum ForcePushMode {
   Force,
   ForceWithLease,
-  ForceWithLeaseIfIncludes,
+  ForceWithLeaseIfIncludes
 }
 
 export const enum RefType {
@@ -100,7 +100,6 @@ export const enum Status {
 }
 
 export interface Change {
-
   /**
    * Returns either `originalUri` or `renameUri`, depending
    * on whether this change is a rename change. When
@@ -192,7 +191,6 @@ export interface BranchQuery extends RefQuery {
 }
 
 export interface Repository {
-
   readonly rootUri: Uri;
   readonly inputBox: InputBox;
   readonly state: RepositoryState;
@@ -200,13 +198,13 @@ export interface Repository {
 
   readonly onDidCommit: Event<void>;
 
-  getConfigs(): Promise<{ key: string; value: string; }[]>;
+  getConfigs(): Promise<{ key: string; value: string }[]>;
   getConfig(key: string): Promise<string>;
   setConfig(key: string, value: string): Promise<string>;
   getGlobalConfig(key: string): Promise<string>;
 
-  getObjectDetails(treeish: string, path: string): Promise<{ mode: string, object: string, size: number }>;
-  detectObjectType(object: string): Promise<{ mimetype: string, encoding?: string }>;
+  getObjectDetails(treeish: string, path: string): Promise<{ mode: string; object: string; size: number }>;
+  detectObjectType(object: string): Promise<{ mimetype: string; encoding?: string }>;
   buffer(ref: string, path: string): Promise<Buffer>;
   show(ref: string, path: string): Promise<string>;
   getCommit(ref: string): Promise<Commit>;
@@ -302,7 +300,12 @@ export interface PostCommitCommandsProvider {
 }
 
 export interface PushErrorHandler {
-  handlePushError(repository: Repository, remote: Remote, refspec: string, error: Error & { gitErrorCode: GitErrorCodes }): Promise<boolean>;
+  handlePushError(
+    repository: Repository,
+    remote: Remote,
+    refspec: string,
+    error: Error & { gitErrorCode: GitErrorCodes }
+  ): Promise<boolean>;
 }
 
 export interface BranchProtection {
@@ -339,7 +342,7 @@ export interface API {
   toGitUri(uri: Uri, ref: string): Uri;
   getRepository(uri: Uri): Repository | null;
   init(root: Uri, options?: InitOptions): Promise<Repository | null>;
-  openRepository(root: Uri): Promise<Repository | null>
+  openRepository(root: Uri): Promise<Repository | null>;
 
   registerRemoteSourcePublisher(publisher: RemoteSourcePublisher): Disposable;
   registerRemoteSourceProvider(provider: RemoteSourceProvider): Disposable;
@@ -350,7 +353,6 @@ export interface API {
 }
 
 export interface GitExtension {
-
   readonly enabled: boolean;
   readonly onDidChangeEnablement: Event<boolean>;
 

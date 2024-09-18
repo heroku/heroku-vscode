@@ -1,18 +1,16 @@
 name: Node CI Suite
 
-on:
-  push
+on: push
 
 jobs:
   test:
-
     runs-on: ${{ matrix.os }}
     name: Node Tests
 
     strategy:
       matrix:
-        node-version: [ 22.x ]
-        os: [ sfdc-hk-ubuntu-22.04-arm-xlarge ]
+        node-version: [22.x]
+        os: [sfdc-hk-ubuntu-22.04-arm-xlarge]
 
     steps:
       - name: Set up Xorg Server

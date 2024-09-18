@@ -1,7 +1,7 @@
-import FormationService from "@heroku-cli/schema/services/formation-service.js";
-import { Formation } from "@heroku-cli/schema";
+import FormationService from '@heroku-cli/schema/services/formation-service.js';
+import { Formation } from '@heroku-cli/schema';
 import vscode, { AuthenticationSession, EventEmitter } from 'vscode';
-import { herokuCommand, RunnableCommand } from "../../meta/command";
+import { herokuCommand, RunnableCommand } from '../../meta/command';
 
 @herokuCommand()
 /**
@@ -23,21 +23,24 @@ export class ScaleFormationCommand extends AbortController implements RunnableCo
   public async run(formation: Formation, quantity?: number): Promise<void> {
     const payload = { quantity };
     if (quantity === undefined) {
-      const userInput = await vscode.window.showInputBox({
-        title: 'Change Dyno count',
-        prompt: 'Set the number of dynos to use for this process.',
-        value: formation.quantity.toString(),
-        validateInput(value): string | undefined {
-          const val = parseInt(value, 10);
-          if (isNaN(val)) {
-            return 'A number between 0 and 100 must be provided';
+      const userInput = await vscode.window.showInputBox(
+        {
+          title: 'Change Dyno count',
+          prompt: 'Set the number of dynos to use for this process.',
+          value: formation.quantity.toString(),
+          validateInput(value): string | undefined {
+            const val = parseInt(value, 10);
+            if (isNaN(val)) {
+              return 'A number between 0 and 100 must be provided';
+            }
+            if (val > 100) {
+              return `${val} exceeds the maximum value of 100`;
+            }
+            return undefined;
           }
-          if (val > 100) {
-            return `${val} exceeds the maximum value of 100`;
-          }
-          return undefined;
         },
-      }, { isCancellationRequested: false, onCancellationRequested: this.cancellationToken.event });
+        { isCancellationRequested: false, onCancellationRequested: this.cancellationToken.event }
+      );
 
       if (userInput) {
         payload.quantity = parseInt(userInput, 10);
@@ -46,11 +49,16 @@ export class ScaleFormationCommand extends AbortController implements RunnableCo
       }
     }
 
-    const { accessToken } = await vscode.authentication.getSession('heroku:auth:login', []) as AuthenticationSession;
+    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) as AuthenticationSession;
     const requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${accessToken}` } };
 
     try {
-      const updatedFormation = await this.formationService.update(formation.app.id as string, formation.id, payload, requestInit);
+      const updatedFormation = await this.formationService.update(
+        formation.app.id as string,
+        formation.id,
+        payload,
+        requestInit
+      );
       Object.assign(formation, updatedFormation);
     } catch {
       await vscode.window.showErrorMessage(`Could not scale the formation for the ${formation.app.name} app.`);

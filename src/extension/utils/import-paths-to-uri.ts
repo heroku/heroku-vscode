@@ -1,4 +1,4 @@
-import vscode from "vscode";
+import vscode from 'vscode';
 /**
  * Utility function used to convert WICG import map
  * paths to vscode Uris. This is necessary for any
@@ -11,14 +11,22 @@ import vscode from "vscode";
  * @param extensionUri The Uri of the extension initializing the WebView.
  * @returns A newly created object with the converted import paths.
  */
-export function convertImportMapPathsToUris<T extends object> (webviewView: vscode.Webview, imports: T, extensionUri: vscode.Uri): T {
+export function convertImportMapPathsToUris<T extends object>(
+  webviewView: vscode.Webview,
+  imports: T,
+  extensionUri: vscode.Uri
+): T {
   const convertedImports = { ...imports };
   for (const moduleSpecifier in convertedImports) {
     if (!Reflect.has(convertedImports, moduleSpecifier)) {
       continue;
     }
     const moduleEntryPath = convertedImports[moduleSpecifier as keyof T] as string;
-    Reflect.set(convertedImports, moduleSpecifier, webviewView.asWebviewUri(vscode.Uri.joinPath(extensionUri, moduleEntryPath)).toString());
+    Reflect.set(
+      convertedImports,
+      moduleSpecifier,
+      webviewView.asWebviewUri(vscode.Uri.joinPath(extensionUri, moduleEntryPath)).toString()
+    );
   }
   return convertedImports;
 }

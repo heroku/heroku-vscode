@@ -30,7 +30,7 @@ suite('The WelcomViewSignInCommand', () => {
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const command = commands.find(command => command === WelcomeViewSignIn.COMMAND_ID);
+    const command = commands.find((command) => command === WelcomeViewSignIn.COMMAND_ID);
     assert.ok(!!command, 'The WelcomeViewSignIn command is not registered');
   });
 
@@ -45,10 +45,10 @@ suite('The WelcomViewSignInCommand', () => {
     assert.ok(!!getSessionStub.exceptions.length);
   });
 
-  test('asks the user to try again when authentication fails', async() => {
+  test('asks the user to try again when authentication fails', async () => {
     showErrorMessageStub.callsFake(async () => 'skip');
     getSessionStub.throws(new Error('failed!'));
     const result = await vscode.commands.executeCommand<string>(WelcomeViewSignIn.COMMAND_ID);
     assert.ok(showErrorMessageStub.called);
-  })
+  });
 });

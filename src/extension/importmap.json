@@ -9,6 +9,7 @@
     "tabbable": "node_modules/tabbable/dist/index.esm.js",
     "@vscode/webview-ui-toolkit": "node_modules/@vscode/webview-ui-toolkit/dist/index.js",
     "@microsoft/fast-react-wrapper": "node_modules/@microsoft/fast-react-wrapper/dist/esm/index.js",
+    "@heroku-cli/schema": "node_modules/@heroku-cli/schema/lib/esm/index.js",
     "buffer": "node_modules/buffer/index.js",
     "base64-js": "node_modules/base64-js/index.js",
     "ieee754": "node_modules/ieee754/index.js"

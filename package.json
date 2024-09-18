@@ -98,7 +98,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "cd src/extension && eslint ./ --ext ts",
     "test": "vscode-test",
-    "prepare": "husky install",
+    "prepare": "husky",
     "format": "prettier . --write --config ./.prettier.mjs"
   },
   "devDependencies": {

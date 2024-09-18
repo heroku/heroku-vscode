@@ -19,8 +19,8 @@ export class TokenCommand extends HerokuCommand<string | null> {
    */
   public async run(): Promise<string | null> {
     using cliTokenProcess = HerokuCommand.exec('heroku auth:token', { signal: this.signal });
-    const { exitCode, output, errorMessage } = await HerokuCommand.waitForCompletion(cliTokenProcess);
+    const { exitCode, output } = await HerokuCommand.waitForCompletion(cliTokenProcess);
 
-    return exitCode === 0 && !errorMessage ? output : null;
+    return exitCode === 0 ? output : null;
   }
 }

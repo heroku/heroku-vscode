@@ -18,8 +18,15 @@ export function activate(context: vscode.ExtensionContext): void {
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
   context.subscriptions.push(
     vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
-    vscode.authentication.registerAuthenticationProvider('heroku:auth:login', 'Heroku', new AuthenticationProvider(context)),
-    vscode.window.registerTreeDataProvider('heroku:resource-explorer:treeview', new HerokuResourceExplorerProvider(context)),
+    vscode.authentication.registerAuthenticationProvider(
+      'heroku:auth:login',
+      'Heroku',
+      new AuthenticationProvider(context)
+    ),
+    vscode.window.registerTreeDataProvider(
+      'heroku:resource-explorer:treeview',
+      new HerokuResourceExplorerProvider(context)
+    )
   );
 }
 

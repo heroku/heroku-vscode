@@ -1,9 +1,28 @@
 <section>
   <header>
     <h1>Add-ons Marketplace</h1>
+    <div>
+      <label for="categories-dropdown">Filter by</label>
+      <vscode-dropdown id="categories-dropdown"></vscode-dropdown>
+    </div>
   </header>
-  <ul class="addons-list">
-
-  </ul>
+  <ul class="addons-list" id="addons"></ul>
   <footer></footer>
 </section>
+
+<template id="addon-template">
+  <li>
+    <div class="card">
+      <img class="addon-logo" />
+      <div>
+        <h2></h2>
+        <span></span>
+      </div>
+      <vscode-progress-ring style="display: none"></vscode-progress-ring>
+      <vscode-button aria-label="Install this add-on" appearance="secondary">Install</vscode-button>
+    </div>
+    <div class="choices">
+      <vscode-dropdown style="display: none"></vscode-dropdown>
+    </div>
+  </li>
+</template>
