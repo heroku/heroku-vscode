@@ -57,7 +57,7 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
     examples: string[] | undefined
   ): string {
     const [herokuStr, , optionsStr, examplesStr] = parts;
-    let output = `## ${herokuStr} ${commandName}\n${description}\n` ?? '';
+    let output = `## ${herokuStr} ${commandName}\n${description}\n`;
 
     // Build out each line of the Options section
     const flagKeys: Array<keyof typeof flags> = Object.keys(flags).filter((key) => !flags[key].hidden);

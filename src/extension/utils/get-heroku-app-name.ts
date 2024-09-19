@@ -11,7 +11,7 @@ export async function getHerokuAppNames(): Promise<string[]> {
   // https://github.com/microsoft/vscode/blob/main/extensions/git/package.json
   const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
   const api = gitExtension?.exports.getAPI(1);
-  let state: string | undefined;
+  let state = api?.state;
   while (state !== 'initialized') {
     state = await new Promise((resolve) => api?.onDidChangeState(resolve));
   }

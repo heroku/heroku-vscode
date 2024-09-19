@@ -54,6 +54,16 @@ export class PropertyChangeNotifier<T extends object> extends EventEmitter imple
   /**
    * @inheritdoc
    */
+  public removeListener<K extends keyof PropertyChangedEventMap<T>>(
+    eventName: K,
+    listener: (event: PropertyChangedEventMap<T>[K]) => void
+  ): this {
+    return super.removeListener(eventName, listener);
+  }
+
+  /**
+   * @inheritdoc
+   */
   public on<K extends keyof PropertyChangedEventMap<T>>(
     eventName: K,
     listener: (event: PropertyChangedEventMap<T>[K]) => void

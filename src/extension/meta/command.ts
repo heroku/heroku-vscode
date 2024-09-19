@@ -11,12 +11,14 @@ export type RunnableCommandCtor<T = unknown> = {
 };
 
 export type CommandDecoratorConfig = {
-  outputChannelId?: HerokuOutputChannel;
+  outputChannelId: HerokuOutputChannel;
+  languageId?: string;
 };
 
 export enum HerokuOutputChannel {
   Authentication = 'Heroku Authentication',
-  CommandOutput = 'Heroku Command Output'
+  CommandOutput = 'Heroku Command Output',
+  LogOutput = 'Heroku Log Output'
 }
 
 const commandOutputChannels = new Map<string, vscode.OutputChannel>();
@@ -25,14 +27,18 @@ const commandOutputChannels = new Map<string, vscode.OutputChannel>();
  * Retrieves the specified output channel
  * or creates one if it does not exist.
  *
- * @param outputChannelId The HerokuOutputChannel to get.
+ * @param config The CommandDecoratorConfig to use
  * @returns The output channel.
  */
-export function getOutputChannel(outputChannelId: HerokuOutputChannel): vscode.OutputChannel {
-  let outputChannel = commandOutputChannels.get(outputChannelId);
+export function getOutputChannel(config?: CommandDecoratorConfig | undefined): vscode.OutputChannel | undefined {
+  if (!hasOutputChannelId(config)) {
+    return;
+  }
+  const { outputChannelId, languageId } = config;
+  let outputChannel = commandOutputChannels.get(outputChannelId as string);
   if (!outputChannel) {
     outputChannel = commandOutputChannels
-      .set(outputChannelId, vscode.window.createOutputChannel(outputChannelId))
+      .set(outputChannelId, vscode.window.createOutputChannel(outputChannelId, languageId))
       .get(outputChannelId);
   }
   return outputChannel as vscode.OutputChannel;
@@ -53,16 +59,25 @@ export function herokuCommand<const C extends RunnableCommandCtor>(config?: Comm
         process.stderr.write(`${target.COMMAND_ID} already registered.`);
         return;
       }
-      let outputChannel: vscode.OutputChannel | undefined;
-      if (config?.outputChannelId) {
-        outputChannel = getOutputChannel(config.outputChannelId);
-      }
 
       vscode.commands.registerCommand(target.COMMAND_ID, async (...args: unknown[]): Promise<unknown> => {
+        const outputChannel = getOutputChannel(config);
         using runnableCommand = new target(outputChannel);
         return await (runnableCommand.run(...args) as Promise<unknown>);
       });
       registeredCommands.add(target.COMMAND_ID);
     });
   };
+}
+
+/**
+ * Checks the provided config for the presence of an outputChannelId
+ *
+ * @param config The config to check for an outputChannelId
+ * @returns boolean
+ */
+function hasOutputChannelId(
+  config: CommandDecoratorConfig | undefined
+): config is { outputChannelId: HerokuOutputChannel; languageId?: string } {
+  return !!(config && 'outputChannelId' in config);
 }

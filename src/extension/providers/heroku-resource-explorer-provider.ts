@@ -1,15 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import AppService from '@heroku-cli/schema/services/app-service.js';
-import type { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
+import type { AddOn, App, Dyno, Formation, LogSession } from '@heroku-cli/schema';
 import DynoService from '@heroku-cli/schema/services/dyno-service.js';
-import vscode, { AuthenticationSession, TreeItemCollapsibleState } from 'vscode';
+import vscode, { type AuthenticationSession, TreeItemCollapsibleState } from 'vscode';
 import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { getHerokuAppNames } from '../utils/get-heroku-app-name';
-import { propertyChangeNotifierFactory, Bindable, PropertyChangedEvent } from '../meta/property-change-notfier';
+import { propertyChangeNotifierFactory, type Bindable, PropertyChangedEvent } from '../meta/property-change-notfier';
 import { RestartDynoCommand } from '../commands/dyno/restart-dyno';
 import { ShowAddonsViewCommand } from '../commands/add-on/show-addons-view';
 import { PollAddOnState } from '../commands/add-on/poll-state';
+
+import '../commands/app/context-menu/start-log-session';
+import '../commands/app/context-menu/open-app';
+import '../commands/app/context-menu/open-settings';
+import '../commands/app/context-menu/end-log-session';
 
 const dynoIconsBySize = {
   Free: '/resources/dyno/dynomite-free-16.png',
@@ -29,12 +34,14 @@ const dynoIconsBySize = {
   'Performance-2XL': '/resources/dyno/dynomite-px-pl.png'
 };
 
+type LogSessionCapableApp = Bindable<App & { logSession?: LogSession }>;
+
 /**
  * The HerokuResourceExplorerProvider is the main entity for
  * managing the Heroku Resource Explorer tree view.
  */
 export class HerokuResourceExplorerProvider<
-    T extends App | Bindable<Dyno> | Bindable<Formation> | Bindable<AddOn | vscode.TreeItem>
+    T extends LogSessionCapableApp | Bindable<Dyno> | Bindable<Formation> | Bindable<AddOn | vscode.TreeItem>
   >
   extends vscode.EventEmitter<T>
   implements vscode.TreeDataProvider<T>
@@ -70,7 +77,7 @@ export class HerokuResourceExplorerProvider<
         return this.getAddOnTreeItem(element as AddOn);
 
       case 'App':
-        return this.getAppTreeItem(element as App);
+        return this.getAppTreeItem(element as LogSessionCapableApp);
 
       case 'Dyno':
         return this.getDynoTreeItem(element as Dyno);
@@ -140,8 +147,10 @@ export class HerokuResourceExplorerProvider<
 
       for (const appName of appNames) {
         const appInfo = await this.appService.info(appName, this.requestInit);
-        this.elementTypeMap.set(appInfo as T, 'App');
-        this.apps.push(appInfo);
+        const app = propertyChangeNotifierFactory(appInfo);
+        app.addListener(PropertyChangedEvent.PROPERTY_CHANGED, () => this.fire(app as T));
+        this.apps.push(app);
+        this.elementTypeMap.set(app as T, 'App');
       }
       return this.apps as T[];
     } catch {
@@ -376,13 +385,14 @@ export class HerokuResourceExplorerProvider<
    * @param app The App to convert to a TreeItem
    * @returns The TreeItem from the specified Dyno
    */
-  private getAppTreeItem(app: App): vscode.TreeItem {
+  private getAppTreeItem(app: LogSessionCapableApp): vscode.TreeItem {
     return {
       id: app.id,
       label: app.name,
       description: app.buildpack_provided_description ?? '',
-      tooltip: `${app.name} - ${app.organization?.name ?? app.team?.name}`,
-      collapsibleState: TreeItemCollapsibleState.Expanded
+      tooltip: `${app.name} - ${app.organization?.name ?? app.team?.name ?? app.owner.email}`,
+      collapsibleState: TreeItemCollapsibleState.Expanded,
+      contextValue: app.logSession ? 'heroku:app:log-session-started' : 'heroku:app'
     } as vscode.TreeItem;
   }
 

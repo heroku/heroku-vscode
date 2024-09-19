@@ -117,6 +117,11 @@ export class AuthenticationProvider
 
     await vscode.commands.executeCommand('setContext', 'heroku.authenticated', true);
 
+    const outputChannel = getOutputChannel({
+      outputChannelId: HerokuOutputChannel.Authentication
+    }) as vscode.OutputChannel;
+    outputChannel.appendLine(`${session.account.label} logged in`);
+
     return session;
   }
 
@@ -163,7 +168,9 @@ export class AuthenticationProvider
       WatchNetrc.COMMAND_ID,
       this.netRcAbortController.signal
     );
-    const outputChannel = getOutputChannel(HerokuOutputChannel.Authentication);
+    const outputChannel = getOutputChannel({
+      outputChannelId: HerokuOutputChannel.Authentication
+    }) as vscode.OutputChannel;
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars

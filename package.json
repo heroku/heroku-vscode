@@ -63,8 +63,48 @@
           "group": "inline"
         },
         {
-          "when": "viewItem === addons",
+          "when": "viewItem === formation:scale-up || viewItem === formation:scale-down || viewItem === formation:scale-up:scale-down",
           "command": "heroku:scale-formation"
+        },
+        {
+          "when": "viewItem === heroku:app || viewItem === heroku:app:log-session-started",
+          "command": "heroku:open-app",
+          "group": "inline@1"
+        },
+        {
+          "when": "viewItem === heroku:app || viewItem === heroku:app:log-session-started",
+          "command": "heroku:access-settings",
+          "group": "inline@2"
+        },
+        {
+          "when": "viewItem === heroku:app",
+          "command": "heroku:start-log-session",
+          "group": "inline@3"
+        },
+        {
+          "when": "viewItem === heroku:app:log-session-started",
+          "command": "heroku:end-log-session",
+          "group": "inline@3"
+        },
+        {
+          "when": "viewItem === heroku:app || viewItem === heroku:app:log-session-started",
+          "command": "heroku:open-app",
+          "group": "App@1"
+        },
+        {
+          "when": "viewItem === heroku:app || viewItem === heroku:app:log-session-started",
+          "command": "heroku:access-settings",
+          "group": "App@2"
+        },
+        {
+          "when": "viewItem === heroku:app",
+          "command": "heroku:start-log-session",
+          "group": "App@3"
+        },
+        {
+          "when": "viewItem === heroku:app:log-session-started",
+          "command": "heroku:end-log-session",
+          "group": "App@3"
         }
       ]
     },
@@ -75,18 +115,59 @@
       },
       {
         "command": "heroku:scale-formation",
-        "title": "Change Dyno count",
+        "title": "Scale",
         "icon": "$(pencil)"
       },
       {
         "command": "heroku:dyno:restart",
         "title": "Restart",
         "icon": "$(timeline-refresh)"
+      },
+      {
+        "command": "heroku:open-app",
+        "title": "Open app in browser",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "heroku:start-log-session",
+        "title": "Start log session",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "heroku:end-log-session",
+        "title": "End log session",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "heroku:access-settings",
+        "title": "Access app settings",
+        "icon": "$(gear)"
       }
     ],
     "capabilities": {
       "hoverProvider": true
-    }
+    },
+    "languages": [
+      {
+        "id": "heroku-logs",
+        "aliases": [
+          "Heroku Logs",
+          "heroku-logs"
+        ],
+        "extensions": [
+          ".log",
+          ".heroku.log"
+        ],
+        "configuration": "./configurations/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "heroku-logs",
+        "scopeName": "source.heroku-logs",
+        "path": "./grammars/heroku-log-format.json"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -124,7 +205,7 @@
     "prettier": "3.3.3",
     "rewire": "^7.0.0",
     "sinon": "^18.0.0",
-    "typescript": "5.5.4"
+    "typescript": "~5.6.2"
   },
   "dependencies": {
     "@heroku-cli/schema": "file:heroku-cli-schema-1.0.25.tgz",
