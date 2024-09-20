@@ -98,6 +98,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
     const defaultOption = document.createElement('vscode-option') as Option;
     defaultOption.setAttributeNode(document.createAttribute('selected'));
     defaultOption.textContent = 'Show all';
+    defaultOption.value = '';
     documentFragment.appendChild(defaultOption);
 
     const installedOption = document.createElement('vscode-option') as Option;

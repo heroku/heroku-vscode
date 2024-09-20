@@ -5,16 +5,20 @@ import DynoService from '@heroku-cli/schema/services/dyno-service.js';
 import vscode, { type AuthenticationSession, TreeItemCollapsibleState } from 'vscode';
 import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
-import { getHerokuAppNames } from '../utils/get-heroku-app-name';
+import { getHerokuAppNames } from '../utils/git-utils';
 import { propertyChangeNotifierFactory, type Bindable, PropertyChangedEvent } from '../meta/property-change-notfier';
 import { RestartDynoCommand } from '../commands/dyno/restart-dyno';
 import { ShowAddonsViewCommand } from '../commands/add-on/show-addons-view';
 import { PollAddOnState } from '../commands/add-on/poll-state';
+import { WatchConfig } from '../commands/git/watch-config';
 
+// Commands
 import '../commands/app/context-menu/start-log-session';
 import '../commands/app/context-menu/open-app';
 import '../commands/app/context-menu/open-settings';
 import '../commands/app/context-menu/end-log-session';
+import '../commands/dyno/scale-formation';
+import '../commands/dyno/restart-dyno';
 
 const dynoIconsBySize = {
   Free: '/resources/dyno/dynomite-free-16.png',
@@ -43,10 +47,10 @@ type LogSessionCapableApp = Bindable<App & { logSession?: LogSession }>;
 export class HerokuResourceExplorerProvider<
     T extends LogSessionCapableApp | Bindable<Dyno> | Bindable<Formation> | Bindable<AddOn | vscode.TreeItem>
   >
-  extends vscode.EventEmitter<T>
+  extends vscode.EventEmitter<T | undefined>
   implements vscode.TreeDataProvider<T>
 {
-  public onDidChangeTreeData: vscode.Event<T | T[]> = this.event;
+  public onDidChangeTreeData: vscode.Event<T | T[] | undefined> = this.event;
 
   protected dynoService = new DynoService(fetch, 'https://api.heroku.com');
   protected appService = new AppService(fetch, 'https://api.heroku.com');
@@ -59,6 +63,8 @@ export class HerokuResourceExplorerProvider<
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
+  protected abortWatchGitConfig = new AbortController();
+
   /**
    * Constructs a new HerokuResourceExplorerProvider
    *
@@ -66,6 +72,7 @@ export class HerokuResourceExplorerProvider<
    */
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();
+    void this.watchGitConfig();
   }
 
   /**
@@ -144,18 +151,34 @@ export class HerokuResourceExplorerProvider<
       )) as AuthenticationSession;
       Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
       const appNames = await getHerokuAppNames();
-
+      const appsNotFound = [];
       for (const appName of appNames) {
-        const appInfo = await this.appService.info(appName, this.requestInit);
+        let appInfo: App;
+        try {
+          appInfo = await this.appService.info(appName, this.requestInit);
+        } catch {
+          appsNotFound.push(appName);
+          continue;
+        }
         const app = propertyChangeNotifierFactory(appInfo);
         app.addListener(PropertyChangedEvent.PROPERTY_CHANGED, () => this.fire(app as T));
         this.apps.push(app);
         this.elementTypeMap.set(app as T, 'App');
       }
+      if (appsNotFound.length) {
+        void this.showAppsNotFound(appsNotFound);
+      }
       return this.apps as T[];
     } catch {
       return [];
     }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  public dispose(): void {
+    this.abortWatchGitConfig.abort();
   }
 
   /**
@@ -169,6 +192,27 @@ export class HerokuResourceExplorerProvider<
       return new vscode.ThemeIcon('loading~spin');
     }
     return this.context.asAbsolutePath(dynoIconsBySize[dyno.size as keyof typeof dynoIconsBySize]);
+  }
+
+  /**
+   * Shows the apps not found message and optionally
+   * opens the dashboard to view all apps.
+   *
+   * @param appsNotFound string[]
+   */
+  private async showAppsNotFound(appsNotFound: string[]): Promise<void> {
+    const message = appsNotFound.length > 1 ? 'Multiple apps were' : `${appsNotFound[0]} was`;
+    const transitional = appsNotFound.length > 1 ? 'that do' : 'which does';
+
+    const response = await vscode.window.showWarningMessage(
+      `${message} found in your git remote ${transitional} not appear to exist on Heroku.`,
+      'View apps',
+      'Nevermind'
+    );
+
+    if (response === 'View apps') {
+      void vscode.env.openExternal(vscode.Uri.parse('https://dashboard.heroku.com/apps'));
+    }
   }
 
   /**
@@ -392,7 +436,8 @@ export class HerokuResourceExplorerProvider<
       description: app.buildpack_provided_description ?? '',
       tooltip: `${app.name} - ${app.organization?.name ?? app.team?.name ?? app.owner.email}`,
       collapsibleState: TreeItemCollapsibleState.Expanded,
-      contextValue: app.logSession ? 'heroku:app:log-session-started' : 'heroku:app'
+      contextValue: app.logSession ? 'heroku:app:log-session-started' : 'heroku:app',
+      iconPath: this.context.asAbsolutePath('/resources/app-28.png')
     } as vscode.TreeItem;
   }
 
@@ -434,5 +479,21 @@ export class HerokuResourceExplorerProvider<
       tooltip: `${addOn.name}`,
       iconPath: addOn.state === 'provisioning' ? new vscode.ThemeIcon('loading~spin') : vscode.Uri.parse(iconUrl)
     } as vscode.TreeItem;
+  }
+
+  /**
+   * Watches the git config for changes.
+   */
+  private async watchGitConfig(): Promise<void> {
+    const appChanges = await vscode.commands.executeCommand<AsyncIterable<Set<string>>>(
+      WatchConfig.COMMAND_ID,
+      this.abortWatchGitConfig
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for await (const appNames of appChanges) {
+      this.apps.length = 0;
+      this.fire(undefined);
+    }
   }
 }
