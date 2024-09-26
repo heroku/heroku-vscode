@@ -22,6 +22,28 @@ export function isHerokuCallExpression(node: sh.Node | undefined): node is sh.Ca
 }
 
 /**
+ * Determines if the specified node is a partial heroku
+ * command call expression. This test is true
+ * if the node is a sh.CallExpr and contains a
+ * string literal as the first argument which
+ * is a partial match to "heroku" and contains
+ * at least the chars "her".
+ *
+ * @param node The node to test.
+ * @returns boolean
+ */
+export function isPartialHerokuCallExpression(node: sh.Node | undefined): node is sh.CallExpr {
+  return (
+    !!node &&
+    isCallExpr(node) &&
+    !!node.Args.length &&
+    !!node.Args[0]?.Parts?.length &&
+    isLiteral(node.Args[0].Parts[0]) &&
+    /^(?:her)(?:o|$)(?:k|$)(?:u|$)/.test(node.Args[0].Parts[0].Value)
+  );
+}
+
+/**
  * Determines if the specified node is a sh.CallExpr.
  *
  * @param node The node to test.

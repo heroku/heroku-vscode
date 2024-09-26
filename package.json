@@ -20,6 +20,7 @@
     "vscode.git"
   ],
   "main": "./out/extension/index.js",
+  "l10n": "./l10n",
   "contributes": {
     "viewsWelcome": [
       {
@@ -192,7 +193,6 @@
     "format": "prettier . --write --config ./.prettier.mjs"
   },
   "devDependencies": {
-    "@oclif/config": "^1.18.17",
     "@types/mocha": "^10.0.7",
     "@types/mvdan-sh": "^0.10.9",
     "@types/node": "18.x",
@@ -222,8 +222,9 @@
     "@heroku-cli/schema": "file:heroku-cli-schema-1.0.25.tgz",
     "@microsoft/fast-element": "^1.13.0",
     "@vscode/codicons": "^0.0.36",
-    "@vscode/l10n": "0.0.x",
+    "@vscode/l10n": "0.0.18",
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "@oclif/core": "2.16.0",
     "marked": "^13.0.3",
     "mvdan-sh": "^0.10.1",
     "resolve.exports": "^2.0.2",
