@@ -11,7 +11,14 @@ export type RunnableCommandCtor<T = unknown> = {
 };
 
 export type CommandDecoratorConfig = {
+  /**
+   * The output channel to use for the command.
+   */
   outputChannelId: HerokuOutputChannel;
+  /**
+   * The language ID to use for the output channel.
+   * If not provided, the default language ID will be used.
+   */
   languageId?: string;
 };
 

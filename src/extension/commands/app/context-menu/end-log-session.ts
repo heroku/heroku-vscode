@@ -14,7 +14,9 @@ export class EndLogSession extends AbortController implements RunnableCommand<vo
    * @param app The app to end the log session for.
    */
   public run(app: App & { logSession?: LogSession }): void {
-    Reflect.deleteProperty(app, 'logSession');
+    if (app.logSession) {
+      Reflect.set(app.logSession, 'muted', true);
+    }
   }
 
   /**

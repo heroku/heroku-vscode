@@ -5,20 +5,21 @@ import DynoService from '@heroku-cli/schema/services/dyno-service.js';
 import vscode, { type AuthenticationSession, TreeItemCollapsibleState } from 'vscode';
 import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
-import { getHerokuAppNames } from '../utils/git-utils';
-import { propertyChangeNotifierFactory, type Bindable, PropertyChangedEvent } from '../meta/property-change-notfier';
-import { RestartDynoCommand } from '../commands/dyno/restart-dyno';
-import { ShowAddonsViewCommand } from '../commands/add-on/show-addons-view';
-import { PollAddOnState } from '../commands/add-on/poll-state';
-import { WatchConfig } from '../commands/git/watch-config';
+import { getHerokuAppNames } from '../../utils/git-utils';
+import { propertyChangeNotifierFactory, type Bindable, PropertyChangedEvent } from '../../meta/property-change-notfier';
+import { RestartDynoCommand } from '../../commands/dyno/restart-dyno';
+import { ShowAddonsViewCommand } from '../../commands/add-on/show-addons-view';
+import { PollAddOnState } from '../../commands/add-on/poll-state';
+import { WatchConfig } from '../../commands/git/watch-config';
 
 // Commands
-import '../commands/app/context-menu/start-log-session';
-import '../commands/app/context-menu/open-app';
-import '../commands/app/context-menu/open-settings';
-import '../commands/app/context-menu/end-log-session';
-import '../commands/dyno/scale-formation';
-import '../commands/dyno/restart-dyno';
+import '../../commands/app/context-menu/start-log-session';
+import '../../commands/app/context-menu/open-app';
+import '../../commands/app/context-menu/open-settings';
+import '../../commands/app/context-menu/end-log-session';
+import '../../commands/dyno/scale-formation';
+import '../../commands/dyno/restart-dyno';
+import { LogStreamClient } from './log-stream-client';
 
 const dynoIconsBySize = {
   Free: '/resources/dyno/dynomite-free-16.png',
@@ -57,13 +58,14 @@ export class HerokuResourceExplorerProvider<
   protected addOnService = new AddOnService(fetch, 'https://api.heroku.com');
   protected formationService = new FormationService(fetch, 'https://api.heroku.com');
 
-  protected apps: App[] = [];
+  protected apps: Array<Bindable<App>> = [];
 
   protected requestInit = { headers: {} };
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
   protected abortWatchGitConfig = new AbortController();
+  protected logStreamClient = new LogStreamClient();
 
   /**
    * Constructs a new HerokuResourceExplorerProvider
@@ -165,6 +167,7 @@ export class HerokuResourceExplorerProvider<
         this.apps.push(app);
         this.elementTypeMap.set(app as T, 'App');
       }
+      this.logStreamClient.apps = this.apps;
       if (appsNotFound.length) {
         void this.showAppsNotFound(appsNotFound);
       }
@@ -231,7 +234,7 @@ export class HerokuResourceExplorerProvider<
       this.childParentMap.set(formation as T, parent);
       formation.addListener('propertyChanged', (event: PropertyChangedEvent<Formation>) => {
         if (event.property === 'quantity') {
-          this.fire(this.getParent(event.target as unknown as T) as T);
+          this.fire(this.getParent(parent));
         }
         this.fire(formation as T);
       });

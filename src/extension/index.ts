@@ -3,7 +3,7 @@ import { DocumentSelector } from 'vscode';
 
 import { ShellScriptHoverProvider } from './providers/shell-script-hover-provider';
 import { AuthenticationProvider } from './providers/authentication-provider';
-import { HerokuResourceExplorerProvider } from './providers/heroku-resource-explorer-provider';
+import { HerokuResourceExplorerProvider } from './providers/resource-explorer/heroku-resource-explorer-provider';
 
 import './commands/auth/welcome-view-sign-in';
 
