@@ -61,7 +61,7 @@
       }
     },
     "scaled-to": {
-      "match": "(?:Scaled to )([a-zA-Z]+)(@)([0-9])(?:\\:)([a-zA-Z0-9-_]+)",
+      "match": "(?:Scaled to )([a-zA-Z]+)(@)([0-9]+)(?:\\:)([a-zA-Z0-9-_]+)",
       "captures": {
         "1": {
           "name": "keyword"

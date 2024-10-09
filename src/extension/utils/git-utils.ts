@@ -12,11 +12,12 @@ const exec = promisify(execProcess);
  */
 export async function findGitConfigFileLocation(): Promise<string> {
   const [ws] = vscode.workspace.workspaceFolders ?? [];
-  const { stdout, stderr } = await exec('git rev-parse --git-dir', { cwd: ws?.uri.path ?? '.' });
+  const cwd = ws?.uri.path ?? '.';
+  const { stdout, stderr } = await exec('git rev-parse --git-dir', { cwd });
   if (stderr) {
     throw new Error(stderr);
   }
-  const configPath = path.join(ws.uri.path, stdout.trim(), 'config');
+  const configPath = path.join(cwd, stdout.trim(), 'config');
   return configPath;
 }
 

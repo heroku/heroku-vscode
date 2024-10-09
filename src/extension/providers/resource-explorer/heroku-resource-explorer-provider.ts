@@ -1,53 +1,50 @@
-import { randomUUID } from 'node:crypto';
 import AppService from '@heroku-cli/schema/services/app-service.js';
-import type { AddOn, App, Dyno, Formation, LogSession } from '@heroku-cli/schema';
+import type { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
 import DynoService from '@heroku-cli/schema/services/dyno-service.js';
-import vscode, { type AuthenticationSession, TreeItemCollapsibleState } from 'vscode';
-import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
+import vscode, { type AuthenticationSession } from 'vscode';
+
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { getHerokuAppNames } from '../../utils/git-utils';
-import { propertyChangeNotifierFactory, type Bindable, PropertyChangedEvent } from '../../meta/property-change-notfier';
-import { RestartDynoCommand } from '../../commands/dyno/restart-dyno';
-import { ShowAddonsViewCommand } from '../../commands/add-on/show-addons-view';
-import { PollAddOnState } from '../../commands/add-on/poll-state';
-import { WatchConfig } from '../../commands/git/watch-config';
+import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
 
-// Commands
+import { WatchConfig } from '../../commands/git/watch-config';
+import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
+import {
+  LogStreamClient,
+  LogStreamEvents,
+  type StartingProcessInfo,
+  type ScaledToInfo,
+  type StateChangedInfo
+} from './log-stream-client';
+import {
+  getAddOnTreeItem,
+  getAppCategories,
+  getAppTreeItem,
+  getDynoTreeItem,
+  getFormationTreeItem
+} from './tree-item-generator';
+
+// Commands used in quick access menus
 import '../../commands/app/context-menu/start-log-session';
 import '../../commands/app/context-menu/open-app';
 import '../../commands/app/context-menu/open-settings';
 import '../../commands/app/context-menu/end-log-session';
 import '../../commands/dyno/scale-formation';
 import '../../commands/dyno/restart-dyno';
-import { LogStreamClient } from './log-stream-client';
 
-const dynoIconsBySize = {
-  Free: '/resources/dyno/dynomite-free-16.png',
-  Eco: '/resources/dyno/dynomite-eco-16.png',
-  Hobby: '/resources/dyno/dynomite-hobby-16.png',
-  Basic: '/resources/dyno/dynomite-basic-16.png',
-  'Standard-1X': '/resources/dyno/dynomite-default-16.png',
-  'Standard-2X': '/resources/dyno/dynomite-default-16.png',
-  '1X': '/resources/dyno/dynomite-1x-16.png',
-  '2X': '/resources/dyno/dynomite-2x-16.png',
-  PX: '/resources/dyno/dynomite-px-16.png',
-  'Performance-M': '/resources/dyno/dynomite-pm-16.png',
-  Performance: '/resources/dyno/dynomite-ps-16.png',
-  'Performance-L': '/resources/dyno/dynomite-pl-16.png',
-  'Performance-L-RAM': '/resources/dyno/dynomite-pl-16.png',
-  'Performance-XL': '/resources/dyno/dynomite-px-pl.png',
-  'Performance-2XL': '/resources/dyno/dynomite-px-pl.png'
-};
-
-type LogSessionCapableApp = Bindable<App & { logSession?: LogSession }>;
-
+/**
+ * Represents an App that can have a LogSession
+ */
+type LogSessionCapableApp = App & { logSession?: LogSessionStream | undefined };
+/**
+ * Represents the possible types of data that can be displayed in the Heroku Resource Explorer tree view.
+ */
+type ExtendedTreeDataTypes = LogSessionCapableApp | Dyno | Formation | AddOn | vscode.TreeItem;
 /**
  * The HerokuResourceExplorerProvider is the main entity for
  * managing the Heroku Resource Explorer tree view.
  */
-export class HerokuResourceExplorerProvider<
-    T extends LogSessionCapableApp | Bindable<Dyno> | Bindable<Formation> | Bindable<AddOn | vscode.TreeItem>
-  >
+export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = ExtendedTreeDataTypes>
   extends vscode.EventEmitter<T | undefined>
   implements vscode.TreeDataProvider<T>
 {
@@ -55,17 +52,22 @@ export class HerokuResourceExplorerProvider<
 
   protected dynoService = new DynoService(fetch, 'https://api.heroku.com');
   protected appService = new AppService(fetch, 'https://api.heroku.com');
-  protected addOnService = new AddOnService(fetch, 'https://api.heroku.com');
   protected formationService = new FormationService(fetch, 'https://api.heroku.com');
 
-  protected apps: Array<Bindable<App>> = [];
+  protected apps: App[] = [];
+  protected appToResourceMap = new WeakMap<
+    App,
+    { dynos: Dyno[]; formations: Formation[]; addOns: AddOn[]; categories: vscode.TreeItem[] }
+  >();
+
+  protected logStreamClient = new LogStreamClient();
 
   protected requestInit = { headers: {} };
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
   protected abortWatchGitConfig = new AbortController();
-  protected logStreamClient = new LogStreamClient();
+  protected syncAddonsPending = false;
 
   /**
    * Constructs a new HerokuResourceExplorerProvider
@@ -83,16 +85,18 @@ export class HerokuResourceExplorerProvider<
   public async getTreeItem(element: T): Promise<vscode.TreeItem> {
     switch (this.elementTypeMap.get(element)) {
       case 'AddOn':
-        return this.getAddOnTreeItem(element as AddOn);
+        return getAddOnTreeItem(this.context, element as AddOn, this.getParent(element) as vscode.TreeItem);
 
-      case 'App':
-        return this.getAppTreeItem(element as LogSessionCapableApp);
+      case 'App': {
+        const app = element as LogSessionCapableApp;
+        return getAppTreeItem(this.context, app, !app.logSession || !!app.logSession?.muted);
+      }
 
       case 'Dyno':
-        return this.getDynoTreeItem(element as Dyno);
+        return getDynoTreeItem(this.context, element as Dyno);
 
       case 'Formation':
-        return this.getFormationTreeItem(element as Formation);
+        return getFormationTreeItem(this.context, element as Formation);
 
       default:
         return element as vscode.TreeItem;
@@ -116,23 +120,30 @@ export class HerokuResourceExplorerProvider<
     // children
     if (element) {
       if (this.elementTypeMap.get(element) === 'App') {
-        return this.getAppCategories(element.id as string) as T[];
+        const { categories: cachedCategories } = this.appToResourceMap.get(element as App) ?? {};
+        if (cachedCategories?.length) {
+          return cachedCategories as T[];
+        }
+        const appCategories = getAppCategories(element.id as string) as T[];
+        appCategories.forEach((category) => this.childParentMap.set(category, element));
+        this.appToResourceMap.get(element as App)!.categories.push(...(appCategories as vscode.TreeItem[]));
+        return appCategories;
       }
       if (Reflect.has(element, 'collapsibleState')) {
-        const [appIdentifier] = element.id?.split(':') ?? [];
+        const app = this.getParent(element) as App;
 
         switch ((element as vscode.TreeItem).label) {
           case 'FORMATIONS':
-            return (await this.getFormationsForApp(appIdentifier, element)) as T[];
+            return (await this.getFormationsForApp(app, element)) as T[];
 
           case 'DYNOS':
-            return (await this.getDynosForApp(appIdentifier, element)) as T[];
+            return (await this.getDynosForApp(app, element)) as T[];
 
           case 'ADD-ONS':
-            return (await this.getAddonsForApp(appIdentifier, element)) as T[];
+            return (await this.getAddonsForApp(app, element)) as T[];
 
           case 'SETTINGS':
-            return this.getSettingsCategories(appIdentifier, element) as T[];
+            return this.getSettingsCategories(app, element) as T[];
 
           default:
             return [];
@@ -157,17 +168,17 @@ export class HerokuResourceExplorerProvider<
       for (const appName of appNames) {
         let appInfo: App;
         try {
-          appInfo = await this.appService.info(appName, this.requestInit);
+          appInfo = await this.appService.info(appName, { ...this.requestInit });
         } catch {
           appsNotFound.push(appName);
           continue;
         }
-        const app = propertyChangeNotifierFactory(appInfo);
-        app.addListener(PropertyChangedEvent.PROPERTY_CHANGED, () => this.fire(app as T));
-        this.apps.push(app);
-        this.elementTypeMap.set(app as T, 'App');
+        this.apps.push(appInfo);
+        this.elementTypeMap.set(appInfo as T, 'App');
+        this.appToResourceMap.set(appInfo, { dynos: [], formations: [], addOns: [], categories: [] });
       }
       this.logStreamClient.apps = this.apps;
+      this.startLiveUpdates();
       if (appsNotFound.length) {
         void this.showAppsNotFound(appsNotFound);
       }
@@ -185,17 +196,138 @@ export class HerokuResourceExplorerProvider<
   }
 
   /**
-   * Gets the icon path for the specified Dyno
-   *
-   * @param dyno The Dyno to get the icon for
-   * @returns string The path of the dyno icon
+   * Starts live updates for the apps
+   * and it's resources.
    */
-  protected getDynoIconPath(dyno: Dyno): string | vscode.ThemeIcon {
-    if (dyno.state === 'starting') {
-      return new vscode.ThemeIcon('loading~spin');
-    }
-    return this.context.asAbsolutePath(dynoIconsBySize[dyno.size as keyof typeof dynoIconsBySize]);
+  private startLiveUpdates(): void {
+    this.logStreamClient.addListener(LogStreamEvents.SCALED_TO, this.onFormationScaledTo);
+    this.logStreamClient.addListener(LogStreamEvents.STATE_CHANGED, this.onDynoStateChanged);
+    this.logStreamClient.addListener(LogStreamEvents.STARTING_PROCESS, this.onDynoProcessStarting);
   }
+
+  /**
+   * Event handler for Dyno scale events.
+   *
+   * @param data The data dispatched when a Dyno scale occurs.
+   */
+  private onFormationScaledTo = (data: ScaledToInfo): void => {
+    const { app, quantity, size } = data;
+    const { dynos, formations, categories } = this.appToResourceMap.get(app)!;
+    const formation = formations.find((f) => f.size === size);
+    if (formation) {
+      Reflect.set(formation, 'quantity', quantity);
+
+      const dynosCategory = categories.find((cat) => cat.label === 'DYNOS');
+      // down scaling will shut down Dynos which cannot be restarted.
+      // These dynos need to be removed since they are no longer valid
+      // but we want to display the visual indicator to the user that they have
+      // been successfully stopped which occurs in the onDynoStateChanged.
+      // This means we'll wait a bit before removing the Dynos from the tree.
+      if (dynos.length > quantity) {
+        void (async (): Promise<void> => {
+          dynos.length = quantity;
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          this.fire(dynosCategory as T);
+        })();
+      }
+
+      this.fire(formation as T);
+    } else {
+      // We might have added a new formation or
+      // updated the size. Refresh these to ensure
+      // pristine formation data.
+      const formationsCategory = categories.find((cat) => cat.label === 'FORMATIONS');
+      formations.length = 0;
+      this.fire(formationsCategory as T);
+    }
+  };
+
+  /**
+   * Handler for the dyno state change event.
+   *
+   * @param data The data dispatched when a dyno state is changed.
+   */
+  private onDynoStateChanged = (data: StateChangedInfo): void => {
+    const { app, dynoName, from, to } = data;
+    const { dynos } = this.appToResourceMap.get(app)!;
+    const dyno = dynos.find((d) => d.name === dynoName);
+    if (!dyno) {
+      return;
+    }
+
+    if (dyno.state !== to) {
+      Reflect.set(dyno, 'state', to);
+      this.fire(dyno as T);
+    }
+
+    // Not all add-on vendors use the Heroku-provided
+    // log drain to write provisioning/deprovisioning
+    // logs. Since Dynos are restarted with *most* changes
+    // to an add-on, we must check for add-ons being
+    // provisioned/deprovisioned when dynos restart.
+    if (from === 'up' && to === 'starting') {
+      void this.queueAddOnSynchronization(app);
+    }
+  };
+
+  /**
+   * Synchronizes the add-ons for the specified app.
+   *
+   * @param app The app to synchronize add-ons for
+   */
+  private async queueAddOnSynchronization(app: App): Promise<void> {
+    if (this.syncAddonsPending) {
+      return;
+    }
+    this.syncAddonsPending = true;
+    const { addOns, categories } = this.appToResourceMap.get(app)!;
+    const addonsMap = new Set(addOns.map((a) => a.id));
+
+    addOns.length = 0;
+    const addOnsCategory = categories.find((cat) => cat.label === 'ADD-ONS');
+    const pristineAddons = await this.getAddonsForApp(app, addOnsCategory as T);
+
+    const pristineAddonsMap = new Set(pristineAddons.map((a) => a.id));
+    if (addonsMap.difference(pristineAddonsMap).size || pristineAddonsMap.difference(addonsMap).size) {
+      this.fire(addOnsCategory as T);
+    }
+    this.syncAddonsPending = false;
+  }
+
+  /**
+   * Handler for the dyno process starting event.
+   *
+   * @param data The data dispached when a dyno is starting.
+   */
+  private onDynoProcessStarting = (data: StartingProcessInfo): void => {
+    const { app, dynoName } = data;
+    const dynos = this.appToResourceMap.get(app)!.dynos;
+    let dyno = dynos.find((d) => d.name === dynoName);
+
+    if (!dyno) {
+      void (async (): Promise<void> => {
+        dyno = await this.dynoService.info(app.id, dynoName, this.requestInit);
+        dynos.push(dyno);
+        dynos.sort((a, b) => {
+          const [, numA] = a.name.split('.');
+          const [, numB] = b.name.split('.');
+          if (numA === numB) {
+            return 0;
+          }
+          return ~~numA < ~~numB ? -1 : 1;
+        });
+
+        const resources = this.appToResourceMap.get(app)!;
+        const dynosCategory = resources.categories.find((cat) => cat.label === 'DYNOS');
+        this.childParentMap.set(dyno as T, dynosCategory as T);
+        this.elementTypeMap.set(dyno as T, 'Dyno');
+        this.fire(dynosCategory as T);
+      })();
+    } else {
+      Reflect.set(dyno, 'state', 'starting');
+      this.fire(dyno as T);
+    }
+  };
 
   /**
    * Shows the apps not found message and optionally
@@ -222,133 +354,107 @@ export class HerokuResourceExplorerProvider<
    * Get the Formations for the specified app and subscribes
    * to property changes on each object retured.
    *
-   * @param appIdentifier The ID of the app to get formatons for
+   * @param app The app the get formations for.
    * @param parent The parent element the formations belongs to
    * @returns An array of Bindable<Formation>
    */
-  private async getFormationsForApp(appIdentifier: string, parent: T): Promise<Formation[]> {
-    const formations = await this.formationService.list(appIdentifier, this.requestInit);
-    const boundFormations = formations.map(propertyChangeNotifierFactory);
-    boundFormations.forEach((formation) => {
+  private async getFormationsForApp(app: App, parent: T): Promise<Formation[]> {
+    const { formations: cachedFormations } = this.appToResourceMap.get(app) ?? {};
+    if (cachedFormations?.length) {
+      return cachedFormations;
+    }
+    const formations = await this.formationService.list(app.id, this.requestInit);
+    formations.forEach((formation) => {
       this.elementTypeMap.set(formation as T, 'Formation');
       this.childParentMap.set(formation as T, parent);
-      formation.addListener('propertyChanged', (event: PropertyChangedEvent<Formation>) => {
-        if (event.property === 'quantity') {
-          this.fire(this.getParent(parent));
-        }
-        this.fire(formation as T);
-      });
     });
-    return boundFormations;
+    const appResources = this.appToResourceMap.get(app);
+    appResources!.formations = formations;
+
+    return formations;
   }
 
   /**
    * Get the Dynos for the specified app and subscribes
    * to property changes on each object retured.
    *
-   * @param appIdentifier The ID of the app to get dynos for.
+   * @param app The app to get dynos for.
    * @param parent The parent elemnent the dyno tree items will belong to.
    * @returns An array of Bindable<Dyno>.
    */
-  private async getDynosForApp(appIdentifier: string, parent: T): Promise<Array<Bindable<Dyno>>> {
-    const dynos = await this.dynoService.list(appIdentifier, this.requestInit);
+  private async getDynosForApp(app: App, parent: T): Promise<Dyno[]> {
+    const { dynos: cachedDynos } = this.appToResourceMap.get(app) ?? {};
+    if (cachedDynos?.length) {
+      return cachedDynos;
+    }
+
+    const dynos = await this.dynoService.list(app.id, this.requestInit);
     if (!dynos.length) {
       const empty = {
         type: 'empty'
-      } as Bindable<Dyno>;
+      } as Dyno;
       this.elementTypeMap.set(empty as T, 'Dyno');
       return [empty];
     }
 
-    const boundDynos = dynos.map(propertyChangeNotifierFactory);
-    boundDynos.forEach((dyno) => {
+    dynos.forEach((dyno) => {
       this.elementTypeMap.set(dyno as T, 'Dyno');
       this.childParentMap.set(dyno as T, parent);
-      dyno.addListener('propertyChanged', () => this.fire(dyno as T));
-      if (dyno.state === 'starting') {
-        void vscode.commands.executeCommand(RestartDynoCommand.COMMAND_ID, dyno, true);
-      }
     });
-    return boundDynos;
+    const appResources = this.appToResourceMap.get(app);
+    appResources!.dynos = dynos;
+    return dynos;
   }
 
   /**
    * Gets the addons for the specified app id and
    * listens to property changes on each object returned.
    *
-   * @param appIdentifier The id of the app to get addons for.
+   * @param app The app to get addons for.
    * @param parent The parent element the AddOns belong to
    * @returns an array of Bindable<AddOn>
    */
-  private async getAddonsForApp(appIdentifier: string, parent: T): Promise<Array<Bindable<AddOn>>> {
+  private async getAddonsForApp(app: App, parent: T): Promise<AddOn[]> {
+    const { addOns: cachedAddOns } = this.appToResourceMap.get(app) ?? {};
+    if (cachedAddOns?.length) {
+      return cachedAddOns;
+    }
+
     const addOns: AddOn[] = [
       {
-        id: randomUUID(),
+        id: `${app.id}-addons-market`,
         app: {
-          id: appIdentifier
+          id: app.id
         },
         name: 'Search Elements Marketplace'
       } as AddOn
     ];
     try {
-      addOns.push(...(await this.addOnService.listByApp(appIdentifier, this.requestInit)));
+      const addons = await vscode.commands.executeCommand<AddOn[]>(ListAddOnsByApp.COMMAND_ID, app.id);
+      addOns.push(...addons);
     } catch {
       // no-op
     }
-    const boundAddons = addOns.map(propertyChangeNotifierFactory);
-    boundAddons.forEach((addOn) => {
+
+    addOns.forEach((addOn) => {
       this.elementTypeMap.set(addOn as T, 'AddOn');
       this.childParentMap.set(addOn as T, parent);
-      if (addOn.state === 'provisioning') {
-        void vscode.commands.executeCommand(PollAddOnState.COMMAND_ID, addOn);
-      }
-      addOn.addListener('propertyChanged', () => this.fire(addOn as T));
     });
-    return boundAddons;
-  }
-
-  /**
-   * Gets the main tree nodes for the resource explorer.
-   *
-   * @param appIdentifier The app id or name.
-   * @returns an array of TreeItem.
-   */
-  private getAppCategories(appIdentifier: string): vscode.TreeItem[] {
-    const appCategories = [
-      {
-        id: appIdentifier + ':formations',
-        label: 'FORMATIONS',
-        collapsibleState: TreeItemCollapsibleState.Expanded
-      },
-      {
-        id: appIdentifier + ':dynos',
-        label: 'DYNOS',
-        collapsibleState: TreeItemCollapsibleState.Expanded
-      },
-      {
-        id: appIdentifier + ':addons',
-        label: 'ADD-ONS',
-        collapsibleState: TreeItemCollapsibleState.Expanded
-      },
-      {
-        id: appIdentifier + ':settings',
-        label: 'SETTINGS',
-        collapsibleState: TreeItemCollapsibleState.Expanded
-      }
-    ].map((cat) => propertyChangeNotifierFactory(cat));
-    appCategories.forEach((cat) => cat.addListener('propertyChanged', () => this.fire(cat as T)));
-    return appCategories;
+    const appResources = this.appToResourceMap.get(app)!;
+    appResources.addOns = addOns;
+    return addOns;
   }
 
   /**
    * Gets the categories for the settings section.
    *
-   * @param appIdentifier The app id or name
+   * @param app The app to get categories for.
    * @param parent The parent node that the categories belongs to.
    *
    * @returns vscode.TreeItem[]
    */
-  private getSettingsCategories(appIdentifier: string, parent: T): vscode.TreeItem[] {
+  private getSettingsCategories(app: App, parent: T): vscode.TreeItem[] {
+    const { id: appIdentifier } = app;
     const categories = [
       {
         id: appIdentifier + ':app-info',
@@ -373,115 +479,6 @@ export class HerokuResourceExplorerProvider<
     ];
     categories.forEach((cat) => this.childParentMap.set(cat as T, parent));
     return categories;
-  }
-
-  /**
-   * Consumes a Dyno object and returns a TreeItem.
-   *
-   * @param dyno The Dyno to convert to a TreeItem
-   * @returns The TreeItem from the specified Dyno
-   */
-  private getDynoTreeItem(dyno: Dyno): vscode.TreeItem {
-    if (dyno.type === 'empty') {
-      return {
-        id: 'empty',
-        label: 'No Dynos running',
-        iconPath: new vscode.ThemeIcon('warning')
-      };
-    }
-    return {
-      id: dyno.id,
-      label: dyno.name,
-      description: `${dyno.command} - ${dyno.state}`,
-      iconPath: this.getDynoIconPath(dyno),
-      tooltip: `${dyno.app.name} - ${dyno.size}`,
-      contextValue: `dyno:${dyno.state}`
-    } as vscode.TreeItem;
-  }
-
-  /**
-   * Consumes a Formation object and returns a TreeItem
-   *
-   * @param formation The Formation to convert to a tree item.
-   * @returns The TreeItem from the specified Formation
-   */
-  private getFormationTreeItem(formation: Formation): vscode.TreeItem {
-    const canIncreaseDynoCount =
-      (!/(Free|Eco|Hobby|Basic|)/.test(formation.size) && formation.quantity < 100) || !formation.quantity;
-    let contextValue = `formation`;
-    if (canIncreaseDynoCount) {
-      contextValue += ':scale-up';
-    }
-
-    if (formation.quantity) {
-      contextValue += ':scale-down';
-    }
-
-    return {
-      id: formation.id,
-      label: formation.type,
-      description: `${formation.size} - ${formation.quantity} ${formation.quantity === 1 ? 'Dyno' : 'Dynos'}`,
-      iconPath: this.context.asAbsolutePath('/resources/formation-icon-16.png'),
-      contextValue
-    } as vscode.TreeItem;
-  }
-
-  /**
-   * Consumes an App object and returns a TreeItem.
-   *
-   * @param app The App to convert to a TreeItem
-   * @returns The TreeItem from the specified Dyno
-   */
-  private getAppTreeItem(app: LogSessionCapableApp): vscode.TreeItem {
-    return {
-      id: app.id,
-      label: app.name,
-      description: app.buildpack_provided_description ?? '',
-      tooltip: `${app.name} - ${app.organization?.name ?? app.team?.name ?? app.owner.email}`,
-      collapsibleState: TreeItemCollapsibleState.Expanded,
-      contextValue: app.logSession ? 'heroku:app:log-session-started' : 'heroku:app',
-      iconPath: this.context.asAbsolutePath('/resources/app-28.png')
-    } as vscode.TreeItem;
-  }
-
-  /**
-   * Consumes an AddOn object and returns a TreeItem.
-   *
-   * @param addOn The AddOn to convert to a TreeItem
-   * @returns The TreeItem from the specified Dyno
-   */
-  private async getAddOnTreeItem(addOn: AddOn): Promise<vscode.TreeItem> {
-    if (addOn.name === 'Search Elements Marketplace') {
-      const categoryNode = this.getParent(addOn as T);
-      return {
-        id: addOn.id,
-        label: addOn.name,
-        iconPath: this.context.asAbsolutePath('/resources/marketing-addon-48.png'),
-        command: {
-          command: ShowAddonsViewCommand.COMMAND_ID,
-          title: 'Find more add-ons',
-          arguments: [addOn.app.id, this.context.extensionUri, categoryNode]
-        }
-      };
-    }
-    // Grab the icon from https://addons.heroku.com
-    let iconUrl: string = '';
-    try {
-      const addonsApiResponse = await fetch(`https://addons.heroku.com/api/v2/addons/${addOn.addon_service.id}`);
-      const json = (await addonsApiResponse.json()) as { addon: { icon_url: string } };
-      iconUrl = URL.canParse(json.addon.icon_url)
-        ? json.addon.icon_url
-        : `https://addons.heroku.com/${json.addon.icon_url}`;
-    } catch {
-      // no-op - don't worry, this won't break things too badly.
-    }
-    return {
-      id: addOn.id,
-      label: addOn.addon_service.name,
-      description: `- ${addOn.state}`,
-      tooltip: `${addOn.name}`,
-      iconPath: addOn.state === 'provisioning' ? new vscode.ThemeIcon('loading~spin') : vscode.Uri.parse(iconUrl)
-    } as vscode.TreeItem;
   }
 
   /**

@@ -3,9 +3,17 @@ import LogSessionService from '@heroku-cli/schema/services/log-session-service.j
 import * as vscode from 'vscode';
 import type { App, LogSession } from '@heroku-cli/schema';
 import { herokuCommand, HerokuOutputChannel, type RunnableCommand } from '../../../meta/command';
-import { Bindable, PropertyChangedEvent } from '../../../meta/property-change-notfier';
 
-export type LogSessionStream = {
+/**
+ * Represents a callback to be executed when a chunk
+ * of data is received from the log stream.
+ */
+export type LogStreamCallback = (chunk: string, app: App) => void;
+
+/**
+ * Represents a log session stream.
+ */
+export type LogSessionStream = AbortController & {
   /**
    * Attaches a callback to the stream. Each
    * chunk from the stream will trigger the callback
@@ -30,14 +38,14 @@ export type LogSessionStream = {
    */
   muted: boolean;
 };
-export type LogStreamCallback = (chunk: string, app: App) => void;
 
 @herokuCommand({ outputChannelId: HerokuOutputChannel.LogOutput, languageId: 'heroku-logs' })
 /**
  * Command used to start a log session for
  * the supplied App object and pipe the output
  * to the output channel when <code>muted</code>
- * is false.
+ * is false. Only one log session is written to
+ * the output channel at a time.
  *
  * Log sessions are appended to the App object using
  * the <code>logSession</code> property. This allows
@@ -45,17 +53,17 @@ export type LogStreamCallback = (chunk: string, app: App) => void;
  * to retain a direct reference to it as is the case
  * when this command is executed from a context menu.
  */
-export class StartLogSession extends AbortController implements LogSessionStream, RunnableCommand<void> {
+export class StartLogSession extends AbortController implements LogSessionStream, RunnableCommand<LogSessionStream> {
   public static COMMAND_ID = 'heroku:start-log-session';
   private static visibleLogSession: StartLogSession | undefined;
 
   private logService = new LogSessionService(fetch, 'https://api.heroku.com');
-  private app!: Bindable<App & { logSession?: StartLogSession }>;
-  private buffer: string[] = [];
-  private streamListeners: Set<CallableFunction> = new Set();
+  private app!: App & { logSession?: StartLogSession };
+  private buffer = '';
+  private streamListeners: Set<LogStreamCallback> = new Set();
   private maxLines = 100;
 
-  // Backing property for the get/set pair
+  // Backing property for the get/set pair of the same name
   #muted = false;
 
   /**
@@ -72,7 +80,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
    * is aborted, it will also be considered muted and the log
    * stream will be destroyed.
    *
-   * @returns true if muted, false otherwise
+   * @returns true if muted, false otherwise.
    */
   public get muted(): boolean {
     return this.#muted || this.signal.aborted;
@@ -113,7 +121,8 @@ export class StartLogSession extends AbortController implements LogSessionStream
     const { outputChannel, buffer, app, muted: oldMuted } = existingLogSession;
     if (!muted) {
       this.prepareOutputChannelForLogSession(outputChannel, app.name);
-      outputChannel?.append(buffer.slice(0, lines).join('\n'));
+      // Take upto maxLines from the buffer and append to the output channel
+      outputChannel?.append(buffer.split('\n').slice(0, lines).join('\n'));
       StartLogSession.visibleLogSession = existingLogSession;
     }
 
@@ -171,21 +180,25 @@ export class StartLogSession extends AbortController implements LogSessionStream
    * @param lines The number of lines from the log history to show in the output channel.
    * @returns Promise<void
    */
-  public async run(app: Bindable<App & { logSession?: StartLogSession }>, muted = false, lines = 100): Promise<void> {
+  public async run(app: App & { logSession?: StartLogSession }, muted = false, lines = 100): Promise<LogSessionStream> {
+    this.maxLines = lines;
+    this.#muted = muted;
+    this.app = app;
     // Log session already exists, just mute/unmute it
     const { logSession: existingLogSession } = app;
     if (existingLogSession && !existingLogSession.signal.aborted) {
       const shouldBeMuted = !existingLogSession.muted ? false : muted; // a value of false becomes 'sticky'
-      return StartLogSession.updateExistingLogSession(existingLogSession, shouldBeMuted, lines);
+      StartLogSession.updateExistingLogSession(existingLogSession, shouldBeMuted, lines);
+      return existingLogSession;
     }
 
-    const logSession = await this.fetchLogSession(app, lines);
+    const logSession = await this.fetchLogSession(app);
     const response = await fetch(logSession.logplex_url, { signal: this.signal });
     if (response.ok) {
-      const reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
       if (!muted) {
         StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, app.name);
       }
+      const reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
       // Since the stream is a log runnning process
       // we want this function to complete without
       // having to wait for the stream to end.
@@ -193,11 +206,9 @@ export class StartLogSession extends AbortController implements LogSessionStream
     } else {
       throw new Error(`Failed to fetch logs: ${response.statusText}`);
     }
-    this.maxLines = lines;
-    this.#muted = muted;
-    this.app = app;
+
     this.app.logSession = this;
-    this.app.on(PropertyChangedEvent.PROPERTY_CHANGED, this.onAppPropertyChanged);
+    return this;
   }
 
   /**
@@ -214,7 +225,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
    * @param lines The number of lines from the log history to display initially.
    * @returns The log session.
    */
-  private async fetchLogSession(app: App, lines: number): Promise<LogSession> {
+  private async fetchLogSession(app: App, lines = this.maxLines): Promise<LogSession> {
     let logSession: LogSession | undefined;
     try {
       const { accessToken } = (await vscode.authentication.getSession(
@@ -236,6 +247,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
    * @returns Promise<void>
    */
   private async beginReading(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
+    this.signal.addEventListener('abort', () => void reader.cancel());
     while (!this.signal.aborted) {
       const { done, value } = await reader.read();
       if (done) {
@@ -245,36 +257,15 @@ export class StartLogSession extends AbortController implements LogSessionStream
       if (value.length > 1) {
         const str = Buffer.from(value).toString();
         this.streamListeners.forEach((cb) => void cb(str, this.app));
-        this.buffer.push(str);
-
-        if (this.buffer.length > this.maxLines) {
-          this.buffer.shift();
-        }
+        this.buffer += str;
 
         if (!this.muted) {
           this.outputChannel?.append(str);
         }
+        if (this.buffer.split('\n').length > this.maxLines) {
+          this.buffer = this.buffer.split('\n').slice(-this.maxLines).join('\n');
+        }
       }
     }
   }
-
-  /**
-   * Event handler for app property changes. Aborts the log session if
-   * the app's logSession propery is deleted or undefined.
-   *
-   * @param event The PropertyChangedEvent passed to the handler
-   */
-  private onAppPropertyChanged = (event: PropertyChangedEvent<App & { logSession?: StartLogSession }>): void => {
-    // Any changes to the 'logSession' property
-    // should result in aborting the currently
-    // running log session since this indicates
-    // either the stream has ended or another
-    // actor has aborted it or started a new one
-    // for this app.
-    if (event.property === 'logSession') {
-      this.abort();
-      this.outputChannel?.append('Log session ended.');
-      this.app.off(PropertyChangedEvent.PROPERTY_CHANGED, this.onAppPropertyChanged);
-    }
-  };
 }

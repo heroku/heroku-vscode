@@ -1,5 +1,6 @@
-import type { App, LogSession } from '@heroku-cli/schema';
+import type { App } from '@heroku-cli/schema';
 import { herokuCommand, type RunnableCommand } from '../../../meta/command';
+import { LogSessionStream } from './start-log-session';
 
 @herokuCommand()
 /**
@@ -13,7 +14,7 @@ export class EndLogSession extends AbortController implements RunnableCommand<vo
    *
    * @param app The app to end the log session for.
    */
-  public run(app: App & { logSession?: LogSession }): void {
+  public run(app: App & { logSession?: LogSessionStream }): void {
     if (app.logSession) {
       Reflect.set(app.logSession, 'muted', true);
     }
