@@ -10,9 +10,9 @@ suite('The EndLogSession command', () => {
     assert.ok(command, 'The EndLogSession is not registered.');
   });
 
-  test('successfully deletes the "logSession" property', async () => {
-    const app = { logSession: {} };
+  test('successfully mutes the log session', async () => {
+    const app = { logSession: { muted: false } };
     await vscode.commands.executeCommand<void>(EndLogSession.COMMAND_ID, app);
-    assert.equal(Reflect.has(app, 'logSession'), false, 'The EndLogSession did not complete successfully.');
+    assert.equal(Reflect.get(app.logSession, 'muted'), true, 'The EndLogSession did not complete successfully.');
   });
 });

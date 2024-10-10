@@ -5,7 +5,6 @@ import { AddOn } from '@heroku-cli/schema';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import importMap from '../../importmap.json';
 import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
-import { Bindable } from '../../meta/property-change-notfier';
 
 type MessagePayload =
   | {
@@ -39,21 +38,16 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
   private addonService = new AddOnService(fetch, 'https://api.heroku.com');
 
   private appIdentifier!: string;
-  private addonTreeItem!: Bindable<vscode.TreeItem>;
+
   /**
    * Creates and displays a webview for showing
    * the add-on marketplace
    *
    * @param appIdentifier The application identifier.
    * @param extensionUri The Uri of the extension.
-   * @param addonTreeItem The addon tree item.
    * @returns Promise<void>
    */
-  public async run(
-    appIdentifier: string,
-    extensionUri: vscode.Uri,
-    addonTreeItem: Bindable<vscode.TreeItem>
-  ): Promise<void> {
+  public async run(appIdentifier: string, extensionUri: vscode.Uri): Promise<void> {
     if (this.appIdentifier !== appIdentifier) {
       ShowAddonsViewCommand.addonsPanel?.dispose();
       ShowAddonsViewCommand.addonsPanel = undefined;
@@ -67,7 +61,6 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       }
     }
     this.appIdentifier = appIdentifier;
-    this.addonTreeItem = addonTreeItem;
     const panel = vscode.window.createWebviewPanel('Addons', 'Elements Marketplace', vscode.ViewColumn.One, {
       enableScripts: true
     });
@@ -187,8 +180,6 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
         );
       }
 
-      // This is a shortcut and may be replaced by something else later.
-      this.addonTreeItem.emit('propertyChanged');
       await webview.postMessage({ type: 'addonCreated', payload: newlyCreatedOrUpdatedAddon, id: addOnId });
     } catch (e) {
       const { message: errorMessage } = e as Error;
