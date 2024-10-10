@@ -203,6 +203,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     this.logStreamClient.addListener(LogStreamEvents.SCALED_TO, this.onFormationScaledTo);
     this.logStreamClient.addListener(LogStreamEvents.STATE_CHANGED, this.onDynoStateChanged);
     this.logStreamClient.addListener(LogStreamEvents.STARTING_PROCESS, this.onDynoProcessStarting);
+
+    this.logStreamClient.addListener(LogStreamEvents.MUTED_CHANGED, this.onStreamMutedChanged);
   }
 
   /**
@@ -327,6 +329,17 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       Reflect.set(dyno, 'state', 'starting');
       this.fire(dyno as T);
     }
+  };
+
+  /**
+   * Updates the app tree item to display the
+   * appropriate icon when a log stream is started
+   * or ended.
+   *
+   * @param app The app to update
+   */
+  private onStreamMutedChanged = (app: App): void => {
+    this.fire(app as T);
   };
 
   /**

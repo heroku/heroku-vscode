@@ -7,6 +7,9 @@ import { StartLogSession, type LogSessionStream } from '../../commands/app/conte
  * LogStreamEventMap is a type alias for a map of log stream events.
  */
 export type LogStreamEventMap = {
+  [LogStreamEvents.STREAM_STARTED]: App;
+  [LogStreamEvents.STREAM_ENDED]: App;
+  [LogStreamEvents.MUTED_CHANGED]: App;
   [LogStreamEvents.STATE_CHANGED]: StateChangedInfo;
   [LogStreamEvents.ATTACHMENT_ATTACHED]: AttachmentAttachedInfo;
   [LogStreamEvents.ATTACHMENT_DETACHED]: AttachmentDetachedInfo;
@@ -71,6 +74,21 @@ export type ScaledToInfo = {
  */
 export enum LogStreamEvents {
   /**
+   * Event type dispatched when a log stream is started.
+   */
+  STREAM_STARTED = 'streamStarted',
+  /**
+   * Event type dispatched when a log stream is ended.
+   */
+  STREAM_ENDED = 'streamEnded',
+  /**
+   * Event type dispatched when a mute state was changed
+   * on the LogStreamSession. This event is dispatched
+   * in response to a user action to view/hide log output in
+   * VSCode's OUTPUT drawer.
+   */
+  MUTED_CHANGED = 'mutedChanged',
+  /**
    * Event type dispatched when a Dyno state was changed.
    */
   STATE_CHANGED = 'stateChanged',
@@ -94,7 +112,6 @@ export enum LogStreamEvents {
    * Event type dispatched when a Dyno was scaled.
    */
   SCALED_TO = 'scaledTo',
-
   /**
    * Event type dispatched when a process is starting
    * as is the case when Dynos are scaled up or restarted.
@@ -247,6 +264,11 @@ export class LogStreamClient extends EventEmitter {
     for (const logSession of logSessions) {
       if (logSession) {
         logSession.attach(this.onLogStreamData);
+        logSession.onDidUpdateMute(() => this.emit(LogStreamEvents.MUTED_CHANGED, logSession.app as App));
+        this.emit(LogStreamEvents.STREAM_STARTED, logSession.app as App);
+        logSession.signal.addEventListener('abort', () =>
+          this.emit(LogStreamEvents.STREAM_ENDED, logSession.app as App)
+        );
       }
     }
   }

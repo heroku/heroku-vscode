@@ -15,6 +15,10 @@ export type LogStreamCallback = (chunk: string, app: App) => void;
  */
 export type LogSessionStream = AbortController & {
   /**
+   * The App object associated with this log session.
+   */
+  app: App | undefined;
+  /**
    * Attaches a callback to the stream. Each
    * chunk from the stream will trigger the callback
    * and the string value will be passed as the sole
@@ -37,6 +41,17 @@ export type LogSessionStream = AbortController & {
    * stream will be destroyed.
    */
   muted: boolean;
+
+  /**
+   * Adds a callback that is executed when the log
+   * stream is muted or unmuted. The callback will be
+   * passed the new value of the muted property as its
+   * sole argument.
+   *
+   * @param cb The callback to execute when the mute property is updated.
+   * @returns void
+   */
+  onDidUpdateMute: (cb: (muted: boolean) => void) => void;
 };
 
 @herokuCommand({ outputChannelId: HerokuOutputChannel.LogOutput, languageId: 'heroku-logs' })
@@ -58,10 +73,13 @@ export class StartLogSession extends AbortController implements LogSessionStream
   private static visibleLogSession: StartLogSession | undefined;
 
   private logService = new LogSessionService(fetch, 'https://api.heroku.com');
-  private app!: App & { logSession?: StartLogSession };
   private buffer = '';
   private streamListeners: Set<LogStreamCallback> = new Set();
+  private muteListeners: Set<(muted: boolean) => void> = new Set();
   private maxLines = 100;
+
+  // Backing property for the readonly app getter
+  #app: (App & { logSession?: StartLogSession }) | undefined;
 
   // Backing property for the get/set pair of the same name
   #muted = false;
@@ -71,6 +89,15 @@ export class StartLogSession extends AbortController implements LogSessionStream
    */
   public constructor(private readonly outputChannel?: vscode.OutputChannel) {
     super();
+  }
+
+  /**
+   * Gets the app associated with this log session.
+   *
+   * @returns The app associated with this log session.
+   */
+  public get app(): (App & { logSession?: StartLogSession }) | undefined {
+    return this.#app;
   }
 
   /**
@@ -95,6 +122,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
     }
     this.#muted = value;
     StartLogSession.updateExistingLogSession(this, this.#muted);
+    this.muteListeners.forEach((cb) => cb(this.#muted));
   }
 
   /**
@@ -120,7 +148,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
 
     const { outputChannel, buffer, app, muted: oldMuted } = existingLogSession;
     if (!muted) {
-      this.prepareOutputChannelForLogSession(outputChannel, app.name);
+      this.prepareOutputChannelForLogSession(outputChannel, app!.name);
       // Take upto maxLines from the buffer and append to the output channel
       outputChannel?.append(buffer.split('\n').slice(0, lines).join('\n'));
       StartLogSession.visibleLogSession = existingLogSession;
@@ -146,6 +174,18 @@ export class StartLogSession extends AbortController implements LogSessionStream
     outputChannel?.clear();
     outputChannel?.appendLine(`Log session started for ${appName}`);
     outputChannel?.show(true);
+  }
+
+  /**
+   * Adds a callback that is executed when the log
+   * stream is muted or unmuted. The callback will be
+   * passed the new value of the muted property as its
+   * sole argument.
+   *
+   * @param cb The callback to add when the mute property is updated.
+   */
+  public onDidUpdateMute(cb: (muted: boolean) => void): void {
+    this.muteListeners.add(cb);
   }
 
   /**
@@ -183,7 +223,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
   public async run(app: App & { logSession?: StartLogSession }, muted = false, lines = 100): Promise<LogSessionStream> {
     this.maxLines = lines;
     this.#muted = muted;
-    this.app = app;
+    this.#app = app;
     // Log session already exists, just mute/unmute it
     const { logSession: existingLogSession } = app;
     if (existingLogSession && !existingLogSession.signal.aborted) {
@@ -207,7 +247,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
       throw new Error(`Failed to fetch logs: ${response.statusText}`);
     }
 
-    this.app.logSession = this;
+    Reflect.set(app, 'logSession', this);
     return this;
   }
 
@@ -251,12 +291,12 @@ export class StartLogSession extends AbortController implements LogSessionStream
     while (!this.signal.aborted) {
       const { done, value } = await reader.read();
       if (done) {
-        this.app.logSession = undefined;
+        this.app!.logSession = undefined;
         break;
       }
       if (value.length > 1) {
         const str = Buffer.from(value).toString();
-        this.streamListeners.forEach((cb) => void cb(str, this.app));
+        this.streamListeners.forEach((cb) => void cb(str, this.app as App));
         this.buffer += str;
 
         if (!this.muted) {
