@@ -4,13 +4,13 @@ import { herokuCommand } from '../../meta/command';
 import { HerokuCommand } from '../heroku-command';
 import { findGitConfigFileLocation, getHerokuAppNames } from '../../utils/git-utils';
 
-export type GitRemotesAppsDiff = { added: Set<string>; removed: Set<string> };
+export type GitRemoteAppsDiff = { added: Set<string>; removed: Set<string> };
 @herokuCommand()
 /**
  * The WatchConfig command watches the git config
  * file for changes and yields the diff.
  */
-export class WatchConfig extends HerokuCommand<AsyncGenerator<GitRemotesAppsDiff>> {
+export class WatchConfig extends HerokuCommand<AsyncGenerator<GitRemoteAppsDiff>> {
   public static COMMAND_ID = 'heroku:watch:config';
 
   /**
@@ -21,14 +21,11 @@ export class WatchConfig extends HerokuCommand<AsyncGenerator<GitRemotesAppsDiff
    *
    * @returns AsyncGenerator<AppNameDiff>
    */
-  public async run(
-    abortController: AbortController,
-    updateContext = true
-  ): Promise<AsyncGenerator<GitRemotesAppsDiff>> {
+  public async run(abortController: AbortController, updateContext = true): Promise<AsyncGenerator<GitRemoteAppsDiff>> {
     const configPath = await findGitConfigFileLocation();
     let apps = new Set(await this.getUpdatedAppNames(updateContext));
 
-    return async function* (this: WatchConfig): AsyncGenerator<GitRemotesAppsDiff> {
+    return async function* (this: WatchConfig): AsyncGenerator<GitRemoteAppsDiff> {
       while (!abortController.signal.aborted) {
         const watcher = watch(configPath, { signal: abortController.signal });
         // eslint-disable-next-line @typescript-eslint/no-unused-vars

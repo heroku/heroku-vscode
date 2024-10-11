@@ -176,6 +176,1287 @@
         "scopeName": "source.heroku-logs",
         "path": "./grammars/heroku-log-format.json"
       }
+    ],
+    "icons": {
+      "hk-icon-add-16": {
+        "description": "Heroku .icon-add-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e900"
+        }
+      },
+      "hk-icon-add-badge-16": {
+        "description": "Heroku .icon-add-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e902"
+        }
+      },
+      "hk-icon-add-mark-16": {
+        "description": "Heroku .icon-add-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e904"
+        }
+      },
+      "hk-icon-add-ring-16": {
+        "description": "Heroku .icon-add-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e906"
+        }
+      },
+      "hk-icon-addon-config-16": {
+        "description": "Heroku .icon-addon-config-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e908"
+        }
+      },
+      "hk-icon-alert-badge-16": {
+        "description": "Heroku .icon-alert-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e90a"
+        }
+      },
+      "hk-icon-alert-mark-16": {
+        "description": "Heroku .icon-alert-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e90c"
+        }
+      },
+      "hk-icon-alert-ring-16": {
+        "description": "Heroku .icon-alert-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e90e"
+        }
+      },
+      "hk-icon-app-16": {
+        "description": "Heroku .icon-app-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e910"
+        }
+      },
+      "hk-icon-app-dead-16": {
+        "description": "Heroku .icon-app-dead-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e912"
+        }
+      },
+      "hk-icon-app-locked-16": {
+        "description": "Heroku .icon-app-locked-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e914"
+        }
+      },
+      "hk-icon-app-review-16": {
+        "description": "Heroku .icon-app-review-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e916"
+        }
+      },
+      "hk-icon-app-sleeping-16": {
+        "description": "Heroku .icon-app-sleeping-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e918"
+        }
+      },
+      "hk-icon-apps-16": {
+        "description": "Heroku .icon-apps-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e91a"
+        }
+      },
+      "hk-icon-attach-16": {
+        "description": "Heroku .icon-attach-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e91c"
+        }
+      },
+      "hk-icon-auto-16": {
+        "description": "Heroku .icon-auto-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e91e"
+        }
+      },
+      "hk-icon-automations-16": {
+        "description": "Heroku .icon-automations-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e920"
+        }
+      },
+      "hk-icon-billing-16": {
+        "description": "Heroku .icon-billing-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e922"
+        }
+      },
+      "hk-icon-build-16": {
+        "description": "Heroku .icon-build-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e924"
+        }
+      },
+      "hk-icon-buildpack-16": {
+        "description": "Heroku .icon-buildpack-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e926"
+        }
+      },
+      "hk-icon-caret-16": {
+        "description": "Heroku .icon-caret-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e928"
+        }
+      },
+      "hk-icon-chart-16": {
+        "description": "Heroku .icon-chart-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e92a"
+        }
+      },
+      "hk-icon-check-16": {
+        "description": "Heroku .icon-check-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e92c"
+        }
+      },
+      "hk-icon-ci-16": {
+        "description": "Heroku .icon-ci-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e92e"
+        }
+      },
+      "hk-icon-configure-16": {
+        "description": "Heroku .icon-configure-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e930"
+        }
+      },
+      "hk-icon-confirm-16": {
+        "description": "Heroku .icon-confirm-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e932"
+        }
+      },
+      "hk-icon-connect-16": {
+        "description": "Heroku .icon-connect-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e934"
+        }
+      },
+      "hk-icon-console-16": {
+        "description": "Heroku .icon-console-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e936"
+        }
+      },
+      "hk-icon-contact-16": {
+        "description": "Heroku .icon-contact-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e938"
+        }
+      },
+      "hk-icon-containers-16": {
+        "description": "Heroku .icon-containers-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e93a"
+        }
+      },
+      "hk-icon-copy-16": {
+        "description": "Heroku .icon-copy-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e93c"
+        }
+      },
+      "hk-icon-data-16": {
+        "description": "Heroku .icon-data-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e93e"
+        }
+      },
+      "hk-icon-data-cassandra-16": {
+        "description": "Heroku .icon-data-cassandra-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e940"
+        }
+      },
+      "hk-icon-data-kafka-16": {
+        "description": "Heroku .icon-data-kafka-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e942"
+        }
+      },
+      "hk-icon-data-postgres-16": {
+        "description": "Heroku .icon-data-postgres-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e944"
+        }
+      },
+      "hk-icon-data-redis-16": {
+        "description": "Heroku .icon-data-redis-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e946"
+        }
+      },
+      "hk-icon-dataclip-16": {
+        "description": "Heroku .icon-dataclip-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e948"
+        }
+      },
+      "hk-icon-datastore-16": {
+        "description": "Heroku .icon-datastore-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e94a"
+        }
+      },
+      "hk-icon-delete-16": {
+        "description": "Heroku .icon-delete-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e94c"
+        }
+      },
+      "hk-icon-deploy-16": {
+        "description": "Heroku .icon-deploy-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e94e"
+        }
+      },
+      "hk-icon-device-16": {
+        "description": "Heroku .icon-device-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e950"
+        }
+      },
+      "hk-icon-diff-16": {
+        "description": "Heroku .icon-diff-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e952"
+        }
+      },
+      "hk-icon-direction-down-16": {
+        "description": "Heroku .icon-direction-down-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e954"
+        }
+      },
+      "hk-icon-direction-horizontal-16": {
+        "description": "Heroku .icon-direction-horizontal-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e956"
+        }
+      },
+      "hk-icon-direction-left-16": {
+        "description": "Heroku .icon-direction-left-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e958"
+        }
+      },
+      "hk-icon-direction-right-16": {
+        "description": "Heroku .icon-direction-right-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e95a"
+        }
+      },
+      "hk-icon-direction-up-16": {
+        "description": "Heroku .icon-direction-up-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e95c"
+        }
+      },
+      "hk-icon-direction-vertical-16": {
+        "description": "Heroku .icon-direction-vertical-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e95e"
+        }
+      },
+      "hk-icon-docs-16": {
+        "description": "Heroku .icon-docs-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e960"
+        }
+      },
+      "hk-icon-dynomite-1x-16": {
+        "description": "Heroku .icon-dynomite-1x-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e962"
+        }
+      },
+      "hk-icon-dynomite-2x-16": {
+        "description": "Heroku .icon-dynomite-2x-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e963"
+        }
+      },
+      "hk-icon-dynomite-basic-16": {
+        "description": "Heroku .icon-dynomite-basic-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e964"
+        }
+      },
+      "hk-icon-dynomite-default-16": {
+        "description": "Heroku .icon-dynomite-default-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e965"
+        }
+      },
+      "hk-icon-dynomite-eco-16": {
+        "description": "Heroku .icon-dynomite-eco-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e966"
+        }
+      },
+      "hk-icon-dynomite-free-16": {
+        "description": "Heroku .icon-dynomite-free-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e967"
+        }
+      },
+      "hk-icon-dynomite-hobby-16": {
+        "description": "Heroku .icon-dynomite-hobby-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e968"
+        }
+      },
+      "hk-icon-dynomite-pl-16": {
+        "description": "Heroku .icon-dynomite-pl-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e969"
+        }
+      },
+      "hk-icon-dynomite-pm-16": {
+        "description": "Heroku .icon-dynomite-pm-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e96a"
+        }
+      },
+      "hk-icon-dynomite-ps-16": {
+        "description": "Heroku .icon-dynomite-ps-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e96b"
+        }
+      },
+      "hk-icon-dynomite-px-16": {
+        "description": "Heroku .icon-dynomite-px-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e96c"
+        }
+      },
+      "hk-icon-dynomite-shield-pl-16": {
+        "description": "Heroku .icon-dynomite-shield-pl-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e96d"
+        }
+      },
+      "hk-icon-dynomite-shield-pm-16": {
+        "description": "Heroku .icon-dynomite-shield-pm-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e96e"
+        }
+      },
+      "hk-icon-dynomite-shield-ps-16": {
+        "description": "Heroku .icon-dynomite-shield-ps-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e96f"
+        }
+      },
+      "hk-icon-dynomite-space-pl-16": {
+        "description": "Heroku .icon-dynomite-space-pl-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e970"
+        }
+      },
+      "hk-icon-dynomite-space-pm-16": {
+        "description": "Heroku .icon-dynomite-space-pm-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e971"
+        }
+      },
+      "hk-icon-dynomite-space-ps-16": {
+        "description": "Heroku .icon-dynomite-space-ps-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e972"
+        }
+      },
+      "hk-icon-edit-16": {
+        "description": "Heroku .icon-edit-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e973"
+        }
+      },
+      "hk-icon-edit-accept-16": {
+        "description": "Heroku .icon-edit-accept-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e975"
+        }
+      },
+      "hk-icon-edit-modify-16": {
+        "description": "Heroku .icon-edit-modify-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e977"
+        }
+      },
+      "hk-icon-edit-reject-16": {
+        "description": "Heroku .icon-edit-reject-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e979"
+        }
+      },
+      "hk-icon-element-16": {
+        "description": "Heroku .icon-element-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e97b"
+        }
+      },
+      "hk-icon-error-badge-16": {
+        "description": "Heroku .icon-error-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e97d"
+        }
+      },
+      "hk-icon-error-mark-16": {
+        "description": "Heroku .icon-error-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e97f"
+        }
+      },
+      "hk-icon-error-ring-16": {
+        "description": "Heroku .icon-error-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e981"
+        }
+      },
+      "hk-icon-failure-badge-16": {
+        "description": "Heroku .icon-failure-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e983"
+        }
+      },
+      "hk-icon-failure-ring-16": {
+        "description": "Heroku .icon-failure-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e985"
+        }
+      },
+      "hk-icon-favorite-16": {
+        "description": "Heroku .icon-favorite-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e987"
+        }
+      },
+      "hk-icon-favorite-option-16": {
+        "description": "Heroku .icon-favorite-option-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e989"
+        }
+      },
+      "hk-icon-favorite-remove-16": {
+        "description": "Heroku .icon-favorite-remove-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e98b"
+        }
+      },
+      "hk-icon-features-16": {
+        "description": "Heroku .icon-features-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e98d"
+        }
+      },
+      "hk-icon-file-16": {
+        "description": "Heroku .icon-file-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e98f"
+        }
+      },
+      "hk-icon-filter-16": {
+        "description": "Heroku .icon-filter-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e991"
+        }
+      },
+      "hk-icon-folder-16": {
+        "description": "Heroku .icon-folder-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e993"
+        }
+      },
+      "hk-icon-formation-16": {
+        "description": "Heroku .icon-formation-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e995"
+        }
+      },
+      "hk-icon-git-branch-16": {
+        "description": "Heroku .icon-git-branch-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e997"
+        }
+      },
+      "hk-icon-git-commit-16": {
+        "description": "Heroku .icon-git-commit-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e999"
+        }
+      },
+      "hk-icon-git-merge-16": {
+        "description": "Heroku .icon-git-merge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e99b"
+        }
+      },
+      "hk-icon-git-pr-16": {
+        "description": "Heroku .icon-git-pr-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e99d"
+        }
+      },
+      "hk-icon-handle-16": {
+        "description": "Heroku .icon-handle-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e99f"
+        }
+      },
+      "hk-icon-help-badge-16": {
+        "description": "Heroku .icon-help-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9a1"
+        }
+      },
+      "hk-icon-help-mark-16": {
+        "description": "Heroku .icon-help-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9a3"
+        }
+      },
+      "hk-icon-help-ring-16": {
+        "description": "Heroku .icon-help-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9a5"
+        }
+      },
+      "hk-icon-info-badge-16": {
+        "description": "Heroku .icon-info-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9a7"
+        }
+      },
+      "hk-icon-info-mark-16": {
+        "description": "Heroku .icon-info-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9a9"
+        }
+      },
+      "hk-icon-info-ring-16": {
+        "description": "Heroku .icon-info-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9ab"
+        }
+      },
+      "hk-icon-key-16": {
+        "description": "Heroku .icon-key-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9ad"
+        }
+      },
+      "hk-icon-language-clojure-16": {
+        "description": "Heroku .icon-language-clojure-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9af"
+        }
+      },
+      "hk-icon-language-go-16": {
+        "description": "Heroku .icon-language-go-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9b1"
+        }
+      },
+      "hk-icon-language-gradle-16": {
+        "description": "Heroku .icon-language-gradle-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9b3"
+        }
+      },
+      "hk-icon-language-java-16": {
+        "description": "Heroku .icon-language-java-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9b5"
+        }
+      },
+      "hk-icon-language-node-16": {
+        "description": "Heroku .icon-language-node-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9b7"
+        }
+      },
+      "hk-icon-language-php-16": {
+        "description": "Heroku .icon-language-php-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9b9"
+        }
+      },
+      "hk-icon-language-python-16": {
+        "description": "Heroku .icon-language-python-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9bb"
+        }
+      },
+      "hk-icon-language-ruby-16": {
+        "description": "Heroku .icon-language-ruby-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9bd"
+        }
+      },
+      "hk-icon-language-scala-16": {
+        "description": "Heroku .icon-language-scala-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9bf"
+        }
+      },
+      "hk-icon-launch-16": {
+        "description": "Heroku .icon-launch-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9c1"
+        }
+      },
+      "hk-icon-launcher-16": {
+        "description": "Heroku .icon-launcher-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9c3"
+        }
+      },
+      "hk-icon-layout-grid-16": {
+        "description": "Heroku .icon-layout-grid-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9c5"
+        }
+      },
+      "hk-icon-layout-list-16": {
+        "description": "Heroku .icon-layout-list-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9c7"
+        }
+      },
+      "hk-icon-lightning-16": {
+        "description": "Heroku .icon-lightning-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9c9"
+        }
+      },
+      "hk-icon-loading-16": {
+        "description": "Heroku .icon-loading-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9cb"
+        }
+      },
+      "hk-icon-lock-locked-16": {
+        "description": "Heroku .icon-lock-locked-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9cd"
+        }
+      },
+      "hk-icon-lock-unlocked-16": {
+        "description": "Heroku .icon-lock-unlocked-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9cf"
+        }
+      },
+      "hk-icon-logo-block-16": {
+        "description": "Heroku .icon-logo-block-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9d1"
+        }
+      },
+      "hk-icon-logo-mark-16": {
+        "description": "Heroku .icon-logo-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9d3"
+        }
+      },
+      "hk-icon-logo-outline-16": {
+        "description": "Heroku .icon-logo-outline-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9d5"
+        }
+      },
+      "hk-icon-logs-16": {
+        "description": "Heroku .icon-logs-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\e9d7"
+        }
+      },
+      "hk-icon-marketplace-16": {
+        "description": "Heroku .icon-marketplace-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea45"
+        }
+      },
+      "hk-icon-maximize-16": {
+        "description": "Heroku .icon-maximize-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea47"
+        }
+      },
+      "hk-icon-metrics-16": {
+        "description": "Heroku .icon-metrics-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea49"
+        }
+      },
+      "hk-icon-minimize-16": {
+        "description": "Heroku .icon-minimize-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea4b"
+        }
+      },
+      "hk-icon-nav-back-16": {
+        "description": "Heroku .icon-nav-back-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea4d"
+        }
+      },
+      "hk-icon-nav-forward-16": {
+        "description": "Heroku .icon-nav-forward-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea4f"
+        }
+      },
+      "hk-icon-nav-go-16": {
+        "description": "Heroku .icon-nav-go-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea51"
+        }
+      },
+      "hk-icon-network-16": {
+        "description": "Heroku .icon-network-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea53"
+        }
+      },
+      "hk-icon-notification-16": {
+        "description": "Heroku .icon-notification-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea55"
+        }
+      },
+      "hk-icon-open-16": {
+        "description": "Heroku .icon-open-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea57"
+        }
+      },
+      "hk-icon-overview-16": {
+        "description": "Heroku .icon-overview-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea59"
+        }
+      },
+      "hk-icon-pause-16": {
+        "description": "Heroku .icon-pause-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea5b"
+        }
+      },
+      "hk-icon-pending-16": {
+        "description": "Heroku .icon-pending-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea5d"
+        }
+      },
+      "hk-icon-personal-16": {
+        "description": "Heroku .icon-personal-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea5f"
+        }
+      },
+      "hk-icon-pipeline-16": {
+        "description": "Heroku .icon-pipeline-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea61"
+        }
+      },
+      "hk-icon-pipelines-16": {
+        "description": "Heroku .icon-pipelines-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea63"
+        }
+      },
+      "hk-icon-play-16": {
+        "description": "Heroku .icon-play-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea65"
+        }
+      },
+      "hk-icon-remove-badge-16": {
+        "description": "Heroku .icon-remove-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea67"
+        }
+      },
+      "hk-icon-remove-mark-16": {
+        "description": "Heroku .icon-remove-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea69"
+        }
+      },
+      "hk-icon-remove-ring-16": {
+        "description": "Heroku .icon-remove-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea6b"
+        }
+      },
+      "hk-icon-repo-16": {
+        "description": "Heroku .icon-repo-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea6d"
+        }
+      },
+      "hk-icon-restart-16": {
+        "description": "Heroku .icon-restart-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea6f"
+        }
+      },
+      "hk-icon-rollback-16": {
+        "description": "Heroku .icon-rollback-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea71"
+        }
+      },
+      "hk-icon-search-16": {
+        "description": "Heroku .icon-search-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea73"
+        }
+      },
+      "hk-icon-service-bitbucket-16": {
+        "description": "Heroku .icon-service-bitbucket-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea75"
+        }
+      },
+      "hk-icon-service-docker-16": {
+        "description": "Heroku .icon-service-docker-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea77"
+        }
+      },
+      "hk-icon-service-dropbox-16": {
+        "description": "Heroku .icon-service-dropbox-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea79"
+        }
+      },
+      "hk-icon-service-git-16": {
+        "description": "Heroku .icon-service-git-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea7b"
+        }
+      },
+      "hk-icon-service-github-16": {
+        "description": "Heroku .icon-service-github-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea7d"
+        }
+      },
+      "hk-icon-service-github-enterprise-16": {
+        "description": "Heroku .icon-service-github-enterprise-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea7f"
+        }
+      },
+      "hk-icon-service-gitlab-16": {
+        "description": "Heroku .icon-service-gitlab-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea81"
+        }
+      },
+      "hk-icon-service-slack-16": {
+        "description": "Heroku .icon-service-slack-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea83"
+        }
+      },
+      "hk-icon-settings-16": {
+        "description": "Heroku .icon-settings-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea85"
+        }
+      },
+      "hk-icon-setup-16": {
+        "description": "Heroku .icon-setup-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea87"
+        }
+      },
+      "hk-icon-sfdc-16": {
+        "description": "Heroku .icon-sfdc-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea89"
+        }
+      },
+      "hk-icon-space-16": {
+        "description": "Heroku .icon-space-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea8b"
+        }
+      },
+      "hk-icon-space-shielded-16": {
+        "description": "Heroku .icon-space-shielded-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea8d"
+        }
+      },
+      "hk-icon-success-badge-16": {
+        "description": "Heroku .icon-success-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea8f"
+        }
+      },
+      "hk-icon-success-mark-16": {
+        "description": "Heroku .icon-success-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea91"
+        }
+      },
+      "hk-icon-success-ring-16": {
+        "description": "Heroku .icon-success-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea93"
+        }
+      },
+      "hk-icon-sync-16": {
+        "description": "Heroku .icon-sync-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea95"
+        }
+      },
+      "hk-icon-target-16": {
+        "description": "Heroku .icon-target-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea97"
+        }
+      },
+      "hk-icon-team-16": {
+        "description": "Heroku .icon-team-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea99"
+        }
+      },
+      "hk-icon-time-16": {
+        "description": "Heroku .icon-time-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea9b"
+        }
+      },
+      "hk-icon-toggle-16": {
+        "description": "Heroku .icon-toggle-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea9d"
+        }
+      },
+      "hk-icon-transfer-16": {
+        "description": "Heroku .icon-transfer-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\ea9f"
+        }
+      },
+      "hk-icon-usage-16": {
+        "description": "Heroku .icon-usage-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\eaa1"
+        }
+      },
+      "hk-icon-user-16": {
+        "description": "Heroku .icon-user-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\eaa3"
+        }
+      },
+      "hk-icon-visibility-16": {
+        "description": "Heroku .icon-visibility-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\eaa5"
+        }
+      },
+      "hk-icon-visibility-off-16": {
+        "description": "Heroku .icon-visibility-off-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\eaa7"
+        }
+      },
+      "hk-icon-warning-badge-16": {
+        "description": "Heroku .icon-warning-badge-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\eaa9"
+        }
+      },
+      "hk-icon-warning-mark-16": {
+        "description": "Heroku .icon-warning-mark-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\eaab"
+        }
+      },
+      "hk-icon-warning-ring-16": {
+        "description": "Heroku .icon-warning-ring-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\eaad"
+        }
+      },
+      "hk-icon-webhooks-16": {
+        "description": "Heroku .icon-webhooks-16",
+        "default": {
+          "fontPath": "./resources/hk-malibu/fonts/Heroku-Malibu.woff",
+          "fontCharacter": "\\eaaf"
+        }
+      }
+    },
+    "colors": [
+      {
+        "id": "hk.purple",
+        "description": "Heroku branding purple",
+        "defaults": {
+          "dark": "#7673C0",
+          "highContrast": "#430098",
+          "highContrastLight": "#211746",
+          "light": "#211746"
+        }
+      },
+      {
+        "id": "hk.purple.2",
+        "description": "Heroku branding digital pallete purple",
+        "defaults": {
+          "dark": "#A997BF",
+          "highContrast": "#A997BF",
+          "highContrastLight": "#79589F",
+          "light": "#79589F"
+        }
+      },
+      {
+        "id": "hk.blue",
+        "description": "Heroku branding digital pallete blue",
+        "defaults": {
+          "dark": "#8EBDF1",
+          "highContrast": "#8EBDF1",
+          "highContrastLight": "#408FEC",
+          "light": "#408FEC"
+        }
+      },
+      {
+        "id": "hk.green",
+        "description": "Heroku branding digital pallete green",
+        "defaults": {
+          "dark": "#ABD7B4",
+          "highContrast": "#ABD7B4",
+          "highContrastLight": "#74C080",
+          "light": "#74C080"
+        }
+      },
+      {
+        "id": "hk.orange",
+        "description": "Heroku branding digital pallete orange",
+        "defaults": {
+          "dark": "#FBC595",
+          "highContrast": "#FBC595",
+          "highContrastLight": "#FA9F47",
+          "light": "#FA9F47"
+        }
+      },
+      {
+        "id": "hk.red",
+        "description": "Heroku branding digital pallete red",
+        "defaults": {
+          "dark": "#E58F8F",
+          "highContrast": "#E58F8F",
+          "highContrastLight": "#D64141",
+          "light": "#D64141"
+        }
+      },
+      {
+        "id": "hk.gray",
+        "description": "Heroku branding gray",
+        "defaults": {
+          "dark": "#C3C5C8",
+          "highContrast": "#7C858C",
+          "highContrastLight": "#333D47",
+          "light": "#333D47"
+        }
+      },
+      {
+        "id": "salesforce.blue",
+        "description": "Heroku branding blue colors",
+        "defaults": {
+          "dark": "#00A1E0",
+          "highContrast": "#215CA0",
+          "highContrastLight": "#032E61",
+          "light": "#032E61"
+        }
+      }
     ]
   },
   "scripts": {

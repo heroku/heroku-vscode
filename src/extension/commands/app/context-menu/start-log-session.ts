@@ -287,25 +287,31 @@ export class StartLogSession extends AbortController implements LogSessionStream
    * @returns Promise<void>
    */
   private async beginReading(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
-    this.signal.addEventListener('abort', () => void reader.cancel());
-    while (!this.signal.aborted) {
-      const { done, value } = await reader.read();
-      if (done) {
-        this.app!.logSession = undefined;
-        break;
-      }
-      if (value.length > 1) {
-        const str = Buffer.from(value).toString();
-        this.streamListeners.forEach((cb) => void cb(str, this.app as App));
-        this.buffer += str;
+    try {
+      while (!this.signal.aborted) {
+        const { done, value } = await reader.read();
+        if (done) {
+          this.app!.logSession = undefined;
+          break;
+        }
+        if (value.length > 1) {
+          const str = Buffer.from(value).toString();
+          this.streamListeners.forEach((cb) => void cb(str, this.app as App));
+          this.buffer += str;
 
-        if (!this.muted) {
-          this.outputChannel?.append(str);
-        }
-        if (this.buffer.split('\n').length > this.maxLines) {
-          this.buffer = this.buffer.split('\n').slice(-this.maxLines).join('\n');
+          if (!this.muted) {
+            this.outputChannel?.append(str);
+          }
+          if (this.buffer.split('\n').length > this.maxLines) {
+            this.buffer = this.buffer.split('\n').slice(-this.maxLines).join('\n');
+          }
         }
       }
+    } catch (e) {
+      if (e instanceof DOMException) {
+        return;
+      }
+      throw e;
     }
   }
 }

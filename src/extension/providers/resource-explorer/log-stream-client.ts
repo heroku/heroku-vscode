@@ -119,6 +119,8 @@ export enum LogStreamEvents {
   STARTING_PROCESS = 'startingProcess'
 }
 
+type ReadOnlyAppArray = ReadonlyArray<App & { logSession?: LogSessionStream }> | undefined;
+
 /**
  * LogStreamClient is a component for handling and processing log streams from multiple Heroku applications.
  * It extends EventEmitter to provide custom event handling for various log stream events.
@@ -172,14 +174,14 @@ export class LogStreamClient extends EventEmitter {
     startingProcess: /(Starting process with command )(`.*?`)/
   };
 
-  #apps: ReadonlyArray<App & { logSession?: LogSessionStream }> | undefined;
+  #apps: ReadOnlyAppArray;
 
   /**
    * Gets the apps.
    *
    * @returns The apps.
    */
-  public get apps(): ReadonlyArray<App & { logSession?: LogSessionStream }> {
+  public get apps(): ReadOnlyAppArray {
     return this.#apps ?? [];
   }
 
@@ -190,13 +192,16 @@ export class LogStreamClient extends EventEmitter {
    *
    * @param value The apps.
    */
-  public set apps(value: ReadonlyArray<App & { logSession?: LogSessionStream }>) {
+  public set apps(value: ReadOnlyAppArray) {
     if (this.#apps === value) {
       return;
     }
-    this.detachLogStreams();
-    this.#apps = value || [];
-    void this.attachLogStreams();
+    const toDetach = value?.filter((app) => this.#apps?.find((existingApp) => existingApp.id !== app.id));
+    const toAttach = value?.filter((app) => !this.#apps?.find((existingApp) => existingApp.id !== app.id));
+
+    this.detachLogStreams(toDetach);
+    this.#apps = value;
+    void this.attachLogStreams(toAttach);
   }
 
   /**
@@ -242,9 +247,14 @@ export class LogStreamClient extends EventEmitter {
 
   /**
    * Detaches the log streams.
+   *
+   * @param toDetach The apps to detach.
    */
-  private detachLogStreams(): void {
-    for (const app of this.apps) {
+  private detachLogStreams(toDetach: ReadOnlyAppArray): void {
+    if (!toDetach?.length) {
+      return;
+    }
+    for (const app of toDetach) {
       app.logSession?.detach(this.onLogStreamData);
       app.logSession?.abort();
       app.logSession = undefined;
@@ -253,23 +263,29 @@ export class LogStreamClient extends EventEmitter {
 
   /**
    * Attaches the log streams.
+   *
+   * @param toAttach The apps to attach.
    */
-  private async attachLogStreams(): Promise<void> {
-    const logSessions = await Promise.all(
-      this.apps.map((app) => vscode.commands.executeCommand<LogSessionStream>(StartLogSession.COMMAND_ID, app, true))
+  private async attachLogStreams(toAttach: ReadOnlyAppArray): Promise<void> {
+    if (!toAttach?.length) {
+      return;
+    }
+    const logSessions = await Promise.allSettled(
+      toAttach.map((app) => vscode.commands.executeCommand<LogSessionStream>(StartLogSession.COMMAND_ID, app, true))
     );
     // Since the first few writes from the stream may contain
     // log history, we wait a second to begin processing real-time logs
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    for (const logSession of logSessions) {
-      if (logSession) {
-        logSession.attach(this.onLogStreamData);
-        logSession.onDidUpdateMute(() => this.emit(LogStreamEvents.MUTED_CHANGED, logSession.app as App));
-        this.emit(LogStreamEvents.STREAM_STARTED, logSession.app as App);
-        logSession.signal.addEventListener('abort', () =>
-          this.emit(LogStreamEvents.STREAM_ENDED, logSession.app as App)
-        );
+    for (const result of logSessions) {
+      const { status } = result;
+      if (status === 'rejected') {
+        continue;
       }
+      const logSession = result.value;
+      logSession.attach(this.onLogStreamData);
+      logSession.onDidUpdateMute(() => this.emit(LogStreamEvents.MUTED_CHANGED, logSession.app as App));
+      this.emit(LogStreamEvents.STREAM_STARTED, logSession.app as App);
+      logSession.signal.addEventListener('abort', () => this.emit(LogStreamEvents.STREAM_ENDED, logSession.app as App));
     }
   }
 

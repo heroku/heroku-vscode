@@ -2,7 +2,7 @@ import proxyquire from 'proxyquire';
 import assert from 'assert';
 import sinon from 'sinon';
 import * as vscode from 'vscode';
-import type { GitRemotesAppsDiff } from './watch-config';
+import type { GitRemoteAppsDiff } from './watch-config';
 import { EventEmitter } from 'stream';
 
 suite('WatchConfig', () => {
@@ -11,12 +11,12 @@ suite('WatchConfig', () => {
   let findGitConfigFileLocationStub: sinon.SinonStub;
   let getHerokuAppNamesStub: sinon.SinonStub;
   let vscodeStub: any;
-  let watcher: AsyncIterable<GitRemotesAppsDiff>;
+  let watcher: AsyncIterable<GitRemoteAppsDiff>;
   let watcherEmitter = new EventEmitter();
 
   setup(() => {
     watcher = (async function* () {
-      const result = await new Promise<GitRemotesAppsDiff>((resolve) => {
+      const result = await new Promise<GitRemoteAppsDiff>((resolve) => {
         watcherEmitter.once('change', resolve);
       });
       yield result;
