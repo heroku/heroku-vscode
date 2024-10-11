@@ -148,7 +148,8 @@ export function getDynoTreeItem(context: vscode.ExtensionContext, dyno: Dyno): v
     description: `${dyno.command} - ${dyno.state}`,
     iconPath: getDynoIconPath(context, dyno),
     tooltip: `${dyno.app.name} - ${dyno.size}`,
-    contextValue: `dyno:${dyno.state}`
+    contextValue: `dyno:${dyno.state}`,
+    resourceUri: vscode.Uri.parse(`heroku:/dyno/${dyno.state}`)
   } as vscode.TreeItem;
 }
 
