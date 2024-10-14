@@ -207,7 +207,7 @@
     "@vscode/test-electron": "2.4.1",
     "eslint": "^8.56.0",
     "eslint-config-salesforce-typescript": "3.4.0",
-    "eslint-plugin-jsdoc": "^48.11.0",
+    "eslint-plugin-jsdoc": "^50.4.1",
     "git-format-staged": "^3.0.0",
     "husky": "^9.1.4",
     "lint-staged": "^15.2.0",
