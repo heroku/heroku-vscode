@@ -3,9 +3,10 @@ import { DocumentSelector } from 'vscode';
 
 import { ShellScriptHoverProvider } from './providers/shell-script-hover-provider';
 import { AuthenticationProvider } from './providers/authentication-provider';
-import { HerokuResourceExplorerProvider } from './providers/heroku-resource-explorer-provider';
+import { HerokuResourceExplorerProvider } from './providers/resource-explorer/heroku-resource-explorer-provider';
 
 import './commands/auth/welcome-view-sign-in';
+import { FildeDecoratorProvider } from './providers/file-decorator/file-decorator-provider';
 
 /**
  * Called when the extension is activated by VSCode
@@ -24,7 +25,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerTreeDataProvider(
       'heroku:resource-explorer:treeview',
       new HerokuResourceExplorerProvider(context)
-    )
+    ),
+
+    vscode.window.registerFileDecorationProvider(new FildeDecoratorProvider(context))
   );
 
   void vscode.commands.executeCommand('setContext', 'heroku.app-found', true);

@@ -2,6 +2,112 @@
   "name": "Log file and Heroku Log",
   "scopeName": "source.heroku-logs",
   "repository": {
+    "app-name": {
+      "match": "\\b[a-zA-Z0-9-]+\\b(?=\\[)",
+      "name": "keyword.control app-name.heroku-logs"
+    },
+    "process-type": {
+      "match": "(?<=\\[)[a-zA-Z0-9-\\.]+(?=\\]:)",
+      "name": "keyword process-type.heroku-logs"
+    },
+    "attachments-attach": {
+      "match": "(Attach )([A-Z_\\s]+)(?:\\(@ref:)([a-zA-Z0-9-]+)",
+      "captures": {
+        "1": {
+          "name": "comment"
+        },
+        "2": {
+          "name": "keyword"
+        },
+        "3": {
+          "name": "keyword"
+        }
+      }
+    },
+    "attachments-update": {
+      "match": "(Update )([A-Z_\\s]+)",
+      "captures": {
+        "1": {
+          "name": "comment"
+        },
+        "2": {
+          "name": "keyword"
+        },
+        "3": {
+          "name": "keyword"
+        }
+      }
+    },
+    "attachments-detach": {
+      "match": "(Detach )([A-Z_\\s]+)(?:\\(@ref:)([a-zA-Z0-9\\-]+)",
+      "captures": {
+        "1": {
+          "name": "invalid"
+        },
+        "2": {
+          "name": "keyword"
+        },
+        "3": {
+          "name": "keyword"
+        }
+      }
+    },
+    "provisioning-complete": {
+      "match": "(?:@ref:)([a-zA-Z0-9\\-]+)(?: completed provisioning)",
+      "captures": {
+        "1": {
+          "name": "keyword"
+        }
+      }
+    },
+    "scaled-to": {
+      "match": "(?:Scaled to )([a-zA-Z]+)(@)([0-9]+)(?:\\:)([a-zA-Z0-9-_]+)",
+      "captures": {
+        "1": {
+          "name": "keyword"
+        },
+        "2": {
+          "name": "keyword"
+        },
+        "3": {
+          "name": "keyword"
+        },
+        "4": {
+          "name": "keyword"
+        }
+      }
+    },
+    "state-changed": {
+      "match": "\\b(State changed from )(\\w+)(?: to )(\\w+)\\b",
+      "captures": {
+        "2": {
+          "patterns": [
+            {
+              "include": "#state-up-or-complete"
+            },
+            {
+              "include": "#state-down"
+            },
+            {
+              "include": "#state-starting"
+            }
+          ]
+        },
+        "3": {
+          "patterns": [
+            {
+              "include": "#state-up-or-complete"
+            },
+            {
+              "include": "#state-down"
+            },
+            {
+              "include": "#state-starting"
+            }
+          ]
+        }
+      }
+    },
     "state-up-or-complete": {
       "match": "(up|complete)",
       "name": "comment strong"
@@ -21,8 +127,28 @@
   },
   "patterns": [
     {
-      "match": "(?<=\\[)[a-zA-Z0-9-]+(?=\\]:)",
-      "name": "keyword process-type.heroku-logs"
+      "include": "#app-name"
+    },
+    {
+      "include": "#process-type"
+    },
+    {
+      "include": "#scaled-to"
+    },
+    {
+      "include": "#state-changed"
+    },
+    {
+      "include": "#attachments-attach"
+    },
+    {
+      "include": "#attachments-detach"
+    },
+    {
+      "include": "#provisioning-complete"
+    },
+    {
+      "include": "#attachments-update"
     },
     {
       "match": "(\\w+#)",
@@ -31,10 +157,6 @@
           "name": "constant.character.escape"
         }
       }
-    },
-    {
-      "match": "\\b[a-zA-Z0-9-]+\\b(?=\\[)",
-      "name": "keyword.control app-name.heroku-logs"
     },
     {
       "match": "\\b(path)=([^\\s]+)",
@@ -126,10 +248,6 @@
       }
     },
     {
-      "match": "\\b(down|up|starting|complete)\\b",
-      "name": "keyword"
-    },
-    {
       "match": "\\b(Stopping all processes with SIGTERM)\\b",
       "name": "constant.character.set.regexp"
     },
@@ -138,37 +256,6 @@
       "captures": {
         "2": {
           "name": "constant.character strong"
-        }
-      }
-    },
-    {
-      "match": "\\b(State changed from )(\\w+)( to )(\\w+)\\b",
-      "captures": {
-        "2": {
-          "patterns": [
-            {
-              "include": "#state-up-or-complete"
-            },
-            {
-              "include": "#state-down"
-            },
-            {
-              "include": "#state-starting"
-            }
-          ]
-        },
-        "4": {
-          "patterns": [
-            {
-              "include": "#state-up-or-complete"
-            },
-            {
-              "include": "#state-down"
-            },
-            {
-              "include": "#state-starting"
-            }
-          ]
         }
       }
     },
