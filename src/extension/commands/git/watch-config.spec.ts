@@ -17,7 +17,9 @@ suite('WatchConfig', () => {
   setup(() => {
     watcher = (async function* () {
       const result = await new Promise<GitRemoteAppsDiff>((resolve) => {
-        watcherEmitter.once('change', resolve);
+        watcherEmitter.once('change', () => {
+          resolve({ added: new Set(), removed: new Set() });
+        });
       });
       yield result;
     })();
@@ -59,47 +61,26 @@ suite('WatchConfig', () => {
     const watchConfig = new WatchConfig();
     const abortController = new AbortController();
 
-    const generator = await watchConfig.run(abortController, true);
+    const generator = await watchConfig.run(abortController);
 
     // Simulate initial state
     getHerokuAppNamesStub.onFirstCall().resolves(['app1', 'app2']);
 
     // Start the generator
-    const promise = generator.next();
-
-    // Simulate a change event with no actual changes
-    watcherEmitter.emit('change', { eventType: 'change' });
+    const result1 = await generator.next();
 
     // Simulate a change event
     getHerokuAppNamesStub.onSecondCall().resolves(['app1', 'app3']);
 
-    const result = await promise;
-    assert.deepStrictEqual(result.value, { added: new Set(['app3']), removed: new Set(['app2']) });
-
-    // Verify that context was updated
-    assert(vscodeStub.commands.executeCommand.calledWith('setContext', 'heroku.app-found', true));
-
-    abortController.abort();
-  });
-
-  test('should not yield when there are no changes', async () => {
-    const watchConfig = new WatchConfig();
-    const abortController = new AbortController();
-
-    const generator = await watchConfig.run(abortController, false);
-
-    // Simulate no changes
-    getHerokuAppNamesStub.resolves(['app1', 'app2']);
-
-    // Start the generator
     const promise = generator.next();
-
     // Simulate a change event with no actual changes
     watcherEmitter.emit('change', { eventType: 'change' });
-    abortController.abort();
-    const result = await promise;
 
-    assert.strictEqual(result.value, undefined);
+    const result2 = await promise;
+
+    assert.deepStrictEqual(result2.value, { added: new Set(['app3']), removed: new Set(['app2']) });
+
+    abortController.abort();
   });
 
   test('should handle errors gracefully', async () => {

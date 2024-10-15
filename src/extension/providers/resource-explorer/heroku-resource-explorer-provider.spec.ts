@@ -5,19 +5,19 @@ import { HerokuResourceExplorerProvider } from './heroku-resource-explorer-provi
 import { App, Dyno, Formation, AddOn } from '@heroku-cli/schema';
 import { randomUUID } from 'node:crypto';
 import * as gitUtils from '../../utils/git-utils';
-import { LogStreamClient, LogStreamEvents } from './log-stream-client';
 import { Readable, Writable } from 'node:stream';
+import { WatchConfig } from '../../commands/git/watch-config';
 
 suite('HerokuResourceExplorerProvider', () => {
   let provider: HerokuResourceExplorerProvider;
   let mockContext: vscode.ExtensionContext;
   let getSessionStub: sinon.SinonStub;
+  let vsCodeExecCommandStub: sinon.SinonStub;
   let fetchStub: sinon.SinonStub;
   let elementTypeMap: Map<unknown, unknown>;
   let childParentMap: Map<unknown, unknown>;
   let appToResourceMap: Map<unknown, unknown>;
   let getHerokuAppNamesStub: sinon.SinonStub;
-  let logStreamClientStub: LogStreamClient;
   let stream: Writable;
 
   const mockApp = { id: 'app1', name: 'test-app', organization: { name: 'test-org' } } as App;
@@ -47,12 +47,19 @@ suite('HerokuResourceExplorerProvider', () => {
       }
     } as any;
 
-    getSessionStub = sinon.stub(vscode.authentication, 'getSession').callsFake(async (providerId: string) => {
-      if (providerId === 'heroku:auth:login') {
-        return sessionObject;
-      }
-      return undefined;
-    });
+    getSessionStub = sinon
+      .stub(vscode.authentication, 'getSession')
+      .withArgs('heroku:auth:login')
+      .resolves(sessionObject);
+
+    vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
+    vsCodeExecCommandStub.withArgs(WatchConfig.COMMAND_ID, sinon.match.any).resolves(
+      (function* () {
+        yield { added: new Set([mockApp.name]), removed: new Set() };
+      })()
+    );
+
+    vsCodeExecCommandStub.callThrough();
 
     // LogStream stub
     stream = new Writable();
@@ -71,6 +78,7 @@ suite('HerokuResourceExplorerProvider', () => {
     );
 
     fetchStub = sinon.stub(global, 'fetch');
+    fetchStub.withArgs('https://api.heroku.com/apps/test-app').resolves(new Response(JSON.stringify(mockApp)));
     fetchStub.withArgs('https://api.heroku.com/apps/app1').resolves(new Response(JSON.stringify(mockApp)));
     fetchStub.withArgs('https://api.heroku.com/apps/app1/dynos').resolves(new Response(JSON.stringify([mockDyno])));
     fetchStub.withArgs('https://api.heroku.com/apps/app1/addons').resolves(new Response(JSON.stringify([mockAddOn])));
@@ -95,8 +103,6 @@ suite('HerokuResourceExplorerProvider', () => {
     getHerokuAppNamesStub = sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
 
     provider = new HerokuResourceExplorerProvider(mockContext);
-    logStreamClientStub = new LogStreamClient();
-    Reflect.set(provider, 'logStreamClient', logStreamClientStub);
 
     elementTypeMap = Reflect.get(provider, 'elementTypeMap') as Map<unknown, unknown>;
     childParentMap = Reflect.get(provider, 'childParentMap') as Map<unknown, unknown>;
@@ -108,12 +114,14 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('getChildren should return apps when no element is provided', async () => {
+    await new Promise((resolve) => provider.event(resolve));
     const children = await provider.getChildren();
     assert.strictEqual(children.length, 1);
     assert.deepStrictEqual(children[0], mockApp);
   });
 
   test('getChildren should return app categories when an app is provided', async () => {
+    await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const children = (await provider.getChildren(app)) as vscode.TreeItem[];
     assert.strictEqual(children.length, 4);
@@ -124,6 +132,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('getChildren should return formations when FORMATIONS category is provided', async () => {
+    await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const categories = (await provider.getChildren(app)) as vscode.TreeItem[];
     const formationsCategory = categories.find((c) => c.label === 'FORMATIONS');
@@ -151,6 +160,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('onFormationScaledTo should update formation quantity and fire event', async () => {
+    await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const categories = (await provider.getChildren(app)) as vscode.TreeItem[]; // gets the categories
 
@@ -167,6 +177,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('onDynoStateChanged should update dyno state and fire event', async () => {
+    await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const categories = (await provider.getChildren(app)) as vscode.TreeItem[]; // gets the categories
 
@@ -184,6 +195,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('onDynoStateChanged should add the new dyno when startup occurs', async () => {
+    await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const categories = (await provider.getChildren(app)) as vscode.TreeItem[]; // gets the categories
 

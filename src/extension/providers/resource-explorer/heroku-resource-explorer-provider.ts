@@ -1,13 +1,12 @@
 import AppService from '@heroku-cli/schema/services/app-service.js';
 import type { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
 import DynoService from '@heroku-cli/schema/services/dyno-service.js';
-import vscode, { type AuthenticationSession } from 'vscode';
+import vscode from 'vscode';
 
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
-import { getHerokuAppNames } from '../../utils/git-utils';
 import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
 
-import { GitRemoteAppsDiff, WatchConfig } from '../../commands/git/watch-config';
+import { GitRemoteAppsDiff as AppsDiff, WatchConfig } from '../../commands/git/watch-config';
 import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 import {
   LogStreamClient,
@@ -62,14 +61,14 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected apps: Map<App['name'], App> = new Map();
   protected appToResourceMap = new WeakMap<App, AppResources>();
 
-  protected logStreamClient = new LogStreamClient();
-
   protected requestInit = { headers: {} };
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
   protected abortWatchGitConfig = new AbortController();
   protected syncAddonsPending = false;
+
+  #logStreamClient!: LogStreamClient;
 
   /**
    * Constructs a new HerokuResourceExplorerProvider
@@ -79,6 +78,23 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();
     void this.watchGitConfig();
+  }
+
+  /**
+   * Gets the LogStreamClient
+   *
+   * @returns The LogStreamClient
+   */
+  private get logStreamClient(): LogStreamClient {
+    if (!this.#logStreamClient) {
+      this.#logStreamClient = new LogStreamClient();
+      this.#logStreamClient.addListener(LogStreamEvents.SCALED_TO, this.onFormationScaledTo);
+      this.#logStreamClient.addListener(LogStreamEvents.STATE_CHANGED, this.onDynoStateChanged);
+      this.#logStreamClient.addListener(LogStreamEvents.STARTING_PROCESS, this.onDynoProcessStarting);
+
+      this.#logStreamClient.addListener(LogStreamEvents.MUTED_CHANGED, this.onStreamMutedChanged);
+    }
+    return this.#logStreamClient;
   }
 
   /**
@@ -157,40 +173,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       return [];
     }
 
-    // Root items
-    if (!this.apps.size) {
-      try {
-        const { accessToken } = (await vscode.authentication.getSession(
-          'heroku:auth:login',
-          []
-        )) as AuthenticationSession;
-        Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
-        const appNames = await getHerokuAppNames();
-        const appsNotFound = [];
-        for (const appName of appNames) {
-          let appInfo: App;
-          try {
-            appInfo = await this.appService.info(appName, { ...this.requestInit });
-          } catch {
-            appsNotFound.push(appName);
-            continue;
-          }
-          this.apps.set(appInfo.name, appInfo);
-          this.elementTypeMap.set(appInfo as T, 'App');
-          this.appToResourceMap.set(appInfo, { dynos: [], formations: [], addOns: [], categories: [] });
-        }
-        this.startLiveUpdates();
-        if (appsNotFound.length) {
-          void this.showAppsNotFound(appsNotFound);
-        }
-      } catch {
-        // no-op
-      }
-    }
-    const appsArray = Array.from(this.apps.values());
-    this.logStreamClient.apps = appsArray;
-
-    return appsArray as T[];
+    return Array.from(this.apps.values()) as T[];
   }
 
   /**
@@ -198,18 +181,6 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    */
   public dispose(): void {
     this.abortWatchGitConfig.abort();
-  }
-
-  /**
-   * Starts live updates for the apps
-   * and it's resources.
-   */
-  private startLiveUpdates(): void {
-    this.logStreamClient.addListener(LogStreamEvents.SCALED_TO, this.onFormationScaledTo);
-    this.logStreamClient.addListener(LogStreamEvents.STATE_CHANGED, this.onDynoStateChanged);
-    this.logStreamClient.addListener(LogStreamEvents.STARTING_PROCESS, this.onDynoProcessStarting);
-
-    this.logStreamClient.addListener(LogStreamEvents.MUTED_CHANGED, this.onStreamMutedChanged);
   }
 
   /**
@@ -472,28 +443,53 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * Watches the git config for changes.
    */
   private async watchGitConfig(): Promise<void> {
-    const appChanges = await vscode.commands.executeCommand<AsyncIterable<GitRemoteAppsDiff>>(
+    const appChanges = await vscode.commands.executeCommand<AsyncIterable<AppsDiff>>(
       WatchConfig.COMMAND_ID,
       this.abortWatchGitConfig
     );
 
     for await (const appDiffs of appChanges) {
-      const { added, removed } = appDiffs;
-      if (added.size) {
-        const apps = await Promise.all(
-          Array.from(added).map((appName) => this.appService.info(appName, this.requestInit))
-        );
-        apps.forEach((app) => {
+      await this.syncApps(appDiffs);
+      this.fire(undefined);
+      await vscode.commands.executeCommand('setContext', 'heroku.app-found', !!this.apps.size);
+    }
+  }
+
+  /**
+   * Syncs the apps based on the provided app diffs.
+   *
+   * @param appDiffs AppsDiff
+   * @returns Promise<void>
+   */
+  private async syncApps(appDiffs: AppsDiff): Promise<void> {
+    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) ?? {};
+    Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
+
+    const { added, removed } = appDiffs;
+    if (added.size) {
+      const appsNotFound = [];
+      const addedArray = Array.from(added).filter((appName) => !this.apps.has(appName));
+      const appResults = await Promise.allSettled(
+        addedArray.map((appName) => this.appService.info(appName, this.requestInit))
+      );
+      for (let i = 0; i < appResults.length; i++) {
+        const result = appResults[i];
+        if (result.status === 'fulfilled') {
+          const app = result.value;
           this.apps.set(app.name, app);
           this.elementTypeMap.set(app as T, 'App');
           this.appToResourceMap.set(app, { dynos: [], formations: [], addOns: [], categories: [] });
-        });
+        } else {
+          appsNotFound.push(addedArray[i]);
+        }
       }
-      if (removed.size) {
-        removed.forEach((appName) => this.apps.delete(appName));
+      if (appsNotFound.length) {
+        void this.showAppsNotFound(appsNotFound);
       }
-
-      this.fire(undefined);
     }
+    if (removed.size) {
+      removed.forEach((appName) => this.apps.delete(appName));
+    }
+    this.logStreamClient.apps = Array.from(this.apps.values());
   }
 }

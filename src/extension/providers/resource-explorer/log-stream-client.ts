@@ -196,12 +196,15 @@ export class LogStreamClient extends EventEmitter {
     if (this.#apps === value) {
       return;
     }
-    const toDetach = value?.filter((app) => this.#apps?.find((existingApp) => existingApp.id !== app.id));
-    const toAttach = value?.filter((app) => !this.#apps?.find((existingApp) => existingApp.id !== app.id));
+    const appsSet = new Set(this.#apps);
+    const newAppsSet = new Set(value);
 
-    this.detachLogStreams(toDetach);
+    const toAttach = newAppsSet.difference(appsSet);
+    const toDetach = appsSet.difference(newAppsSet);
+
+    this.detachLogStreams(Array.from(toDetach));
     this.#apps = value;
-    void this.attachLogStreams(toAttach);
+    void this.attachLogStreams(Array.from(toAttach));
   }
 
   /**
