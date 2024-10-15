@@ -90,7 +90,7 @@ suite('HerokuResourceExplorerProvider', () => {
 
     fetchStub
       .withArgs('https://api.heroku.com/apps/app1/dynos/web.2')
-      .resolves(new Response(JSON.stringify({ ...mockDyno, name: 'web.2' })));
+      .resolves(new Response(JSON.stringify({ ...mockDyno, name: 'web.2', id: randomUUID() })));
 
     getHerokuAppNamesStub = sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
 

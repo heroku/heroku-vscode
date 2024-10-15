@@ -6,11 +6,10 @@ import { dynoIconsBySize } from './dyno-icons-by-size';
 /**
  * Consumes a Formation object and returns a TreeItem
  *
- * @param context The extension context
  * @param formation The Formation to convert to a tree item.
  * @returns The TreeItem from the specified Formation
  */
-export function getFormationTreeItem(context: vscode.ExtensionContext, formation: Formation): vscode.TreeItem {
+export function getFormationTreeItem(formation: Formation): vscode.TreeItem {
   const canIncreaseDynoCount =
     (!/(Free|Eco|Hobby|Basic|)/.test(formation.size) && formation.quantity < 100) || !formation.quantity;
   let contextValue = `formation`;
@@ -26,7 +25,7 @@ export function getFormationTreeItem(context: vscode.ExtensionContext, formation
     id: formation.id,
     label: formation.type,
     description: `${formation.size} - ${formation.quantity} ${formation.quantity === 1 ? 'Dyno' : 'Dynos'}`,
-    iconPath: context.asAbsolutePath('/resources/formation-icon-16.png'),
+    iconPath: new vscode.ThemeIcon('hk-icon-formation-16', new vscode.ThemeColor('hk.purple.2')),
     contextValue
   } as vscode.TreeItem;
 }
@@ -34,12 +33,11 @@ export function getFormationTreeItem(context: vscode.ExtensionContext, formation
 /**
  * Consumes an App object and returns a TreeItem.
  *
- * @param context The extension context
  * @param app The App to convert to a TreeItem.
  * @param logSessionMuted Whether the log session is muted or not.
  * @returns The TreeItem from the specified Dyno
  */
-export function getAppTreeItem(context: vscode.ExtensionContext, app: App, logSessionMuted: boolean): vscode.TreeItem {
+export function getAppTreeItem(app: App, logSessionMuted: boolean): vscode.TreeItem {
   return {
     id: app.id,
     label: app.name,
@@ -47,7 +45,7 @@ export function getAppTreeItem(context: vscode.ExtensionContext, app: App, logSe
     tooltip: `${app.name} - ${app.organization?.name ?? app.team?.name ?? app.owner.email}`,
     collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
     contextValue: logSessionMuted ? 'heroku:app' : 'heroku:app:log-session-started',
-    iconPath: context.asAbsolutePath('/resources/app-28.png')
+    iconPath: new vscode.ThemeIcon('hk-icon-app-16', new vscode.ThemeColor('hk.purple'))
   } as vscode.TreeItem;
 }
 
@@ -82,6 +80,7 @@ export function getAppCategories(appIdentifier: string): vscode.TreeItem[] {
   ];
 }
 
+const iconUrls: Record<string, string> = {};
 /**
  * Consumes an AddOn object and returns a TreeItem.
  *
@@ -99,7 +98,7 @@ export async function getAddOnTreeItem(
     return {
       id: addOn.id,
       label: addOn.name,
-      iconPath: context.asAbsolutePath('/resources/marketing-addon-48.png'),
+      iconPath: new vscode.ThemeIcon('hk-icon-search-16'),
       command: {
         command: ShowAddonsViewCommand.COMMAND_ID,
         title: 'Find more add-ons',
@@ -108,16 +107,20 @@ export async function getAddOnTreeItem(
     };
   }
   // Grab the icon from https://addons.heroku.com
-  let iconUrl: string = '';
-  try {
-    const addonsApiResponse = await fetch(`https://addons.heroku.com/api/v2/addons/${addOn.addon_service.id}`);
-    const json = (await addonsApiResponse.json()) as { addon: { icon_url: string } };
-    iconUrl = URL.canParse(json.addon.icon_url)
-      ? json.addon.icon_url
-      : `https://addons.heroku.com/${json.addon.icon_url}`;
-  } catch {
-    // no-op - don't worry, this won't break things too badly.
+  let iconUrl: string = iconUrls[addOn.addon_service.id];
+  if (!iconUrl) {
+    try {
+      const addonsApiResponse = await fetch(`https://addons.heroku.com/api/v2/addons/${addOn.addon_service.id}`);
+      const json = (await addonsApiResponse.json()) as { addon: { icon_url: string } };
+      iconUrl = URL.canParse(json.addon.icon_url)
+        ? json.addon.icon_url
+        : `https://addons.heroku.com/${json.addon.icon_url}`;
+      iconUrls[addOn.addon_service.id] = iconUrl;
+    } catch {
+      // no-op - don't worry, this won't break things too badly.
+    }
   }
+
   return {
     id: addOn.id,
     label: addOn.addon_service.name,
@@ -130,11 +133,10 @@ export async function getAddOnTreeItem(
 /**
  * Consumes a Dyno object and returns a TreeItem.
  *
- * @param context The extension context
  * @param dyno The Dyno to convert to a TreeItem
  * @returns The TreeItem from the specified Dyno
  */
-export function getDynoTreeItem(context: vscode.ExtensionContext, dyno: Dyno): vscode.TreeItem {
+export function getDynoTreeItem(dyno: Dyno): vscode.TreeItem {
   if (dyno.type === 'empty') {
     return {
       id: 'empty',
@@ -146,7 +148,7 @@ export function getDynoTreeItem(context: vscode.ExtensionContext, dyno: Dyno): v
     id: dyno.id,
     label: dyno.name,
     description: `${dyno.command} - ${dyno.state}`,
-    iconPath: getDynoIconPath(context, dyno),
+    iconPath: getDynoIconPath(dyno),
     tooltip: `${dyno.app.name} - ${dyno.size}`,
     contextValue: `dyno:${dyno.state}`,
     resourceUri: vscode.Uri.parse(`heroku:/dyno/${dyno.state}`)
@@ -154,15 +156,51 @@ export function getDynoTreeItem(context: vscode.ExtensionContext, dyno: Dyno): v
 }
 
 /**
+ * Gets the categories for the settings section.
+ *
+ * @param app The app to get categories for.
+ * @returns vscode.TreeItem[]
+ */
+export function getSettingsCategories(app: App): vscode.TreeItem[] {
+  const { id: appIdentifier } = app;
+  return [
+    {
+      id: appIdentifier + ':app-info',
+      label: 'App Information',
+      iconPath: new vscode.ThemeIcon('hk-icon-info-ring-16', new vscode.ThemeColor('hk.blue'))
+    },
+    {
+      id: appIdentifier + ':config-vars',
+      label: 'Config Vars',
+      iconPath: new vscode.ThemeIcon('hk-icon-addon-config-16', new vscode.ThemeColor('hk.blue'))
+    },
+    {
+      id: appIdentifier + ':buildpacks',
+      label: 'Buildpacks',
+      iconPath: new vscode.ThemeIcon('hk-icon-buildpack-16', new vscode.ThemeColor('hk.purple'))
+    },
+    {
+      id: appIdentifier + ':ssl-certs',
+      label: 'SSL Certificates',
+      iconPath: new vscode.ThemeIcon('hk-icon-lock-locked-16', new vscode.ThemeColor('hk.green'))
+    },
+    {
+      id: appIdentifier + ':domains',
+      label: 'Domains',
+      iconPath: new vscode.ThemeIcon('hk-icon-network-16', new vscode.ThemeColor('hk.blue'))
+    }
+  ] as vscode.TreeItem[];
+}
+
+/**
  * Gets the icon path for the specified Dyno
  *
- * @param context The extension context
  * @param dyno The Dyno to get the icon for
  * @returns string The path of the dyno icon
  */
-function getDynoIconPath(context: vscode.ExtensionContext, dyno: Dyno): string | vscode.ThemeIcon {
+function getDynoIconPath(dyno: Dyno): string | vscode.ThemeIcon {
   if (dyno.state === 'starting') {
     return new vscode.ThemeIcon('loading~spin');
   }
-  return context.asAbsolutePath(dynoIconsBySize[dyno.size as keyof typeof dynoIconsBySize]);
+  return dynoIconsBySize[dyno.size as keyof typeof dynoIconsBySize];
 }

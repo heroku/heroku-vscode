@@ -7,7 +7,7 @@ import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { getHerokuAppNames } from '../../utils/git-utils';
 import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
 
-import { WatchConfig } from '../../commands/git/watch-config';
+import { GitRemoteAppsDiff, WatchConfig } from '../../commands/git/watch-config';
 import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 import {
   LogStreamClient,
@@ -21,7 +21,8 @@ import {
   getAppCategories,
   getAppTreeItem,
   getDynoTreeItem,
-  getFormationTreeItem
+  getFormationTreeItem,
+  getSettingsCategories
 } from './tree-item-generator';
 
 // Commands used in quick access menus
@@ -41,6 +42,10 @@ type LogSessionCapableApp = App & { logSession?: LogSessionStream | undefined };
  */
 type ExtendedTreeDataTypes = LogSessionCapableApp | Dyno | Formation | AddOn | vscode.TreeItem;
 /**
+ * Represents the resources associated with an App.
+ */
+type AppResources = { dynos: Dyno[]; formations: Formation[]; addOns: AddOn[]; categories: vscode.TreeItem[] };
+/**
  * The HerokuResourceExplorerProvider is the main entity for
  * managing the Heroku Resource Explorer tree view.
  */
@@ -54,11 +59,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected appService = new AppService(fetch, 'https://api.heroku.com');
   protected formationService = new FormationService(fetch, 'https://api.heroku.com');
 
-  protected apps: App[] = [];
-  protected appToResourceMap = new WeakMap<
-    App,
-    { dynos: Dyno[]; formations: Formation[]; addOns: AddOn[]; categories: vscode.TreeItem[] }
-  >();
+  protected apps: Map<App['name'], App> = new Map();
+  protected appToResourceMap = new WeakMap<App, AppResources>();
 
   protected logStreamClient = new LogStreamClient();
 
@@ -89,14 +91,14 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
       case 'App': {
         const app = element as LogSessionCapableApp;
-        return getAppTreeItem(this.context, app, !app.logSession || !!app.logSession?.muted);
+        return getAppTreeItem(app, !app.logSession || !!app.logSession?.muted);
       }
 
       case 'Dyno':
-        return getDynoTreeItem(this.context, element as Dyno);
+        return getDynoTreeItem(element as Dyno);
 
       case 'Formation':
-        return getFormationTreeItem(this.context, element as Formation);
+        return getFormationTreeItem(element as Formation);
 
       default:
         return element as vscode.TreeItem;
@@ -142,8 +144,11 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
           case 'ADD-ONS':
             return (await this.getAddonsForApp(app, element)) as T[];
 
-          case 'SETTINGS':
-            return this.getSettingsCategories(app, element) as T[];
+          case 'SETTINGS': {
+            const categories = getSettingsCategories(app);
+            categories.forEach((cat) => this.childParentMap.set(cat as T, element));
+            return categories as T[];
+          }
 
           default:
             return [];
@@ -153,39 +158,39 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     }
 
     // Root items
-    if (this.apps.length) {
-      return this.apps as T[];
-    }
-
-    try {
-      const { accessToken } = (await vscode.authentication.getSession(
-        'heroku:auth:login',
-        []
-      )) as AuthenticationSession;
-      Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
-      const appNames = await getHerokuAppNames();
-      const appsNotFound = [];
-      for (const appName of appNames) {
-        let appInfo: App;
-        try {
-          appInfo = await this.appService.info(appName, { ...this.requestInit });
-        } catch {
-          appsNotFound.push(appName);
-          continue;
+    if (!this.apps.size) {
+      try {
+        const { accessToken } = (await vscode.authentication.getSession(
+          'heroku:auth:login',
+          []
+        )) as AuthenticationSession;
+        Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
+        const appNames = await getHerokuAppNames();
+        const appsNotFound = [];
+        for (const appName of appNames) {
+          let appInfo: App;
+          try {
+            appInfo = await this.appService.info(appName, { ...this.requestInit });
+          } catch {
+            appsNotFound.push(appName);
+            continue;
+          }
+          this.apps.set(appInfo.name, appInfo);
+          this.elementTypeMap.set(appInfo as T, 'App');
+          this.appToResourceMap.set(appInfo, { dynos: [], formations: [], addOns: [], categories: [] });
         }
-        this.apps.push(appInfo);
-        this.elementTypeMap.set(appInfo as T, 'App');
-        this.appToResourceMap.set(appInfo, { dynos: [], formations: [], addOns: [], categories: [] });
+        this.startLiveUpdates();
+        if (appsNotFound.length) {
+          void this.showAppsNotFound(appsNotFound);
+        }
+      } catch {
+        // no-op
       }
-      this.logStreamClient.apps = this.apps;
-      this.startLiveUpdates();
-      if (appsNotFound.length) {
-        void this.showAppsNotFound(appsNotFound);
-      }
-      return this.apps as T[];
-    } catch {
-      return [];
     }
+    const appsArray = Array.from(this.apps.values());
+    this.logStreamClient.apps = appsArray;
+
+    return appsArray as T[];
   }
 
   /**
@@ -309,7 +314,12 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (!dyno) {
       void (async (): Promise<void> => {
         dyno = await this.dynoService.info(app.id, dynoName, this.requestInit);
-        dynos.push(dyno);
+        if (!dyno) {
+          return;
+        }
+        if (!dynos.some((d) => d.id === dyno?.id)) {
+          dynos.push(dyno);
+        }
         dynos.sort((a, b) => {
           const [, numA] = a.name.split('.');
           const [, numB] = b.name.split('.');
@@ -459,53 +469,30 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   }
 
   /**
-   * Gets the categories for the settings section.
-   *
-   * @param app The app to get categories for.
-   * @param parent The parent node that the categories belongs to.
-   *
-   * @returns vscode.TreeItem[]
-   */
-  private getSettingsCategories(app: App, parent: T): vscode.TreeItem[] {
-    const { id: appIdentifier } = app;
-    const categories = [
-      {
-        id: appIdentifier + ':app-info',
-        label: 'App Information'
-      },
-      {
-        id: appIdentifier + ':config-vars',
-        label: 'Config Vars'
-      },
-      {
-        id: appIdentifier + ':buildpacks',
-        label: 'Buildpacks'
-      },
-      {
-        id: appIdentifier + ':ssl-certs',
-        label: 'SSL Certificates'
-      },
-      {
-        id: appIdentifier + ':domains',
-        label: 'Domains'
-      }
-    ];
-    categories.forEach((cat) => this.childParentMap.set(cat as T, parent));
-    return categories;
-  }
-
-  /**
    * Watches the git config for changes.
    */
   private async watchGitConfig(): Promise<void> {
-    const appChanges = await vscode.commands.executeCommand<AsyncIterable<Set<string>>>(
+    const appChanges = await vscode.commands.executeCommand<AsyncIterable<GitRemoteAppsDiff>>(
       WatchConfig.COMMAND_ID,
       this.abortWatchGitConfig
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for await (const appNames of appChanges) {
-      this.apps.length = 0;
+    for await (const appDiffs of appChanges) {
+      const { added, removed } = appDiffs;
+      if (added.size) {
+        const apps = await Promise.all(
+          Array.from(added).map((appName) => this.appService.info(appName, this.requestInit))
+        );
+        apps.forEach((app) => {
+          this.apps.set(app.name, app);
+          this.elementTypeMap.set(app as T, 'App');
+          this.appToResourceMap.set(app, { dynos: [], formations: [], addOns: [], categories: [] });
+        });
+      }
+      if (removed.size) {
+        removed.forEach((appName) => this.apps.delete(appName));
+      }
+
       this.fire(undefined);
     }
   }
