@@ -1508,6 +1508,6 @@
     "marked": "^13.0.3",
     "mvdan-sh": "^0.10.1",
     "resolve.exports": "^2.0.2",
-    "tslib": "2.6.3"
+    "tslib": "2.8.0"
   }
 }
