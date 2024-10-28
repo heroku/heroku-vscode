@@ -1,5 +1,5 @@
 import AppService from '@heroku-cli/schema/services/app-service.js';
-import type { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
+import type { AddOn, App, Dyno, Formation, TeamApp } from '@heroku-cli/schema';
 import DynoService from '@heroku-cli/schema/services/dyno-service.js';
 import vscode from 'vscode';
 
@@ -58,14 +58,14 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected appService = new AppService(fetch, 'https://api.heroku.com');
   protected formationService = new FormationService(fetch, 'https://api.heroku.com');
 
-  protected apps: Map<App['name'], App> = new Map();
-  protected appToResourceMap = new WeakMap<App, AppResources>();
+  protected apps: Map<App['name'], App | TeamApp> = new Map();
+  protected appToResourceMap = new WeakMap<App | TeamApp, AppResources>();
 
   protected requestInit = { headers: {} };
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
-  protected abortWatchGitConfig = new AbortController();
+  protected abortWatchGitConfig: AbortController | undefined;
   protected syncAddonsPending = false;
 
   #logStreamClient!: LogStreamClient;
@@ -77,7 +77,6 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    */
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();
-    void this.watchGitConfig();
   }
 
   /**
@@ -171,6 +170,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         }
       }
       return [];
+    } else {
+      void this.watchGitConfig();
     }
 
     return Array.from(this.apps.values()) as T[];
@@ -180,7 +181,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * @inheritdoc
    */
   public dispose(): void {
-    this.abortWatchGitConfig.abort();
+    this.abortWatchGitConfig?.abort();
   }
 
   /**
@@ -418,7 +419,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       {
         id: `${app.id}-addons-market`,
         app: {
-          id: app.id
+          id: app.id,
+          name: app.name
         },
         name: 'Search Elements Marketplace'
       } as AddOn
@@ -443,15 +445,22 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * Watches the git config for changes.
    */
   private async watchGitConfig(): Promise<void> {
+    if (this.abortWatchGitConfig && !this.abortWatchGitConfig.signal.aborted) {
+      return;
+    }
+    this.abortWatchGitConfig = new AbortController();
     const appChanges = await vscode.commands.executeCommand<AsyncIterable<AppsDiff>>(
       WatchConfig.COMMAND_ID,
       this.abortWatchGitConfig
     );
-
-    for await (const appDiffs of appChanges) {
-      await this.syncApps(appDiffs);
-      this.fire(undefined);
-      await vscode.commands.executeCommand('setContext', 'heroku.app-found', !!this.apps.size);
+    try {
+      for await (const appDiffs of appChanges) {
+        await this.syncApps(appDiffs);
+        this.fire(undefined);
+        await vscode.commands.executeCommand('setContext', 'heroku.app-found', !!this.apps.size);
+      }
+    } catch {
+      // noop
     }
   }
 
@@ -467,7 +476,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
     const { added, removed } = appDiffs;
     if (added.size) {
-      const appsNotFound = [];
+      let appsNotFound = [];
       const addedArray = Array.from(added).filter((appName) => !this.apps.has(appName));
       const appResults = await Promise.allSettled(
         addedArray.map((appName) => this.appService.info(appName, this.requestInit))
@@ -476,13 +485,14 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         const result = appResults[i];
         if (result.status === 'fulfilled') {
           const app = result.value;
-          this.apps.set(app.name, app);
+          this.apps.set(app.name ?? '', app);
           this.elementTypeMap.set(app as T, 'App');
           this.appToResourceMap.set(app, { dynos: [], formations: [], addOns: [], categories: [] });
         } else {
           appsNotFound.push(addedArray[i]);
         }
       }
+      appsNotFound = appsNotFound.filter((name: string) => !this.apps.has(name));
       if (appsNotFound.length) {
         void this.showAppsNotFound(appsNotFound);
       }

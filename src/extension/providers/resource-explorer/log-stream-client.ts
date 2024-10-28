@@ -1,5 +1,5 @@
 import EventEmitter from 'node:events';
-import type { App, Dyno, Formation } from '@heroku-cli/schema';
+import type { App, Dyno, Formation, TeamApp } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
 import { StartLogSession, type LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 
@@ -119,7 +119,7 @@ export enum LogStreamEvents {
   STARTING_PROCESS = 'startingProcess'
 }
 
-type ReadOnlyAppArray = ReadonlyArray<App & { logSession?: LogSessionStream }> | undefined;
+type ReadOnlyAppArray = ReadonlyArray<(App | TeamApp) & { logSession?: LogSessionStream }> | undefined;
 
 /**
  * LogStreamClient is a component for handling and processing log streams from multiple Heroku applications.

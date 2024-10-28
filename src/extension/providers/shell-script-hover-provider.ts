@@ -1,29 +1,12 @@
 import * as vscode from 'vscode';
 
 import { Hover, Position, ProviderResult, TextDocument } from 'vscode';
-import type { Command, Manifest } from '@oclif/config';
+import type { Command } from '@oclif/config';
 import sh from 'mvdan-sh';
 import { ShellScriptLexer } from '../lexers/shell-script-lexer.js';
 import { isHerokuCallExpression, isInsideRangeBoundary } from '../lexers/lexer-utils.js';
 import * as manifest from '../meta/oclif.manifest.json';
-
-/**
- * The ManifestMeta interface describes the
- * oclif manifest properties with the added
- * 'description' field and is used to satisfy
- * strong typing for the json used for
- * hover data.
- */
-type ManifestMeta = {
-  description: string;
-  commands: {
-    [id: string]: CorrectedCommand;
-  };
-} & Manifest;
-
-type CorrectedCommand = Command & {
-  args: Record<string, Command.Arg>;
-};
+import type { CommandMeta, ManifestMeta } from '../manifest.js';
 
 /**
  * The ShellScriptHoverProvider is responsible for
@@ -86,7 +69,7 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
    * @param meta The json metadata describing the command details.
    * @returns vscode.MarkdownString
    */
-  private static buildHoverMarkdownFromCommandMeta(meta: Command | undefined | null): vscode.MarkdownString {
+  private static buildHoverMarkdownFromCommandMeta(meta: CommandMeta | undefined | null): vscode.MarkdownString {
     if (!meta) {
       return new vscode.MarkdownString();
     }
@@ -157,7 +140,7 @@ export class ShellScriptHoverProvider implements vscode.HoverProvider {
    * @param commandNode The sh.Word node representing the command to retrieve the metata for.
    * @returns Command or null if none found.
    */
-  private static getCommandMetaByCommandNode(commandNode?: sh.Word | undefined | null): CorrectedCommand | null {
+  private static getCommandMetaByCommandNode(commandNode?: sh.Word | undefined | null): CommandMeta | null {
     const { commands } = manifest as unknown as ManifestMeta;
     const commandName = commandNode?.Lit();
     return commandName ? commands[commandName] : null;

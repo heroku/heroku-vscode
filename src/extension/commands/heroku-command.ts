@@ -31,13 +31,35 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
    * or the child process closing whichever is first.
    *
    * @param childProcess The child process to wait on.
+   * @param outputChannel The optional output channel. This can be used to pipe the Heroku CLI stdout or sdterr messages.
    * @returns HerokuCommandCompletionInfo
    */
-  protected static async waitForCompletion(childProcess: ChildProcess): Promise<HerokuCommandCompletionInfo> {
+  protected static async waitForCompletion(
+    childProcess: ChildProcess,
+    outputChannel?: vscode.OutputChannel
+  ): Promise<HerokuCommandCompletionInfo> {
+    const { default: stripAnsi } = await import('strip-ansi');
     let output = '';
     let errorMessage = '';
-    childProcess.stdout?.addListener('data', (data) => (output += data));
-    childProcess.stderr?.addListener('data', (data) => (errorMessage += data));
+    let lastLineReceived = '';
+    childProcess.stdout?.addListener('data', (data: string) => {
+      const stripped = stripAnsi(data).trim();
+      if (!stripped || lastLineReceived === stripped) {
+        return;
+      }
+      outputChannel?.appendLine(stripped);
+      output += stripped;
+      lastLineReceived = stripped;
+    });
+    childProcess.stderr?.addListener('data', (data: string) => {
+      const stripped = stripAnsi(data).trim();
+      if (!stripped || lastLineReceived === stripped) {
+        return;
+      }
+      outputChannel?.appendLine(stripped);
+      errorMessage += stripped;
+      lastLineReceived = stripped;
+    });
 
     const exitCode = await Promise.race([
       new Promise<number>((resolve) => {

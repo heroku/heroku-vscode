@@ -137,9 +137,12 @@ export class AuthenticationProvider
     const netRcChanges = await vscode.commands.executeCommand<
       AsyncIterable<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
     >(WatchNetrc.COMMAND_ID, this.netRcAbortController.signal, this.context, AuthenticationProvider.SESSION_KEY);
-
-    for await (const change of netRcChanges) {
-      this.fire(change);
+    try {
+      for await (const change of netRcChanges) {
+        this.fire(change);
+      }
+    } catch {
+      // noop
     }
   }
 }

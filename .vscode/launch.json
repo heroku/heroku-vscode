@@ -15,6 +15,24 @@
       "type": "node"
     },
     {
+      "name": "Create Icons",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/scripts/malibu-icons.mjs",
+      "request": "launch",
+      "runtimeVersion": "22",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node"
+    },
+    {
+      "name": "Update Menu Contributions",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/scripts/contrib-menu-commands-updater.mjs",
+      "request": "launch",
+      "runtimeVersion": "22",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node"
+    },
+    {
       "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",

@@ -89,7 +89,10 @@
               "include": "#state-down"
             },
             {
-              "include": "#state-starting"
+              "include": "#state-starting-or-stopping"
+            },
+            {
+              "include": "#state-provisioning"
             }
           ]
         },
@@ -102,7 +105,10 @@
               "include": "#state-down"
             },
             {
-              "include": "#state-starting"
+              "include": "#state-starting-or-stopping"
+            },
+            {
+              "include": "#state-provisioning"
             }
           ]
         }
@@ -116,9 +122,13 @@
       "match": "(down)",
       "name": "invalid strong"
     },
-    "state-starting": {
-      "match": "(starting)",
+    "state-starting-or-stopping": {
+      "match": "(starting|stopping)",
       "name": "keyword.control.anchor.regexp strong"
+    },
+    "state-provisioning": {
+      "match": "(provisioning)",
+      "name": "keyword app-name.heroku-logs strong"
     },
     "exit-status": {
       "match": "(0)",

@@ -26,7 +26,8 @@ export function getFormationTreeItem(formation: Formation): vscode.TreeItem {
     label: formation.type,
     description: `${formation.size} - ${formation.quantity} ${formation.quantity === 1 ? 'Dyno' : 'Dynos'}`,
     iconPath: new vscode.ThemeIcon('hk-icon-formation-16', new vscode.ThemeColor('hk.purple.2')),
-    contextValue
+    contextValue,
+    resourceUri: vscode.Uri.parse(`heroku:/formation/${formation.size}`)
   } as vscode.TreeItem;
 }
 
@@ -126,7 +127,9 @@ export async function getAddOnTreeItem(
     label: addOn.addon_service.name,
     description: `- ${addOn.state}`,
     tooltip: `${addOn.name}`,
-    iconPath: addOn.state === 'provisioning' ? new vscode.ThemeIcon('loading~spin') : vscode.Uri.parse(iconUrl)
+    iconPath: addOn.state === 'provisioning' ? new vscode.ThemeIcon('loading~spin') : vscode.Uri.parse(iconUrl),
+    contextValue: `heroku:addon:${addOn.addon_service.name}`,
+    resourceUri: vscode.Uri.parse(`heroku:/addon/${addOn.addon_service.name}`)
   } as vscode.TreeItem;
 }
 
@@ -150,7 +153,7 @@ export function getDynoTreeItem(dyno: Dyno): vscode.TreeItem {
     description: `${dyno.command} - ${dyno.state}`,
     iconPath: getDynoIconPath(dyno),
     tooltip: `${dyno.app.name} - ${dyno.size}`,
-    contextValue: `dyno:${dyno.state}`,
+    contextValue: `heroku:dyno:${dyno.state}`,
     resourceUri: vscode.Uri.parse(`heroku:/dyno/${dyno.state}`)
   } as vscode.TreeItem;
 }

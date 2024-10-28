@@ -77,6 +77,8 @@ export class StartLogSession extends AbortController implements LogSessionStream
   private streamListeners: Set<LogStreamCallback> = new Set();
   private muteListeners: Set<(muted: boolean) => void> = new Set();
   private maxLines = 100;
+  private lastHeartbeatTime = 0;
+  private timeoutId: NodeJS.Timeout | undefined;
 
   // Backing property for the readonly app getter
   #app: (App & { logSession?: StartLogSession }) | undefined;
@@ -130,9 +132,8 @@ export class StartLogSession extends AbortController implements LogSessionStream
    *
    * @param existingLogSession The log session to update.
    * @param muted Whether to mute the log session or not.
-   * @param lines The number of lines to show in the output channel.
    */
-  private static updateExistingLogSession(existingLogSession: StartLogSession, muted: boolean, lines?: number): void {
+  private static updateExistingLogSession(existingLogSession: StartLogSession, muted: boolean): void {
     const { visibleLogSession } = StartLogSession;
 
     // We're unplugging the existing visible log session
@@ -142,22 +143,17 @@ export class StartLogSession extends AbortController implements LogSessionStream
       visibleLogSession.outputChannel?.clear();
     }
 
-    if (visibleLogSession === existingLogSession) {
-      return;
-    }
-
     const { outputChannel, buffer, app, muted: oldMuted } = existingLogSession;
     if (!muted) {
       this.prepareOutputChannelForLogSession(outputChannel, app!.name);
       // Take upto maxLines from the buffer and append to the output channel
-      outputChannel?.append(buffer.split('\n').slice(0, lines).join('\n'));
+      outputChannel?.append(buffer.split('\n').slice(0, visibleLogSession?.maxLines).join('\n'));
       StartLogSession.visibleLogSession = existingLogSession;
     }
 
     if (muted !== oldMuted) {
       Reflect.set(existingLogSession, 'muted', muted);
     }
-    Reflect.set(existingLogSession, 'maxLines', lines);
   }
 
   /**
@@ -227,24 +223,14 @@ export class StartLogSession extends AbortController implements LogSessionStream
     // Log session already exists, just mute/unmute it
     const { logSession: existingLogSession } = app;
     if (existingLogSession && !existingLogSession.signal.aborted) {
-      const shouldBeMuted = !existingLogSession.muted ? false : muted; // a value of false becomes 'sticky'
-      StartLogSession.updateExistingLogSession(existingLogSession, shouldBeMuted, lines);
+      existingLogSession.maxLines = lines;
+      existingLogSession.muted = !existingLogSession.muted ? false : muted; // a value of false becomes 'sticky';
       return existingLogSession;
     }
-
-    const logSession = await this.fetchLogSession(app);
-    const response = await fetch(logSession.logplex_url, { signal: this.signal });
-    if (response.ok) {
-      if (!muted) {
-        StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, app.name);
-      }
-      const reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
-      // Since the stream is a log runnning process
-      // we want this function to complete without
-      // having to wait for the stream to end.
-      void this.beginReading(reader);
-    } else {
-      throw new Error(`Failed to fetch logs: ${response.statusText}`);
+    try {
+      await this.startLogSession();
+    } catch {
+      this.scheduleTimeout();
     }
 
     Reflect.set(app, 'logSession', this);
@@ -294,6 +280,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
           this.app!.logSession = undefined;
           break;
         }
+        this.scheduleTimeout();
         if (value.length > 1) {
           const str = Buffer.from(value).toString();
           this.streamListeners.forEach((cb) => void cb(str, this.app as App));
@@ -313,5 +300,43 @@ export class StartLogSession extends AbortController implements LogSessionStream
       }
       throw e;
     }
+  }
+
+  /**
+   * Starts the log session and if successful, the read stream
+   * is initialized and log data becomes availale.
+   */
+  private async startLogSession(): Promise<void> {
+    const logSession = await this.fetchLogSession(this.#app!);
+    const response = await fetch(logSession.logplex_url, { signal: this.signal });
+    if (response.ok) {
+      if (!this.muted) {
+        StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, this.#app!.name);
+      }
+      const reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+      // Since the stream is a log runnning process
+      // we want this function to complete without
+      // having to wait for the stream to end.
+      void this.beginReading(reader);
+    } else {
+      throw new Error(`Failed to fetch logs: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Sets a timeout to restart the log session after
+   * 30 seconds of inactivity. If the log session is
+   * restarted, the existing log session will be disposed.
+   *
+   * This is also used when connectivity is lost and the
+   * log stream reader is no longer sending the null byte
+   * heartbeat.
+   */
+  private scheduleTimeout(): void {
+    clearTimeout(this.timeoutId);
+    this.timeoutId = setTimeout(() => {
+      delete this.#app!.logSession;
+      void this.run(this.#app!, this.#muted);
+    }, 30_000);
   }
 }

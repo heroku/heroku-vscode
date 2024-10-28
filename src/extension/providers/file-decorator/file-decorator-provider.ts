@@ -22,7 +22,9 @@ export class FildeDecoratorProvider
    */
   public stateToDecorator: Record<Dyno['state'], vscode.FileDecoration> = {
     up: { badge: '🟢', tooltip: 'Dyno is up' },
+    provisioning: { badge: '🔵', tooltip: 'Dyno is provisioning' },
     idle: { badge: '🟡', tooltip: 'Dyno is idle' },
+    stopping: { badge: '🟡', tooltip: 'Dyno is stopping' },
     starting: { badge: '🟡', tooltip: 'Dyno is starting' },
     down: { badge: '🔴', tooltip: 'Dyno is down' },
     crashed: { badge: '🔴', tooltip: 'Dyno has crashed' }
