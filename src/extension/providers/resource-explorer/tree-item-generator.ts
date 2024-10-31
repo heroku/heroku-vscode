@@ -1,3 +1,4 @@
+import EventEmitter from 'node:events';
 import { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
 import { ShowAddonsViewCommand } from '../../commands/add-on/show-addons-view';
@@ -87,13 +88,13 @@ const iconUrls: Record<string, string> = {};
  *
  * @param context The extension context
  * @param addOn The AddOn to convert to a TreeItem
- * @param categoryNode The parent node of the add-on
+ * @param notifier The event emitter to notify when the add-on is added
  * @returns The TreeItem from the specified Dyno
  */
 export async function getAddOnTreeItem(
   context: vscode.ExtensionContext,
   addOn: AddOn,
-  categoryNode: vscode.TreeItem
+  notifier: EventEmitter
 ): Promise<vscode.TreeItem> {
   if (addOn.name === 'Search Elements Marketplace') {
     return {
@@ -103,7 +104,7 @@ export async function getAddOnTreeItem(
       command: {
         command: ShowAddonsViewCommand.COMMAND_ID,
         title: 'Find more add-ons',
-        arguments: [addOn.app.id, context.extensionUri, categoryNode]
+        arguments: [addOn.app.id, context.extensionUri, notifier]
       }
     };
   }

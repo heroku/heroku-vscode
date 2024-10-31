@@ -28,7 +28,14 @@ export async function findGitConfigFileLocation(): Promise<string> {
  * @returns string[] An array of app names derived from the git remotes.
  */
 export async function getHerokuAppNames(): Promise<string[]> {
-  const [ws] = vscode.workspace.workspaceFolders ?? [];
+  let ws: vscode.WorkspaceFolder | undefined;
+  while (!ws) {
+    [ws] = vscode.workspace.workspaceFolders ?? [];
+    if (ws) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
   const { stdout, stderr } = await exec('git remote -v', { cwd: ws?.uri.path ?? '.' });
   if (stderr) {
     throw new Error(stderr);

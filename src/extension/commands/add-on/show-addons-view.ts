@@ -1,3 +1,4 @@
+import EventEmitter from 'node:events';
 import vscode, { AuthenticationSession, WebviewPanel } from 'vscode';
 import PlanService from '@heroku-cli/schema/services/plan-service.js';
 import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
@@ -9,14 +10,14 @@ import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
 type MessagePayload =
   | {
       type: 'addons';
-      id: never;
-      plan: never;
-      installedAddonId: never;
+      id?: never;
+      plan?: never;
+      installedAddonId?: never;
     }
   | {
       type: 'addonPlans';
       id: string;
-      plan: never;
+      plan?: never;
       installedAddonId: never;
     }
   | {
@@ -38,6 +39,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
   private addonService = new AddOnService(fetch, 'https://api.heroku.com');
 
   private appIdentifier!: string;
+  private notifier: EventEmitter | undefined;
 
   /**
    * Creates and displays a webview for showing
@@ -45,21 +47,16 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
    *
    * @param appIdentifier The application identifier.
    * @param extensionUri The Uri of the extension.
+   * @param notifier The notification emitter.
    * @returns Promise<void>
    */
-  public async run(appIdentifier: string, extensionUri: vscode.Uri): Promise<void> {
-    if (this.appIdentifier !== appIdentifier) {
-      ShowAddonsViewCommand.addonsPanel?.dispose();
-      ShowAddonsViewCommand.addonsPanel = undefined;
-    }
+  public async run(appIdentifier: string, extensionUri: vscode.Uri, notifier: EventEmitter): Promise<void> {
+    this.notifier = notifier;
+    this.notifier.on('installedAddOnsChanged', this.onInstalledAddOnsChanged);
 
-    if (ShowAddonsViewCommand.addonsPanel) {
-      try {
-        return ShowAddonsViewCommand.addonsPanel.reveal();
-      } catch {
-        // panel is disposed.
-      }
-    }
+    ShowAddonsViewCommand.addonsPanel?.dispose();
+    ShowAddonsViewCommand.addonsPanel = undefined;
+
     this.appIdentifier = appIdentifier;
     const panel = vscode.window.createWebviewPanel('Addons', 'Elements Marketplace', vscode.ViewColumn.One, {
       enableScripts: true
@@ -91,9 +88,10 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
     </html>`;
 
     ShowAddonsViewCommand.addonsPanel = panel;
-    await new Promise((resolve) => {
-      panel.onDidDispose(resolve);
-    });
+    const { promise, resolve } = Promise.withResolvers();
+    panel.onDidDispose(resolve);
+
+    await promise;
   }
 
   /**
@@ -101,8 +99,13 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
    * any pending API requests.
    */
   public [Symbol.dispose](): void {
+    this.notifier?.removeAllListeners();
     this.abort();
   }
+
+  private onInstalledAddOnsChanged = (): void => {
+    void this.onMessage({ type: 'addons' });
+  };
 
   private onMessage = async (message: MessagePayload): Promise<void> => {
     const { webview } = ShowAddonsViewCommand.addonsPanel as WebviewPanel;
@@ -181,6 +184,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       }
 
       await webview.postMessage({ type: 'addonCreated', payload: newlyCreatedOrUpdatedAddon, id: addOnId });
+      this.notifier?.emit('addonCreated', newlyCreatedOrUpdatedAddon);
     } catch (e) {
       const { message: errorMessage } = e as Error;
       await webview.postMessage({ type: 'addonCreationFailed', payload: errorMessage, id: addOnId });

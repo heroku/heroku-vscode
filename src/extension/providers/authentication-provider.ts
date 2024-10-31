@@ -16,7 +16,7 @@ export class AuthenticationProvider
   extends EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
   implements vscode.AuthenticationProvider
 {
-  private static SESSION_KEY = 'heroku.session' as const;
+  public static SESSION_KEY = 'heroku.session' as const;
   public onDidChangeSessions = this.event;
   private netRcAbortController: AbortController | undefined;
 

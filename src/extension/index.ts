@@ -13,13 +13,16 @@ import { HerokuPsRunner } from './commands/heroku-cli/heroku-ps-runner';
 import { HerokuPgRunner } from './commands/heroku-cli/heroku-pg-runner';
 import { HerokuRedisRunner } from './commands/heroku-cli/heroku-redis-runner';
 import { HerokuUnknownCommandRunner } from './commands/heroku-cli/heroku-unknown-command-runner';
+import { HerokuAddOnCommandRunner } from './commands/heroku-cli/heroku-addon-command-runner';
 
 /**
  * Called when the extension is activated by VSCode
  *
  * @param context The extension context provided by VSCode
  */
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  await context.secrets.delete(AuthenticationProvider.SESSION_KEY);
+
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
   context.subscriptions.push(
     vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
@@ -59,6 +62,8 @@ function registerCommandsfromManifest(): vscode.Disposable[] {
           void vscode.commands.executeCommand(HerokuPgRunner.COMMAND_ID, command, ...args);
         } else if (/^(redis)(:?)/.test(command)) {
           void vscode.commands.executeCommand(HerokuRedisRunner.COMMAND_ID, command, ...args);
+        } else if (/^(addons)(:?)/.test(command)) {
+          void vscode.commands.executeCommand(HerokuAddOnCommandRunner.COMMAND_ID, command, ...args);
         } else {
           void vscode.commands.executeCommand(HerokuUnknownCommandRunner.COMMAND_ID, command, ...args);
         }
