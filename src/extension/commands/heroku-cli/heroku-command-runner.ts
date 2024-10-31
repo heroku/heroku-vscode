@@ -85,9 +85,9 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
       return 0;
     });
 
-    keysByType.forEach((flag) => {
-      const isRequired = Reflect.get(flagsOrArgsManifest[flag], 'required');
-      (isRequired ? requiredInputs : optionalInputs).push(flag);
+    keysByType.forEach((key) => {
+      const isRequired = Reflect.get(flagsOrArgsManifest[key], 'required') ?? key === 'confirm';
+      (isRequired ? requiredInputs : optionalInputs).push(key);
     });
     // Prioritize required inputs
     // over optional inputs when
@@ -113,7 +113,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
       if (userInputMap.has(flagOrArg)) {
         continue;
       }
-      // Some inputs do not have a description - I sure hope these aren't required
+
       const {
         description,
         type,
@@ -133,13 +133,21 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
         // which requires typing a yes/no response,
         // we use an information message with "yes", "no"
         // or cancel button choices.
-        const choice = await vscode.window.showInformationMessage(`Should we ${description}?`, 'Yes', 'No', 'Cancel');
+        const isConfirm = flagOrArg === 'confirm';
+        const message = isConfirm
+          ? `I sure hope you know what your doing: ${description}.\n`
+          : `Should we ${description}?`;
+        const items = isConfirm ? ['Proceed Anyway', 'Cancel'] : ['Yes', 'No', 'Cancel'];
+        const choice = await (isConfirm ? vscode.window.showWarningMessage : vscode.window.showInformationMessage)(
+          message,
+          ...items
+        );
         // user cancelled
         if (choice === undefined || choice === 'Cancel') {
           return true;
         }
-        if (choice === 'Yes') {
-          userInputMap.set(flagOrArg, undefined);
+        if (choice === 'Yes' || choice === 'Proceed Anyway') {
+          userInputMap.set(flagOrArg, defaultValue);
         }
       } else {
         const input = await vscode.window.showInputBox({

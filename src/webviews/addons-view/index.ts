@@ -435,5 +435,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
     button.innerHTML = isInstalledAddon ? 'Modify&nbsp;plan' : 'install';
     button.disabled = false;
     button.appearance = 'secondary';
+    button.addEventListener('click', this.onInstallClick);
+    button.removeEventListener('click', this.onSubmitOrUpdate);
   };
 }

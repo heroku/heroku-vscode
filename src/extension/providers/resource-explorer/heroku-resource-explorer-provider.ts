@@ -13,7 +13,9 @@ import {
   LogStreamEvents,
   type StartingProcessInfo,
   type ScaledToInfo,
-  type StateChangedInfo
+  type StateChangedInfo,
+  AttachmentProvisionedInfo,
+  AttachmentDetachedInfo
 } from './log-stream-client';
 import {
   getAddOnTreeItem,
@@ -90,6 +92,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       this.#logStreamClient.addListener(LogStreamEvents.SCALED_TO, this.onFormationScaledTo);
       this.#logStreamClient.addListener(LogStreamEvents.STATE_CHANGED, this.onDynoStateChanged);
       this.#logStreamClient.addListener(LogStreamEvents.STARTING_PROCESS, this.onDynoProcessStarting);
+      this.#logStreamClient.addListener(LogStreamEvents.PROVISIONING_COMPLETED, this.onAttachmentProvisioned);
+      this.#logStreamClient.addListener(LogStreamEvents.ATTACHMENT_DETACHED, this.onAttachmentDetached);
 
       this.#logStreamClient.addListener(LogStreamEvents.MUTED_CHANGED, this.onStreamMutedChanged);
     }
@@ -227,7 +231,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * @param data The data dispatched when a dyno state is changed.
    */
   private onDynoStateChanged = (data: StateChangedInfo): void => {
-    const { app, dynoName, from, to } = data;
+    const { app, dynoName, to } = data;
     const { dynos } = this.appToResourceMap.get(app)!;
     const dyno = dynos.find((d) => d.name === dynoName);
     if (!dyno) {
@@ -244,9 +248,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     // logs. Since Dynos are restarted with *most* changes
     // to an add-on, we must check for add-ons being
     // provisioned/deprovisioned when dynos restart.
-    if (from === 'up' && to === 'starting') {
-      void this.queueAddOnSynchronization(app);
-    }
+    void this.queueAddOnSynchronization(app);
   };
 
   /**
@@ -259,15 +261,27 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       return;
     }
     this.syncAddonsPending = true;
+    await new Promise((resolve) => setTimeout(resolve, 5000)); // wait for log chatter to settle a bit
     const { addOns, categories } = this.appToResourceMap.get(app)!;
-    const addonsMap = new Set(addOns.map((a) => a.id));
+    const addonsSet = new Set(addOns.map((a) => a.id));
 
     addOns.length = 0;
     const addOnsCategory = categories.find((cat) => cat.label === 'ADD-ONS');
     const pristineAddons = await this.getAddonsForApp(app, addOnsCategory as T);
+    const pristineAddonsSet = new Set(pristineAddons.map((a) => a.id));
+    // Sync properties
+    addonsSet.forEach((id) => {
+      if (pristineAddonsSet.has(id)) {
+        const addon = addOns.find((a) => a.id === id);
+        const pristineAddon = pristineAddons.find((a) => a.id === id);
+        if (addon && pristineAddon) {
+          Object.assign(addon, pristineAddon);
+          this.fire(addon as T);
+        }
+      }
+    });
 
-    const pristineAddonsMap = new Set(pristineAddons.map((a) => a.id));
-    if (addonsMap.difference(pristineAddonsMap).size || pristineAddonsMap.difference(addonsMap).size) {
+    if (addonsSet.difference(pristineAddonsSet).size || pristineAddonsSet.difference(addonsSet).size) {
       this.fire(addOnsCategory as T);
     }
     this.syncAddonsPending = false;
@@ -311,6 +325,34 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       Reflect.set(dyno, 'state', 'starting');
       this.fire(dyno as T);
     }
+  };
+
+  /**
+   * Handler for when attachments complete provisioning
+   *
+   * @param data The data dispatched when the attachment completes provisioning
+   */
+  private onAttachmentProvisioned = (data: AttachmentProvisionedInfo): void => {
+    const { app, ref } = data;
+    const { addOns } = this.appToResourceMap.get(app)!;
+    if (addOns) {
+      const addOn = addOns.find((a) => a.id === ref);
+      if (addOn) {
+        Reflect.set(addOn, 'state', 'provisioned');
+        this.fire(addOn as T);
+      } else {
+        void this.queueAddOnSynchronization(app);
+      }
+    }
+  };
+
+  /**
+   * Handler for when attachments are detached
+   *
+   * @param data The data dispatched when the attachment detaches
+   */
+  private onAttachmentDetached = (data: AttachmentDetachedInfo): void => {
+    void this.queueAddOnSynchronization(data.app);
   };
 
   /**
