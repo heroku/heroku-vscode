@@ -7134,7 +7134,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "Insecure action. All data, including the Redis password, will not be encrypted."
         },
         "app": {
           "char": "a",
@@ -7489,7 +7490,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "WARNING: Irreversible action. All stats covered by RESETSTAT will be reset."
         }
       },
       "hasDynamicHelp": false,
@@ -7591,7 +7593,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "WARNING: Irreversible action. Redis database will be upgraded which cannot be undone."
         }
       },
       "hasDynamicHelp": false,
@@ -8344,7 +8347,7 @@
           "type": "option"
         },
         "confirm": {
-          "description": "set to space name to bypass confirm prompt",
+          "description": "The Outbound IPs for this space will be reused! Ensure that external services no longer allow the outbound IPs from this space.",
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
@@ -9695,7 +9698,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "Destructive action. This will delete the selected backup and cannot be undone."
         },
         "app": {
           "char": "a",
@@ -9938,7 +9942,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "Desctrctive action. This will replace the current database with the selected backup. This cannot be undone."
         },
         "app": {
           "char": "a",
@@ -10248,7 +10253,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "Destructive Action. This command will permanently destroy the credential and all objects owned by the credential."
         },
         "app": {
           "char": "a",
@@ -10296,7 +10302,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "Destructive Action. Ownership of all database objects owned by additional credentials will be transferred to the default credential. This command will also grant the default credential admin option for all additional credentials."
         },
         "app": {
           "char": "a",
@@ -10526,7 +10533,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "Destructive action. This command will affect the selected database. This will delete the specified link along with the tables and views created within it. This may have adverse effects for software written against the link's schema."
         },
         "remote": {
           "char": "r",
@@ -11331,7 +11339,7 @@
           "type": "option"
         },
         "confirm": {
-          "description": "set to PCX ID to bypass confirm prompt",
+          "description": "Destructive Action. This command will attempt to destroy the peering connection.",
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
@@ -11696,7 +11704,7 @@
           "type": "option"
         },
         "confirm": {
-          "description": "set to VPN connection name to bypass confirm prompt",
+          "description": "Destructive Action. This command will attempt to destroy the specified VPN Connection.",
           "hidden": true,
           "name": "confirm",
           "hasDynamicHelp": false,

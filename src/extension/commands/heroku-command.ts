@@ -26,39 +26,52 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
   }
 
   /**
+   * Tests whether the specified object is an OutputChannel
+   *
+   * @param obj The object to test
+   * @returns boolean indicating whether the object is an OutputChannel
+   */
+  protected static isOutputChannel(obj: unknown): obj is vscode.OutputChannel {
+    return !!obj && typeof obj === 'object' && 'appendLine' in obj;
+  }
+
+  /**
    * Waits for the specified child process to complete.
    * Completion is defied as exiting with or without a code
-   * or the child process closing whichever is first.
+   * or the child process closing, whichever is first.
+   *
+   * If an OutputChannel is provided, the output
+   * of the child process will be written to the OutputChannel. If a
+   * Terminal is provided, the output of the child process will be
+   * written to the Terminal.
    *
    * @param childProcess The child process to wait on.
-   * @param outputChannel The optional output channel. This can be used to pipe the Heroku CLI stdout or sdterr messages.
+   * @param outputWriter The output channel or terminal to write to. This can be used to pipe the Heroku CLI stdout or sdterr messages.
    * @returns HerokuCommandCompletionInfo
    */
   protected static async waitForCompletion(
     childProcess: ChildProcess,
-    outputChannel?: vscode.OutputChannel
+    outputWriter?: vscode.OutputChannel | vscode.Terminal
   ): Promise<HerokuCommandCompletionInfo> {
-    const { default: stripAnsi } = await import('strip-ansi');
     let output = '';
     let errorMessage = '';
-    let lastLineReceived = '';
+
+    const writeText = (data: string): void => {
+      if (this.isOutputChannel(outputWriter)) {
+        outputWriter?.appendLine?.(data);
+      } else {
+        outputWriter?.sendText?.(data);
+      }
+    };
+
     childProcess.stdout?.addListener('data', (data: string) => {
-      const stripped = stripAnsi(data).trim();
-      if (!stripped || lastLineReceived === stripped) {
-        return;
-      }
-      outputChannel?.appendLine(stripped);
-      output += stripped;
-      lastLineReceived = stripped;
+      writeText(data);
+      output += data;
     });
+
     childProcess.stderr?.addListener('data', (data: string) => {
-      const stripped = stripAnsi(data).trim();
-      if (!stripped || lastLineReceived === stripped) {
-        return;
-      }
-      outputChannel?.appendLine(stripped);
-      errorMessage += stripped;
-      lastLineReceived = stripped;
+      writeText(data);
+      errorMessage += data;
     });
 
     const exitCode = await Promise.race([

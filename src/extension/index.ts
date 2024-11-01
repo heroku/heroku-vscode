@@ -8,12 +8,10 @@ import { FildeDecoratorProvider } from './providers/file-decorator/file-decorato
 import * as shellCommandDecorator from './commands/heroku-shell-command-decorator';
 
 import './commands/auth/welcome-view-sign-in';
-import { HerokuAppsRunner } from './commands/heroku-cli/heroku-apps-runner';
+import { HerokuContextMenuCommandRunner } from './commands/heroku-cli/heroku-context-menu-command-runner';
 import { HerokuPsRunner } from './commands/heroku-cli/heroku-ps-runner';
-import { HerokuPgRunner } from './commands/heroku-cli/heroku-pg-runner';
-import { HerokuRedisRunner } from './commands/heroku-cli/heroku-redis-runner';
-import { HerokuUnknownCommandRunner } from './commands/heroku-cli/heroku-unknown-command-runner';
 import { HerokuAddOnCommandRunner } from './commands/heroku-cli/heroku-addon-command-runner';
+import { HerokuRedisCommandRunner } from './commands/heroku-cli/heroku-redis-command-runner';
 
 /**
  * Called when the extension is activated by VSCode
@@ -54,18 +52,14 @@ function registerCommandsfromManifest(): vscode.Disposable[] {
   for (const command of Object.keys(manifest.commands)) {
     disposables.push(
       vscode.commands.registerCommand(`heroku:user:${command}`, (...args: unknown[]) => {
-        if (/^(apps)(:?)/.test(command)) {
-          void vscode.commands.executeCommand(HerokuAppsRunner.COMMAND_ID, command, ...args);
-        } else if (/^(ps)(:?)/.test(command)) {
+        if (/^(ps)(:?)/.test(command)) {
           void vscode.commands.executeCommand(HerokuPsRunner.COMMAND_ID, command, ...args);
-        } else if (/^(pg)(:?)/.test(command)) {
-          void vscode.commands.executeCommand(HerokuPgRunner.COMMAND_ID, command, ...args);
-        } else if (/^(redis)(:?)/.test(command)) {
-          void vscode.commands.executeCommand(HerokuRedisRunner.COMMAND_ID, command, ...args);
         } else if (/^(addons)(:?)/.test(command)) {
           void vscode.commands.executeCommand(HerokuAddOnCommandRunner.COMMAND_ID, command, ...args);
+        } else if (/^(redis)(:?)/.test(command)) {
+          void vscode.commands.executeCommand(HerokuRedisCommandRunner.COMMAND_ID, command, ...args);
         } else {
-          void vscode.commands.executeCommand(HerokuUnknownCommandRunner.COMMAND_ID, command, ...args);
+          void vscode.commands.executeCommand(HerokuContextMenuCommandRunner.COMMAND_ID, command, ...args);
         }
       })
     );

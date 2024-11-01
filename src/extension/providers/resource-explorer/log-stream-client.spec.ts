@@ -114,7 +114,6 @@ suite('LogStreamClient', () => {
       assert.ok(
         spy.calledOnceWith({
           app: mockApp,
-          type: 'app',
           configVar: 'LOGDNA',
           ref: 'logdna-deep-31633'
         })
@@ -131,7 +130,6 @@ suite('LogStreamClient', () => {
       assert.ok(
         spy.calledOnceWith({
           app: mockApp,
-          type: 'app',
           configVar: 'LOGDNA',
           ref: 'logdna-deep-31633'
         })
@@ -148,8 +146,8 @@ suite('LogStreamClient', () => {
       assert.ok(
         spy.calledOnceWith({
           app: mockApp,
-          type: 'app',
-          configVar: 'LOGDNA'
+          configVar: 'LOGDNA',
+          type: 'api'
         })
       );
     });
@@ -164,7 +162,6 @@ suite('LogStreamClient', () => {
       assert.ok(
         spy.calledOnceWith({
           app: mockApp,
-          type: 'app',
           ref: 'searchbox-tapered-14398'
         })
       );
@@ -180,7 +177,6 @@ suite('LogStreamClient', () => {
       assert.ok(
         spy.calledOnceWith({
           app: mockApp,
-          type: 'app',
           dynoType: 'web' as Dyno['type'],
           quantity: 2 as Formation['quantity'],
           size: 'Standard-1X' as Formation['size']

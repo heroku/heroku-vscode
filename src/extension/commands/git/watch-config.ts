@@ -10,7 +10,7 @@ export type GitRemoteAppsDiff = { added: Set<string>; removed: Set<string> };
  * file for changes and yields the diff.
  */
 export class WatchConfig extends HerokuCommand<AsyncGenerator<GitRemoteAppsDiff>> {
-  public static COMMAND_ID = 'heroku:watch:config';
+  public static COMMAND_ID = 'heroku:watch:config' as const;
 
   /**
    * Runs the command.

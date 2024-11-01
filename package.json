@@ -3813,7 +3813,7 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm install && npm run compile && npm prune --production",
     "compile": "tsc -p ./src/extension/tsconfig.json & tsc -p ./src/webviews/tsconfig.json && node scripts/import-map-builder.mjs && node scripts/css-html-copy-watcher.mjs --copy-only",
     "compile:tests": "tsc -p ./src/extension/tsconfig.spec.json",
     "watch:extension": "node scripts/import-map-builder.mjs && tsc -watch -p ./src/extension/tsconfig.json",
@@ -3861,7 +3861,6 @@
     "marked": "^13.0.3",
     "mvdan-sh": "^0.10.1",
     "resolve.exports": "^2.0.2",
-    "strip-ansi": "^7.1.0",
     "tslib": "2.6.3"
   }
 }

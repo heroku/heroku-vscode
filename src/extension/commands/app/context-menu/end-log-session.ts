@@ -7,7 +7,7 @@ import { LogSessionStream } from './start-log-session';
  * Command to end the log session for the given app.
  */
 export class EndLogSession extends AbortController implements RunnableCommand<void> {
-  public static COMMAND_ID = 'heroku:end-log-session';
+  public static COMMAND_ID = 'heroku:end-log-session' as const;
 
   /**
    * Ends the log session for the given app.

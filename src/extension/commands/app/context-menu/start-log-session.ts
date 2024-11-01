@@ -69,7 +69,7 @@ export type LogSessionStream = AbortController & {
  * when this command is executed from a context menu.
  */
 export class StartLogSession extends AbortController implements LogSessionStream, RunnableCommand<LogSessionStream> {
-  public static COMMAND_ID = 'heroku:start-log-session';
+  public static COMMAND_ID = 'heroku:start-log-session' as const;
   private static visibleLogSession: StartLogSession | undefined;
 
   private logService = new LogSessionService(fetch, 'https://api.heroku.com');

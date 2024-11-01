@@ -11,7 +11,7 @@ import { LoginCommand } from './login';
  * user uses the "Sign in" button on the welcome screen.
  */
 export class WelcomeViewSignIn extends HerokuCommand<void> {
-  public static COMMAND_ID = 'heroku:welcome:signin';
+  public static COMMAND_ID = 'heroku:welcome:signin' as const;
 
   /**
    * Attempts to query the session info from the
