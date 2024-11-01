@@ -3814,7 +3814,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./src/extension/tsconfig.json & tsc -p ./src/webviews/tsconfig.json",
+    "compile": "tsc -p ./src/extension/tsconfig.json & tsc -p ./src/webviews/tsconfig.json && node scripts/import-map-builder.mjs && node scripts/css-html-copy-watcher.mjs --copy-only",
     "compile:tests": "tsc -p ./src/extension/tsconfig.spec.json",
     "watch:extension": "node scripts/import-map-builder.mjs && tsc -watch -p ./src/extension/tsconfig.json",
     "watch:webviews": "node scripts/css-html-copy-watcher.mjs & tsc -watch -p ./src/webviews/tsconfig.json",

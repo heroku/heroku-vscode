@@ -12,7 +12,8 @@
       "request": "launch",
       "runtimeVersion": "22",
       "skipFiles": ["<node_internals>/**"],
-      "type": "node"
+      "type": "node",
+      "args": ["--copy-only"]
     },
     {
       "name": "Create Icons",

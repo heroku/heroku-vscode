@@ -15,7 +15,7 @@ suite('The LogoutCommand', () => {
       const cp = new (class extends EventEmitter {
         public [Symbol.dispose]() {}
       })() as childProcess.ChildProcess;
-      setTimeout(() => cp.emit('exit', 0));
+      setTimeout(() => cp.emit('exit', 0), 50);
       return cp;
     });
   });

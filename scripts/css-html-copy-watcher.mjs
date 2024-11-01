@@ -1,15 +1,20 @@
 import { watch, cp, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
+const [copyOnly] = process.argv.slice(2);
 const dir = path.resolve('./src/webviews');
 const target = /(html|css)$/;
 const files = await readdir(dir, { recursive: true });
-files.forEach((file) => {
-  if (target.test(file)) {
-    void cp(`./src/webviews/${file}`, `./out/webviews/${file}`);
-  }
-});
 
+for (const file of files) {
+  if (target.test(file)) {
+    await cp(`./src/webviews/${file}`, `./out/webviews/${file}`);
+  }
+}
+
+if (copyOnly) {
+  process.exit(0);
+}
 const watcher = watch(dir, { recursive: true });
 
 for await (const event of watcher) {
