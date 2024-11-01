@@ -114,6 +114,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
       documentFragment.appendChild(option);
     }
     this.categoryDropdown.appendChild(documentFragment);
+    requestAnimationFrame(() => (this.categoryDropdown.value = this.selectedValue ?? ''));
   }
 
   /**
@@ -395,6 +396,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
    */
   private onAddonsMessage = (categories: ElementsCategory[], installedAddons: AddOn[]): void => {
     this.categories = categories;
+    this.installedAddonsByServiceId.clear();
     installedAddons.forEach((addon) => this.installedAddonsByServiceId.set(addon.addon_service.id, addon));
     this.prepareCategoryOptions();
     this.setSelectedValue();

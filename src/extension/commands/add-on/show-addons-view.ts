@@ -61,7 +61,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
     const panel = vscode.window.createWebviewPanel('Addons', 'Elements Marketplace', vscode.ViewColumn.One, {
       enableScripts: true
     });
-    panel.iconPath = vscode.Uri.joinPath(extensionUri, 'resources/elements-icon-60.png');
+    panel.iconPath = vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'element.svg');
     const { webview } = panel;
     webview.onDidReceiveMessage(this.onMessage);
 
