@@ -1,7 +1,7 @@
 import { herokuCommand } from '../../meta/command';
 import { HerokuCommandRunner } from './heroku-command-runner';
 
-type CommandOptions = { hydratedCommand: string; assignments: string };
+export type CommandOptions = { hydratedCommand: string; assignments: string };
 
 @herokuCommand()
 /**

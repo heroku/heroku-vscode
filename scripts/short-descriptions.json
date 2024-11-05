@@ -55,6 +55,7 @@
   "buildpacks:info": "Fetch buildpack info",
   "buildpacks:remove": "Remove app buildpack",
   "buildpacks:search": "Search for buildpacks",
+  "buildpacks:set": "Set buildpack",
   "buildpacks:versions": "List buildpack versions",
   "auth:login": "Login with credentials",
   "auth:logout": "Clear local credentials",

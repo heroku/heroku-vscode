@@ -1,6 +1,6 @@
 import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
 import { CommandMeta } from '../../manifest';
-import { HerokuCommandRunner } from './heroku-command-runner';
+import { FlagsOrArgs, HerokuCommandRunner } from './heroku-command-runner';
 
 type MaybeNamedObjectWithApp = { name?: string; id?: string; app?: MaybeNamedObjectWithApp };
 
@@ -36,66 +36,22 @@ export class HerokuContextMenuCommandRunner extends HerokuCommandRunner<MaybeNam
     context?: MaybeNamedObjectWithApp
   ): PromiseLike<void> | void {
     const appName = this.getAppNameFromContext(context);
-    if (flags.app?.required && appName) {
+    if (flags.app && appName) {
       userInputByFlag.set('app', appName);
-    }
-    // Special case for destructive actions
-    // e.g. ones with a `confirm` prompt
-    // This structure will present the user with a warning
-    // dialog and buttons to continue or cancel.
-    if (flags.confirm) {
-      Reflect.set(flags.confirm, 'required', true);
-      Reflect.set(flags.confirm, 'type', 'boolean');
-      Reflect.set(flags.confirm, 'default', true);
-      Reflect.set(flags.confirm, 'hidden', false);
-      Reflect.set(flags.confirm, 'default', appName);
-      if (!flags.confirm.description) {
-        Reflect.set(flags.confirm, 'description', 'This is a destructive action which cannot be undone');
-      }
     }
   }
 
   /**
-   * Utility function that hydrates the matching keys and
-   * values from the context. In some cases, the name of
-   * the flag or arg matches the property name of the context
-   * object. In these cases, we just match up the keys and
-   * values from the context.
-   *
-   * This function is to be called manually by
-   * the implementing class as it is not called
-   * automatically by the base class.
-   *
-   * Caution is recommended sice arg or flag names
-   * meant for user input can sometimes match property
-   * names on the context object leading to unexpected
-   * results.
-   *
-   * @param userInputs Map of the user inputs
-   * @param manifest The manifest to match flag or arg keys on the context
-   * @param context The object to derive the values from
-   * @param ignoreOptional Boolean indicating if optional values should be ignored
+   * @inheritdoc
    */
-  protected hydrateMatchingObjectKeys(
-    userInputs: Map<string, string | undefined>,
-    manifest: CommandMeta['flags'] | CommandMeta['args'],
-    context: MaybeNamedObjectWithApp = {},
-    ignoreOptional?: boolean
-  ): void {
-    const keys = Object.keys(manifest);
-    for (const key of keys) {
-      if (ignoreOptional && !manifest[key].required) {
-        continue;
-      }
-      if (Reflect.has(context, key)) {
-        const contextvalue = Reflect.get(context, key) as unknown;
-        const inputValue = this.isNamedObject(contextvalue) ? contextvalue.name : contextvalue;
-        userInputs.set(
-          key,
-          'type' in manifest[key] && manifest[key].type === 'boolean' ? undefined : (inputValue as string)
-        );
-      }
+  protected collectInputsFromManifest(flagsOrArgsManifest: FlagsOrArgs, omitOptinal?: boolean): string[] {
+    const collectedInputs = super.collectInputsFromManifest(flagsOrArgsManifest, omitOptinal);
+    // If we're asking for an app, let's not also
+    // ask for a remote.
+    if (collectedInputs.includes('app') && collectedInputs.includes('remote')) {
+      collectedInputs.splice(collectedInputs.indexOf('remote'), 1);
     }
+    return collectedInputs;
   }
 
   /**

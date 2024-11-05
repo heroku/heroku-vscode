@@ -5,8 +5,10 @@ import { HerokuCommand } from '../heroku-command';
 import manifest from '../../meta/oclif.manifest.json';
 import { CommandMeta } from '../../manifest';
 
-type FlagsOrArgs = CommandMeta['flags'] | CommandMeta['args'];
-type CommandFlagAndArgUnion = Command.Arg & Command.Flag & ({ options: vscode.QuickPickItem[] } & { value: string });
+export type FlagsOrArgs = CommandMeta['flags'] | CommandMeta['args'];
+export type CommandFlagAndArgUnion = Command.Arg &
+  Command.Flag &
+  ({ options: vscode.QuickPickItem[] } & { value: string });
 /**
  * The HerokuAppsRunner is used to execute the
  * Heroku CLI for the apps topic.
@@ -51,31 +53,31 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     const commandManifest = manifest.commands[commandName] as CommandMeta;
     const { args, flags } = commandManifest;
 
-    const userInputByFlag: Map<string, string | undefined> = new Map();
-    await this.hydrateFlags(userInputByFlag, flags, targetDataModel);
-
-    let cancelled = await this.getInput(flags, userInputByFlag, !!targetDataModel);
-    if (cancelled) {
-      return;
-    }
-
     let command = `heroku ${commandName}`;
-    for (const [flag, value] of userInputByFlag) {
-      command += ` --${flag}`;
-      if (value) {
-        command += ` ${value}`;
-      }
-    }
-
     const userInputByArg: Map<string, string | undefined> = new Map();
     await this.hydrateArgs(userInputByArg, args, targetDataModel);
 
-    cancelled = await this.getInput(args, userInputByArg, !!targetDataModel);
+    let cancelled = await this.getInput(args, userInputByArg, !!targetDataModel);
     if (cancelled) {
       return;
     }
     for (const [, value] of userInputByArg) {
       command += ` ${value}`;
+    }
+
+    const userInputByFlag: Map<string, string | undefined> = new Map();
+    await this.hydrateFlags(userInputByFlag, flags, targetDataModel);
+
+    cancelled = await this.getInput(flags, userInputByFlag, !!targetDataModel);
+    if (cancelled) {
+      return;
+    }
+
+    for (const [flag, value] of userInputByFlag) {
+      command += ` --${flag}`;
+      if (value) {
+        command += ` ${value}`;
+      }
     }
 
     return command;
@@ -114,7 +116,8 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     const herokuProcess = HerokuCommand.exec(fullyHydratedCommand, {
       signal: this.signal,
       windowsHide: true,
-      env: { ...process.env, FORCE_COLOR: '3' }
+      env: { ...process.env, FORCE_COLOR: '3' },
+      cwd: vscode.workspace.workspaceFolders?.[0].uri.path
     });
     const { promise, resolve } = Promise.withResolvers();
     herokuProcess.once('exit', (code: number, signal: string) => resolve(code ?? signal));
@@ -142,6 +145,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     // along with the above Duplex stream
     // means that all data from the `handleInput()`
     // function is user input.
+    let stdinBuffer = '';
     const pty: vscode.Pseudoterminal = {
       onDidWrite: writeEmitter.event,
       open: () => writeEmitter.fire(`$ ${fullyHydratedCommand}\r\n`),
@@ -153,8 +157,36 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
         if (herokuProcess.exitCode !== null) {
           return data === 'q' && pseudoterminal.dispose();
         }
-        writeEmitter.fire(data);
-        herokuProcess.stdin?.write(data);
+        // Send navigation keys to stdin since there
+        // may be some instances where the CLI asks
+        // the user to choose from a list.
+        const arrowKeys = ['\u001b[A', '\u001b[B', '\u001b[C', '\u001b[D'];
+        if (arrowKeys.some((key) => data.startsWith(key))) {
+          herokuProcess.stdin?.write(data);
+        }
+        // all other ANSI control chars - implement later if needed
+        if (data.startsWith('\u001b[')) {
+          return;
+        }
+        // CTRL+C
+        if (data.startsWith('\x03')) {
+          herokuProcess.kill('SIGINT');
+          return;
+        }
+        // all other user inputs
+        writeEmitter.fire(data.replaceAll('\r', '\r\n'));
+        if (data === '\r') {
+          herokuProcess.stdin?.write(`${stdinBuffer}\r\n`);
+          stdinBuffer = '';
+        } else if (data === '\u007F') {
+          // backspace
+          if (stdinBuffer.length > 0) {
+            writeEmitter.fire('\b \b');
+          }
+          stdinBuffer = stdinBuffer.slice(0, -1);
+        } else {
+          stdinBuffer += data;
+        }
       }
     };
 
@@ -169,9 +201,8 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     // wait for the user to close the
     // terminal or press q to quit.
     await promise;
-    writeEmitter.fire('\nPress "q" to quit:');
-
-    return;
+    const message = herokuProcess.exitCode ? 'Failed -' : 'Completed -';
+    writeEmitter.fire(`\n${message} Press "q" to quit:`);
   }
 
   /**
@@ -238,18 +269,12 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     // which requires typing a yes/no response,
     // we use an information message with "yes", "no"
     // or cancel button choices.
-    const isConfirm = flagOrArgName === 'confirm';
-    const message = isConfirm ? `${description}` : `Should we ${description}?`;
-    const items = isConfirm ? ['Cancel', '⚠ Proceed Anyway'] : ['Yes', 'No', 'Cancel'];
-    const choice = await (isConfirm ? vscode.window.showWarningMessage : vscode.window.showInformationMessage)(
-      message,
-      ...items
-    );
+    const choice = await vscode.window.showInformationMessage(`Should we ${description}`, ...['Yes', 'No', 'Cancel']);
     // user cancelled
     if (choice === undefined || choice === 'Cancel') {
       return true;
     }
-    if (choice === 'Yes' || choice.endsWith('Proceed Anyway')) {
+    if (choice === 'Yes') {
       userInputMap.set(flagOrArgName, defaultValue);
     }
     return false;
@@ -340,7 +365,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     });
 
     keysByType.forEach((key) => {
-      const isRequired = Reflect.get(flagsOrArgsManifest[key], 'required') ?? key === 'confirm';
+      const isRequired = Reflect.get(flagsOrArgsManifest[key], 'required');
       (isRequired ? requiredInputs : optionalInputs).push(key);
     });
     // Prioritize required inputs

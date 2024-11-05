@@ -612,7 +612,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "WARNING: This will delete the specified app including all add-ons"
         }
       },
       "hasDynamicHelp": false,
@@ -1122,7 +1123,7 @@
           "type": "option"
         },
         "confirm": {
-          "description": "overwrite existing add-on attachment with same name",
+          "description": "WARNING: This will overwrite existing add-on attachment with same name",
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
@@ -1184,7 +1185,7 @@
           "type": "option"
         },
         "confirm": {
-          "description": "overwrite existing config vars or existing add-on attachments",
+          "description": "WARNING: This will overwrite existing config vars or existing add-on attachments",
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
@@ -1250,7 +1251,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "WARNING: This will permanently destroy the add-on and all of its resources"
         },
         "wait": {
           "description": "watch add-on destruction status and exit when complete",
@@ -2592,6 +2594,7 @@
           "required": true
         }
       },
+      "description": "set new app buildpack, overwriting into list of buildpacks if necessary",
       "flags": {
         "app": {
           "char": "a",
@@ -4751,13 +4754,6 @@
           "char": "r",
           "description": "git remote of app to use",
           "name": "remote",
-          "hasDynamicHelp": false,
-          "multiple": false,
-          "type": "option"
-        },
-        "confirm": {
-          "name": "confirm",
-          "required": false,
           "hasDynamicHelp": false,
           "multiple": false,
           "type": "option"
@@ -9188,7 +9184,8 @@
           "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
-          "type": "option"
+          "type": "option",
+          "description": "This command will disable Automatic Certificate Management from the selected app. This will cause the certificate to be removed causing SSL validation errors. In order to avoid downtime, these recommended steps are preferred which will also disable Automatic Certificate Management.\n1) Request a new SSL certificate for your domains names from your certificate provider\n2) heroku certs:update CRT KEY"
         },
         "app": {
           "char": "a",
@@ -10254,7 +10251,7 @@
           "hasDynamicHelp": false,
           "multiple": false,
           "type": "option",
-          "description": "Destructive Action. This command will permanently destroy the credential and all objects owned by the credential."
+          "description": "Destructive action. This command will permanently destroy the credential and all objects owned by the credential."
         },
         "app": {
           "char": "a",
@@ -10303,7 +10300,7 @@
           "hasDynamicHelp": false,
           "multiple": false,
           "type": "option",
-          "description": "Destructive Action. Ownership of all database objects owned by additional credentials will be transferred to the default credential. This command will also grant the default credential admin option for all additional credentials."
+          "description": "Destructive action. Ownership of all database objects owned by additional credentials will be transferred to the default credential. This command will also grant the default credential admin option for all additional credentials."
         },
         "app": {
           "char": "a",
@@ -11455,13 +11452,6 @@
           "hasDynamicHelp": false,
           "multiple": false,
           "type": "option"
-        },
-        "confirm": {
-          "description": "set to space name to bypass confirm prompt",
-          "name": "confirm",
-          "hasDynamicHelp": false,
-          "multiple": false,
-          "type": "option"
         }
       },
       "hasDynamicHelp": false,
@@ -11530,13 +11520,6 @@
           "description": "space to remove rule from",
           "name": "space",
           "required": true,
-          "hasDynamicHelp": false,
-          "multiple": false,
-          "type": "option"
-        },
-        "confirm": {
-          "description": "set to space name to bypass confirm prompt",
-          "name": "confirm",
           "hasDynamicHelp": false,
           "multiple": false,
           "type": "option"

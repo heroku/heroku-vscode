@@ -2,6 +2,7 @@ import type { AddOn } from '@heroku-cli/schema';
 import PlanService from '@heroku-cli/schema/services/plan-service.js';
 import vscode from 'vscode';
 import type { Command } from '@oclif/config';
+import AddOnAttachmentService from '@heroku-cli/schema/services/add-on-attachment-service.js';
 import type { CommandMeta } from '../../manifest';
 import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
 import { HerokuContextMenuCommandRunner } from './heroku-context-menu-command-runner';
@@ -31,6 +32,10 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
       this.injectPlanOptionsIntoCommand(args.plan, addOn);
     }
 
+    if (this.commandName === 'addons:detach') {
+      this.injectAttachmentOptionsIntoCommand(args.attachment_name, addOn);
+    }
+
     if (!addOn) {
       return;
     }
@@ -43,6 +48,9 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
     }
     if (args.addonName?.required) {
       userInputByArg.set('addonName', addOn.name);
+    }
+    if (args.addon_name?.required) {
+      userInputByArg.set('addon_name', addOn.name);
     }
   }
 
@@ -97,6 +105,49 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
 
     Reflect.set(upgradePlanArgs, 'options', thenable);
     Reflect.set(upgradePlanArgs, 'required', true);
+  }
+
+  /**
+   * Injects the list of available attachments into the "attachment_name"
+   * argument. This utilizes the async VSCode QuickPick API to present the user with
+   * a list of plans to choose from.
+   *
+   * @param detachAttachmentArg The "attachment_name" argument from the "addons:detach" command
+   * @param addOn The add-on to detach an attachment from
+   */
+  protected injectAttachmentOptionsIntoCommand(detachAttachmentArg: Command.Arg, addOn: AddOn): void {
+    const attachmentService = new AddOnAttachmentService(fetch, 'https://api.heroku.com');
+
+    const thenable = (async (): Promise<vscode.QuickPickItem[]> => {
+      const { accessToken } = (await vscode.authentication.getSession(
+        'heroku:auth:login',
+        []
+      )) as vscode.AuthenticationSession;
+      const attachments = await attachmentService.listByAddOn(addOn.id, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+
+      const items: vscode.QuickPickItem[] = [
+        {
+          kind: vscode.QuickPickItemKind.Separator,
+          label: 'Attachments'
+        }
+      ];
+
+      items.push(
+        ...attachments.map(
+          (a) =>
+            ({
+              label: a.name,
+              value: a.id
+            }) as vscode.QuickPickItem
+        )
+      );
+      return items;
+    })();
+
+    Reflect.set(detachAttachmentArg, 'options', thenable);
+    Reflect.set(detachAttachmentArg, 'required', true);
   }
 
   /**
