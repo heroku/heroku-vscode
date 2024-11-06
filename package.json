@@ -1418,6 +1418,10 @@
         "label": "Stacks"
       },
       {
+        "id": "heroku:user:ps:autoscale",
+        "label": "Autoscale"
+      },
+      {
         "id": "heroku:user:ci:config",
         "label": "Config"
       },
@@ -1430,6 +1434,10 @@
         "label": "Connection-pooling"
       },
       {
+        "id": "heroku:user:pg:maintenance",
+        "label": "Maintenance"
+      },
+      {
         "id": "heroku:user:pg:credentials",
         "label": "Credentials"
       },
@@ -1438,16 +1446,8 @@
         "label": "Links"
       },
       {
-        "id": "heroku:user:pg:maintenance",
-        "label": "Maintenance"
-      },
-      {
         "id": "heroku:user:pg:settings",
         "label": "Settings"
-      },
-      {
-        "id": "heroku:user:ps:autoscale",
-        "label": "Autoscale"
       },
       {
         "id": "heroku:user:spaces:drains",
@@ -1466,12 +1466,12 @@
         "label": "Vpn"
       },
       {
-        "id": "heroku:user:webhooks:deliveries",
-        "label": "Deliveries"
-      },
-      {
         "id": "heroku:user:webhooks:events",
         "label": "Events"
+      },
+      {
+        "id": "heroku:user:webhooks:deliveries",
+        "label": "Deliveries"
       },
       {
         "id": "heroku:user:pg:settings:auto-explain",
@@ -1762,13 +1762,13 @@
           "submenu": "heroku:user:pg:connection-pooling"
         },
         {
+          "submenu": "heroku:user:pg:maintenance"
+        },
+        {
           "submenu": "heroku:user:pg:credentials"
         },
         {
           "submenu": "heroku:user:pg:links"
-        },
-        {
-          "submenu": "heroku:user:pg:maintenance"
         },
         {
           "submenu": "heroku:user:pg:settings"
@@ -1931,10 +1931,10 @@
       ],
       "heroku:user:webhooks": [
         {
-          "submenu": "heroku:user:webhooks:deliveries"
+          "submenu": "heroku:user:webhooks:events"
         },
         {
-          "submenu": "heroku:user:webhooks:events"
+          "submenu": "heroku:user:webhooks:deliveries"
         },
         {
           "command": "heroku:user:webhooks:add",
@@ -1989,6 +1989,18 @@
           "command": "heroku:user:apps:stacks:set",
           "group": "apps:stacks",
           "when": "viewItem =~ /^(heroku:app)/"
+        }
+      ],
+      "heroku:user:ps:autoscale": [
+        {
+          "command": "heroku:user:ps:autoscale:disable",
+          "group": "ps:autoscale",
+          "when": "viewItem =~ /^(heroku:dyno)/"
+        },
+        {
+          "command": "heroku:user:ps:autoscale:enable",
+          "group": "ps:autoscale",
+          "when": "viewItem =~ /^(heroku:dyno)/"
         }
       ],
       "heroku:user:ci:config": [
@@ -2077,6 +2089,23 @@
           "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
         }
       ],
+      "heroku:user:pg:maintenance": [
+        {
+          "command": "heroku:user:pg:maintenance",
+          "group": "aaapg",
+          "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
+        },
+        {
+          "command": "heroku:user:pg:maintenance:run",
+          "group": "pg:maintenance",
+          "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
+        },
+        {
+          "command": "heroku:user:pg:maintenance:window",
+          "group": "pg:maintenance",
+          "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
+        }
+      ],
       "heroku:user:pg:credentials": [
         {
           "command": "heroku:user:pg:credentials",
@@ -2126,23 +2155,6 @@
           "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
         }
       ],
-      "heroku:user:pg:maintenance": [
-        {
-          "command": "heroku:user:pg:maintenance",
-          "group": "aaapg",
-          "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
-        },
-        {
-          "command": "heroku:user:pg:maintenance:run",
-          "group": "pg:maintenance",
-          "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
-        },
-        {
-          "command": "heroku:user:pg:maintenance:window",
-          "group": "pg:maintenance",
-          "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
-        }
-      ],
       "heroku:user:pg:settings": [
         {
           "submenu": "heroku:user:pg:settings:auto-explain"
@@ -2186,18 +2198,6 @@
           "command": "heroku:user:pg:settings:track-functions",
           "group": "pg:settings",
           "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
-        }
-      ],
-      "heroku:user:ps:autoscale": [
-        {
-          "command": "heroku:user:ps:autoscale:disable",
-          "group": "ps:autoscale",
-          "when": "viewItem =~ /^(heroku:dyno)/"
-        },
-        {
-          "command": "heroku:user:ps:autoscale:enable",
-          "group": "ps:autoscale",
-          "when": "viewItem =~ /^(heroku:dyno)/"
         }
       ],
       "heroku:user:spaces:drains": [
@@ -2288,18 +2288,6 @@
           "when": "viewItem =~ /^(heroku:space)/"
         }
       ],
-      "heroku:user:webhooks:deliveries": [
-        {
-          "command": "heroku:user:webhooks:deliveries",
-          "group": "aaawebhooks",
-          "when": "viewItem =~ /^(heroku:app)/"
-        },
-        {
-          "command": "heroku:user:webhooks:deliveries:info",
-          "group": "webhooks:deliveries",
-          "when": "viewItem =~ /^(heroku:app)/"
-        }
-      ],
       "heroku:user:webhooks:events": [
         {
           "command": "heroku:user:webhooks:events",
@@ -2309,6 +2297,18 @@
         {
           "command": "heroku:user:webhooks:events:info",
           "group": "webhooks:events",
+          "when": "viewItem =~ /^(heroku:app)/"
+        }
+      ],
+      "heroku:user:webhooks:deliveries": [
+        {
+          "command": "heroku:user:webhooks:deliveries",
+          "group": "aaawebhooks",
+          "when": "viewItem =~ /^(heroku:app)/"
+        },
+        {
+          "command": "heroku:user:webhooks:deliveries:info",
+          "group": "webhooks:deliveries",
           "when": "viewItem =~ /^(heroku:app)/"
         }
       ],
@@ -2471,6 +2471,36 @@
           "when": "viewItem =~ /^(heroku:addon)/"
         },
         {
+          "command": "heroku:user:ps",
+          "group": "",
+          "when": "viewItem =~ /^(heroku:dyno)/"
+        },
+        {
+          "command": "heroku:user:ps:restart",
+          "group": "ps",
+          "when": "viewItem =~ /^(heroku:dyno)/"
+        },
+        {
+          "command": "heroku:user:ps:scale",
+          "group": "ps",
+          "when": "viewItem =~ /^(heroku:dyno)/"
+        },
+        {
+          "command": "heroku:user:ps:stop",
+          "group": "ps",
+          "when": "viewItem =~ /^(heroku:dyno)/"
+        },
+        {
+          "command": "heroku:user:ps:type",
+          "group": "ps",
+          "when": "viewItem =~ /^(heroku:dyno)/"
+        },
+        {
+          "command": "heroku:user:ps:wait",
+          "group": "ps",
+          "when": "viewItem =~ /^(heroku:dyno)/"
+        },
+        {
           "command": "heroku:user:pipelines:add",
           "group": "pipelines",
           "when": "viewItem =~ /^(heroku:pipeline)/"
@@ -2541,34 +2571,9 @@
           "when": "viewItem =~ /^(heroku:pipeline)/"
         },
         {
-          "command": "heroku:user:ps",
+          "command": "heroku:user:teams",
           "group": "",
-          "when": "viewItem =~ /^(heroku:dyno)/"
-        },
-        {
-          "command": "heroku:user:ps:restart",
-          "group": "ps",
-          "when": "viewItem =~ /^(heroku:dyno)/"
-        },
-        {
-          "command": "heroku:user:ps:scale",
-          "group": "ps",
-          "when": "viewItem =~ /^(heroku:dyno)/"
-        },
-        {
-          "command": "heroku:user:ps:stop",
-          "group": "ps",
-          "when": "viewItem =~ /^(heroku:dyno)/"
-        },
-        {
-          "command": "heroku:user:ps:type",
-          "group": "ps",
-          "when": "viewItem =~ /^(heroku:dyno)/"
-        },
-        {
-          "command": "heroku:user:ps:wait",
-          "group": "ps",
-          "when": "viewItem =~ /^(heroku:dyno)/"
+          "when": "viewItem =~ /^(heroku:team)/"
         },
         {
           "command": "heroku:user:spaces:create",
@@ -2619,11 +2624,6 @@
           "command": "heroku:user:spaces:wait",
           "group": "spaces",
           "when": "viewItem =~ /^(heroku:space)/"
-        },
-        {
-          "command": "heroku:user:teams",
-          "group": "",
-          "when": "viewItem =~ /^(heroku:team)/"
         },
         {
           "submenu": "heroku:user:access"
@@ -2751,66 +2751,6 @@
         "title": "Update collaborators"
       },
       {
-        "command": "heroku:user:apps:create",
-        "category": "Heroku apps",
-        "title": "New"
-      },
-      {
-        "command": "heroku:user:apps:destroy",
-        "category": "Heroku apps",
-        "title": "Permanently delete"
-      },
-      {
-        "command": "heroku:user:apps:errors",
-        "category": "Heroku apps",
-        "title": "View errors"
-      },
-      {
-        "command": "heroku:user:apps",
-        "category": "Heroku apps",
-        "title": "List apps"
-      },
-      {
-        "command": "heroku:user:apps:info",
-        "category": "Heroku apps",
-        "title": "Info"
-      },
-      {
-        "command": "heroku:user:apps:join",
-        "category": "Heroku apps",
-        "title": "Join team"
-      },
-      {
-        "command": "heroku:user:apps:leave",
-        "category": "Heroku apps",
-        "title": "Exit team"
-      },
-      {
-        "command": "heroku:user:apps:lock",
-        "category": "Heroku apps",
-        "title": "Lock team access"
-      },
-      {
-        "command": "heroku:user:apps:open",
-        "category": "Heroku apps",
-        "title": "Open in browser"
-      },
-      {
-        "command": "heroku:user:apps:rename",
-        "category": "Heroku apps",
-        "title": "Rename"
-      },
-      {
-        "command": "heroku:user:apps:transfer",
-        "category": "Heroku apps",
-        "title": "Transfer ownership"
-      },
-      {
-        "command": "heroku:user:apps:unlock",
-        "category": "Heroku apps",
-        "title": "Unlock team access"
-      },
-      {
         "command": "heroku:user:addons:attach",
         "category": "Heroku addons",
         "title": "Attach resource"
@@ -2876,6 +2816,86 @@
         "title": "Show provisioning status"
       },
       {
+        "command": "heroku:user:apps:create",
+        "category": "Heroku apps",
+        "title": "New"
+      },
+      {
+        "command": "heroku:user:apps:destroy",
+        "category": "Heroku apps",
+        "title": "Permanently delete"
+      },
+      {
+        "command": "heroku:user:apps:errors",
+        "category": "Heroku apps",
+        "title": "View errors"
+      },
+      {
+        "command": "heroku:user:apps",
+        "category": "Heroku apps",
+        "title": "List apps"
+      },
+      {
+        "command": "heroku:user:apps:info",
+        "category": "Heroku apps",
+        "title": "Info"
+      },
+      {
+        "command": "heroku:user:apps:join",
+        "category": "Heroku apps",
+        "title": "Join team"
+      },
+      {
+        "command": "heroku:user:apps:leave",
+        "category": "Heroku apps",
+        "title": "Exit team"
+      },
+      {
+        "command": "heroku:user:apps:lock",
+        "category": "Heroku apps",
+        "title": "Lock team access"
+      },
+      {
+        "command": "heroku:user:apps:open",
+        "category": "Heroku apps",
+        "title": "Open in browser"
+      },
+      {
+        "command": "heroku:user:apps:rename",
+        "category": "Heroku apps",
+        "title": "Rename"
+      },
+      {
+        "command": "heroku:user:apps:transfer",
+        "category": "Heroku apps",
+        "title": "Transfer ownership"
+      },
+      {
+        "command": "heroku:user:apps:unlock",
+        "category": "Heroku apps",
+        "title": "Unlock team access"
+      },
+      {
+        "command": "heroku:user:auth:login",
+        "category": "Heroku auth",
+        "title": "Login with credentials"
+      },
+      {
+        "command": "heroku:user:auth:logout",
+        "category": "Heroku auth",
+        "title": "Clear local credentials"
+      },
+      {
+        "command": "heroku:user:auth:token",
+        "category": "Heroku auth",
+        "title": "Output current auth token"
+      },
+      {
+        "command": "heroku:user:auth:whoami",
+        "category": "Heroku auth",
+        "title": "Display logged in user"
+      },
+      {
         "command": "heroku:user:authorizations:create",
         "category": "Heroku authorizations",
         "title": "Create OAuth authorization"
@@ -2904,36 +2924,6 @@
         "command": "heroku:user:authorizations:update",
         "category": "Heroku authorizations",
         "title": "Update OAuth authorization"
-      },
-      {
-        "command": "heroku:user:certs:add",
-        "category": "Heroku certs",
-        "title": "Add SSL certificate to app"
-      },
-      {
-        "command": "heroku:user:certs:generate",
-        "category": "Heroku certs",
-        "title": "Generate key and CSR"
-      },
-      {
-        "command": "heroku:user:certs",
-        "category": "Heroku certs",
-        "title": "List SSL certificates"
-      },
-      {
-        "command": "heroku:user:certs:info",
-        "category": "Heroku certs",
-        "title": "Show SSL certificate info"
-      },
-      {
-        "command": "heroku:user:certs:remove",
-        "category": "Heroku certs",
-        "title": "Remove SSL certificate from app"
-      },
-      {
-        "command": "heroku:user:certs:update",
-        "category": "Heroku certs",
-        "title": "Update SSL certificate on app"
       },
       {
         "command": "heroku:user:autocomplete:create",
@@ -3001,24 +2991,34 @@
         "title": "List buildpack versions"
       },
       {
-        "command": "heroku:user:auth:login",
-        "category": "Heroku auth",
-        "title": "Login with credentials"
+        "command": "heroku:user:certs:add",
+        "category": "Heroku certs",
+        "title": "Add SSL certificate to app"
       },
       {
-        "command": "heroku:user:auth:logout",
-        "category": "Heroku auth",
-        "title": "Clear local credentials"
+        "command": "heroku:user:certs:generate",
+        "category": "Heroku certs",
+        "title": "Generate key and CSR"
       },
       {
-        "command": "heroku:user:auth:token",
-        "category": "Heroku auth",
-        "title": "Output current auth token"
+        "command": "heroku:user:certs",
+        "category": "Heroku certs",
+        "title": "List SSL certificates"
       },
       {
-        "command": "heroku:user:auth:whoami",
-        "category": "Heroku auth",
-        "title": "Display logged in user"
+        "command": "heroku:user:certs:info",
+        "category": "Heroku certs",
+        "title": "Show SSL certificate info"
+      },
+      {
+        "command": "heroku:user:certs:remove",
+        "category": "Heroku certs",
+        "title": "Remove SSL certificate from app"
+      },
+      {
+        "command": "heroku:user:certs:update",
+        "category": "Heroku certs",
+        "title": "Update SSL certificate on app"
       },
       {
         "command": "heroku:user:ci:debug",
@@ -3346,6 +3346,106 @@
         "title": "Open team interface"
       },
       {
+        "command": "heroku:user:ps",
+        "category": "Heroku ps",
+        "title": "List app dynos"
+      },
+      {
+        "command": "heroku:user:ps:restart",
+        "category": "Heroku ps",
+        "title": "Restart"
+      },
+      {
+        "command": "heroku:user:ps:scale",
+        "category": "Heroku ps",
+        "title": "Scale"
+      },
+      {
+        "command": "heroku:user:ps:stop",
+        "category": "Heroku ps",
+        "title": "Stop"
+      },
+      {
+        "command": "heroku:user:ps:type",
+        "category": "Heroku ps",
+        "title": "Manage dyno sizes"
+      },
+      {
+        "command": "heroku:user:ps:wait",
+        "category": "Heroku ps",
+        "title": "Wait for dynos to run latest version"
+      },
+      {
+        "command": "heroku:user:pipelines:add",
+        "category": "Heroku pipelines",
+        "title": "Add app to pipeline"
+      },
+      {
+        "command": "heroku:user:pipelines:connect",
+        "category": "Heroku pipelines",
+        "title": "Connect GitHub repo to pipeline"
+      },
+      {
+        "command": "heroku:user:pipelines:create",
+        "category": "Heroku pipelines",
+        "title": "Create new pipeline"
+      },
+      {
+        "command": "heroku:user:pipelines:destroy",
+        "category": "Heroku pipelines",
+        "title": "Destroy a pipeline"
+      },
+      {
+        "command": "heroku:user:pipelines:diff",
+        "category": "Heroku pipelines",
+        "title": "Compare app releases with downstream apps"
+      },
+      {
+        "command": "heroku:user:pipelines",
+        "category": "Heroku pipelines",
+        "title": "List accessible pipelines"
+      },
+      {
+        "command": "heroku:user:pipelines:info",
+        "category": "Heroku pipelines",
+        "title": "Show apps in pipeline"
+      },
+      {
+        "command": "heroku:user:pipelines:open",
+        "category": "Heroku pipelines",
+        "title": "Open pipeline in dashboard"
+      },
+      {
+        "command": "heroku:user:pipelines:promote",
+        "category": "Heroku pipelines",
+        "title": "Promote latest release to downstream apps"
+      },
+      {
+        "command": "heroku:user:pipelines:remove",
+        "category": "Heroku pipelines",
+        "title": "Remove app from pipeline"
+      },
+      {
+        "command": "heroku:user:pipelines:rename",
+        "category": "Heroku pipelines",
+        "title": "Rename"
+      },
+      {
+        "command": "heroku:user:pipelines:setup",
+        "category": "Heroku pipelines",
+        "title": "Bootstrap new pipeline"
+      },
+      {
+        "command": "heroku:user:pipelines:transfer",
+        "category": "Heroku pipelines",
+        "title": "Transfer pipeline ownership"
+      },
+      {
+        "command": "heroku:user:pipelines:update",
+        "category": "Heroku pipelines",
+        "title": "Update app's stage"
+      },
+      {
         "command": "heroku:user:pg:bloat",
         "category": "Heroku pg",
         "title": "Show table and index bloat"
@@ -3446,106 +3546,6 @@
         "title": "Wait until database is available"
       },
       {
-        "command": "heroku:user:pipelines:add",
-        "category": "Heroku pipelines",
-        "title": "Add app to pipeline"
-      },
-      {
-        "command": "heroku:user:pipelines:connect",
-        "category": "Heroku pipelines",
-        "title": "Connect GitHub repo to pipeline"
-      },
-      {
-        "command": "heroku:user:pipelines:create",
-        "category": "Heroku pipelines",
-        "title": "Create new pipeline"
-      },
-      {
-        "command": "heroku:user:pipelines:destroy",
-        "category": "Heroku pipelines",
-        "title": "Destroy a pipeline"
-      },
-      {
-        "command": "heroku:user:pipelines:diff",
-        "category": "Heroku pipelines",
-        "title": "Compare app releases with downstream apps"
-      },
-      {
-        "command": "heroku:user:pipelines",
-        "category": "Heroku pipelines",
-        "title": "List accessible pipelines"
-      },
-      {
-        "command": "heroku:user:pipelines:info",
-        "category": "Heroku pipelines",
-        "title": "Show apps in pipeline"
-      },
-      {
-        "command": "heroku:user:pipelines:open",
-        "category": "Heroku pipelines",
-        "title": "Open pipeline in dashboard"
-      },
-      {
-        "command": "heroku:user:pipelines:promote",
-        "category": "Heroku pipelines",
-        "title": "Promote latest release to downstream apps"
-      },
-      {
-        "command": "heroku:user:pipelines:remove",
-        "category": "Heroku pipelines",
-        "title": "Remove app from pipeline"
-      },
-      {
-        "command": "heroku:user:pipelines:rename",
-        "category": "Heroku pipelines",
-        "title": "Rename"
-      },
-      {
-        "command": "heroku:user:pipelines:setup",
-        "category": "Heroku pipelines",
-        "title": "Bootstrap new pipeline"
-      },
-      {
-        "command": "heroku:user:pipelines:transfer",
-        "category": "Heroku pipelines",
-        "title": "Transfer pipeline ownership"
-      },
-      {
-        "command": "heroku:user:pipelines:update",
-        "category": "Heroku pipelines",
-        "title": "Update app's stage"
-      },
-      {
-        "command": "heroku:user:ps",
-        "category": "Heroku ps",
-        "title": "List app dynos"
-      },
-      {
-        "command": "heroku:user:ps:restart",
-        "category": "Heroku ps",
-        "title": "Restart"
-      },
-      {
-        "command": "heroku:user:ps:scale",
-        "category": "Heroku ps",
-        "title": "Scale"
-      },
-      {
-        "command": "heroku:user:ps:stop",
-        "category": "Heroku ps",
-        "title": "Stop"
-      },
-      {
-        "command": "heroku:user:ps:type",
-        "category": "Heroku ps",
-        "title": "Manage dyno sizes"
-      },
-      {
-        "command": "heroku:user:ps:wait",
-        "category": "Heroku ps",
-        "title": "Wait for dynos to run latest version"
-      },
-      {
         "command": "heroku:user:redis:cli",
         "category": "Heroku redis",
         "title": "Open Redis prompt"
@@ -3601,6 +3601,16 @@
         "title": "Wait for Redis instance availability"
       },
       {
+        "command": "heroku:user:reviewapps:disable",
+        "category": "Heroku reviewapps",
+        "title": "Disable review apps on pipeline"
+      },
+      {
+        "command": "heroku:user:reviewapps:enable",
+        "category": "Heroku reviewapps",
+        "title": "Enable review apps on pipeline"
+      },
+      {
         "command": "heroku:user:releases",
         "category": "Heroku releases",
         "title": "Display app releases"
@@ -3619,16 +3629,6 @@
         "command": "heroku:user:releases:rollback",
         "category": "Heroku releases",
         "title": "Roll back to previous release"
-      },
-      {
-        "command": "heroku:user:reviewapps:disable",
-        "category": "Heroku reviewapps",
-        "title": "Disable review apps on pipeline"
-      },
-      {
-        "command": "heroku:user:reviewapps:enable",
-        "category": "Heroku reviewapps",
-        "title": "Enable review apps on pipeline"
       },
       {
         "command": "heroku:user:run:detached",
@@ -3654,6 +3654,11 @@
         "command": "heroku:user:sessions",
         "category": "Heroku sessions",
         "title": "List OAuth sessions"
+      },
+      {
+        "command": "heroku:user:teams",
+        "category": "Heroku teams",
+        "title": "List your teams"
       },
       {
         "command": "heroku:user:spaces:create",
@@ -3704,11 +3709,6 @@
         "command": "heroku:user:spaces:wait",
         "category": "Heroku spaces",
         "title": "Wait for space creation"
-      },
-      {
-        "command": "heroku:user:teams",
-        "category": "Heroku teams",
-        "title": "List your teams"
       },
       {
         "command": "heroku:user:webhooks:add",
@@ -3796,6 +3796,16 @@
         "title": "Check 2FA status"
       },
       {
+        "command": "heroku:user:ps:autoscale:disable",
+        "category": "Heroku ps",
+        "title": "Disable web dyno autoscaling"
+      },
+      {
+        "command": "heroku:user:ps:autoscale:enable",
+        "category": "Heroku ps",
+        "title": "Enable web dyno autoscaling"
+      },
+      {
         "command": "heroku:user:ci:config:get",
         "category": "Heroku ci",
         "title": "Get CI config var"
@@ -3876,6 +3886,21 @@
         "title": "Add attachment using connection pooling"
       },
       {
+        "command": "heroku:user:pg:maintenance",
+        "category": "Heroku pg",
+        "title": "Show maintenance information"
+      },
+      {
+        "command": "heroku:user:pg:maintenance:run",
+        "category": "Heroku pg",
+        "title": "Start maintenance process"
+      },
+      {
+        "command": "heroku:user:pg:maintenance:window",
+        "category": "Heroku pg",
+        "title": "Set weekly maintenance window"
+      },
+      {
         "command": "heroku:user:pg:credentials:create",
         "category": "Heroku pg",
         "title": "Create credential in database"
@@ -3914,21 +3939,6 @@
         "command": "heroku:user:pg:links",
         "category": "Heroku pg",
         "title": "List databases and links info"
-      },
-      {
-        "command": "heroku:user:pg:maintenance",
-        "category": "Heroku pg",
-        "title": "Show maintenance information"
-      },
-      {
-        "command": "heroku:user:pg:maintenance:run",
-        "category": "Heroku pg",
-        "title": "Start maintenance process"
-      },
-      {
-        "command": "heroku:user:pg:maintenance:window",
-        "category": "Heroku pg",
-        "title": "Set weekly maintenance window"
       },
       {
         "command": "heroku:user:pg:settings:auto-explain",
@@ -3974,16 +3984,6 @@
         "command": "heroku:user:pg:settings:track-functions",
         "category": "Heroku pg",
         "title": "Track function call counts and time"
-      },
-      {
-        "command": "heroku:user:ps:autoscale:disable",
-        "category": "Heroku ps",
-        "title": "Disable web dyno autoscaling"
-      },
-      {
-        "command": "heroku:user:ps:autoscale:enable",
-        "category": "Heroku ps",
-        "title": "Enable web dyno autoscaling"
       },
       {
         "command": "heroku:user:spaces:drains:get",
@@ -4066,22 +4066,22 @@
         "title": "Wait for VPN connection creation"
       },
       {
-        "command": "heroku:user:webhooks:deliveries",
-        "category": "Heroku webhooks",
-        "title": "List webhook deliveries on app"
-      },
-      {
-        "command": "heroku:user:webhooks:deliveries:info",
-        "category": "Heroku webhooks",
-        "title": "Info for webhook event on app"
-      },
-      {
         "command": "heroku:user:webhooks:events",
         "category": "Heroku webhooks",
         "title": "List webhook events on app"
       },
       {
         "command": "heroku:user:webhooks:events:info",
+        "category": "Heroku webhooks",
+        "title": "Info for webhook event on app"
+      },
+      {
+        "command": "heroku:user:webhooks:deliveries",
+        "category": "Heroku webhooks",
+        "title": "List webhook deliveries on app"
+      },
+      {
+        "command": "heroku:user:webhooks:deliveries:info",
         "category": "Heroku webhooks",
         "title": "Info for webhook event on app"
       },
@@ -4123,7 +4123,7 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm install --omit=dev && npm run compile",
+    "vscode:prepublish": "npm install && npm run compile",
     "compile": "tsc -p ./src/extension/tsconfig.json & tsc -p ./src/webviews/tsconfig.json && node scripts/import-map-builder.mjs && node scripts/css-html-copy-watcher.mjs --copy-only",
     "compile:tests": "tsc -p ./src/extension/tsconfig.spec.json",
     "watch:extension": "node scripts/import-map-builder.mjs && tsc -watch -p ./src/extension/tsconfig.json",
