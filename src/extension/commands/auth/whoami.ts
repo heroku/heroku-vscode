@@ -7,7 +7,7 @@ import { HerokuCommand } from '../heroku-command';
  * to determine the identity of the current user.
  */
 export class WhoAmI extends HerokuCommand<string | null> {
-  public static COMMAND_ID = 'heroku:auth:whoami';
+  public static COMMAND_ID = 'heroku:auth:whoami' as const;
 
   /**
    * Runs the `heroku auth:whoami` command and returns

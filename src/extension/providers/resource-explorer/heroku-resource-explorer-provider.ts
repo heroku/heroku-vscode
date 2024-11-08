@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import AppService from '@heroku-cli/schema/services/app-service.js';
 import type { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
 import DynoService from '@heroku-cli/schema/services/dyno-service.js';
@@ -13,7 +14,9 @@ import {
   LogStreamEvents,
   type StartingProcessInfo,
   type ScaledToInfo,
-  type StateChangedInfo
+  type StateChangedInfo,
+  AttachmentProvisionedInfo,
+  AttachmentDetachedInfo
 } from './log-stream-client';
 import {
   getAddOnTreeItem,
@@ -65,8 +68,14 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
-  protected abortWatchGitConfig = new AbortController();
+  protected abortWatchGitConfig: AbortController | undefined;
   protected syncAddonsPending = false;
+
+  /**
+   * Bi-directonal emitter used to maintain
+   * sync between the webview and the explorer.
+   */
+  protected addonsViewEmitter = new EventEmitter();
 
   #logStreamClient!: LogStreamClient;
 
@@ -77,7 +86,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    */
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();
-    void this.watchGitConfig();
+    this.addonsViewEmitter.on('addonCreated', this.onAddonCreated);
   }
 
   /**
@@ -91,6 +100,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       this.#logStreamClient.addListener(LogStreamEvents.SCALED_TO, this.onFormationScaledTo);
       this.#logStreamClient.addListener(LogStreamEvents.STATE_CHANGED, this.onDynoStateChanged);
       this.#logStreamClient.addListener(LogStreamEvents.STARTING_PROCESS, this.onDynoProcessStarting);
+      this.#logStreamClient.addListener(LogStreamEvents.PROVISIONING_COMPLETED, this.onAttachmentProvisioned);
+      this.#logStreamClient.addListener(LogStreamEvents.ATTACHMENT_DETACHED, this.onAttachmentDetached);
 
       this.#logStreamClient.addListener(LogStreamEvents.MUTED_CHANGED, this.onStreamMutedChanged);
     }
@@ -103,7 +114,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   public async getTreeItem(element: T): Promise<vscode.TreeItem> {
     switch (this.elementTypeMap.get(element)) {
       case 'AddOn':
-        return getAddOnTreeItem(this.context, element as AddOn, this.getParent(element) as vscode.TreeItem);
+        return getAddOnTreeItem(this.context, element as AddOn, this.addonsViewEmitter);
 
       case 'App': {
         const app = element as LogSessionCapableApp;
@@ -171,6 +182,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         }
       }
       return [];
+    } else {
+      void this.watchGitConfig();
     }
 
     return Array.from(this.apps.values()) as T[];
@@ -180,7 +193,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * @inheritdoc
    */
   public dispose(): void {
-    this.abortWatchGitConfig.abort();
+    this.abortWatchGitConfig?.abort();
   }
 
   /**
@@ -226,7 +239,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * @param data The data dispatched when a dyno state is changed.
    */
   private onDynoStateChanged = (data: StateChangedInfo): void => {
-    const { app, dynoName, from, to } = data;
+    const { app, dynoName, to } = data;
     const { dynos } = this.appToResourceMap.get(app)!;
     const dyno = dynos.find((d) => d.name === dynoName);
     if (!dyno) {
@@ -243,9 +256,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     // logs. Since Dynos are restarted with *most* changes
     // to an add-on, we must check for add-ons being
     // provisioned/deprovisioned when dynos restart.
-    if (from === 'up' && to === 'starting') {
-      void this.queueAddOnSynchronization(app);
-    }
+    void this.queueAddOnSynchronization(app);
   };
 
   /**
@@ -258,19 +269,37 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       return;
     }
     this.syncAddonsPending = true;
+    await new Promise((resolve) => setTimeout(resolve, 5000)); // wait for log chatter to settle a bit
     const { addOns, categories } = this.appToResourceMap.get(app)!;
-    const addonsMap = new Set(addOns.map((a) => a.id));
+    const addonsSet = new Set(addOns.map((a) => a.id));
 
     addOns.length = 0;
     const addOnsCategory = categories.find((cat) => cat.label === 'ADD-ONS');
     const pristineAddons = await this.getAddonsForApp(app, addOnsCategory as T);
+    const pristineAddonsSet = new Set(pristineAddons.map((a) => a.id));
+    // Sync properties
+    addonsSet.forEach((id) => {
+      if (pristineAddonsSet.has(id)) {
+        const addon = addOns.find((a) => a.id === id);
+        const pristineAddon = pristineAddons.find((a) => a.id === id);
+        if (addon && pristineAddon) {
+          Object.assign(addon, pristineAddon);
+          this.fire(addon as T);
+        }
+      }
+    });
 
-    const pristineAddonsMap = new Set(pristineAddons.map((a) => a.id));
-    if (addonsMap.difference(pristineAddonsMap).size || pristineAddonsMap.difference(addonsMap).size) {
+    if (addonsSet.difference(pristineAddonsSet).size || pristineAddonsSet.difference(addonsSet).size) {
       this.fire(addOnsCategory as T);
+      this.addonsViewEmitter.emit('installedAddOnsChanged');
     }
     this.syncAddonsPending = false;
   }
+
+  private onAddonCreated = (addon: AddOn): void => {
+    const app = this.apps.get(addon.app.name)!;
+    void this.queueAddOnSynchronization(app);
+  };
 
   /**
    * Handler for the dyno process starting event.
@@ -310,6 +339,34 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       Reflect.set(dyno, 'state', 'starting');
       this.fire(dyno as T);
     }
+  };
+
+  /**
+   * Handler for when attachments complete provisioning
+   *
+   * @param data The data dispatched when the attachment completes provisioning
+   */
+  private onAttachmentProvisioned = (data: AttachmentProvisionedInfo): void => {
+    const { app, ref } = data;
+    const { addOns } = this.appToResourceMap.get(app)!;
+    if (addOns) {
+      const addOn = addOns.find((a) => a.id === ref);
+      if (addOn) {
+        Reflect.set(addOn, 'state', 'provisioned');
+        this.fire(addOn as T);
+      } else {
+        void this.queueAddOnSynchronization(app);
+      }
+    }
+  };
+
+  /**
+   * Handler for when attachments are detached
+   *
+   * @param data The data dispatched when the attachment detaches
+   */
+  private onAttachmentDetached = (data: AttachmentDetachedInfo): void => {
+    void this.queueAddOnSynchronization(data.app);
   };
 
   /**
@@ -418,7 +475,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       {
         id: `${app.id}-addons-market`,
         app: {
-          id: app.id
+          id: app.id,
+          name: app.name
         },
         name: 'Search Elements Marketplace'
       } as AddOn
@@ -443,15 +501,22 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * Watches the git config for changes.
    */
   private async watchGitConfig(): Promise<void> {
+    if (this.abortWatchGitConfig && !this.abortWatchGitConfig.signal.aborted) {
+      return;
+    }
+    this.abortWatchGitConfig = new AbortController();
     const appChanges = await vscode.commands.executeCommand<AsyncIterable<AppsDiff>>(
       WatchConfig.COMMAND_ID,
       this.abortWatchGitConfig
     );
-
-    for await (const appDiffs of appChanges) {
-      await this.syncApps(appDiffs);
-      this.fire(undefined);
-      await vscode.commands.executeCommand('setContext', 'heroku.app-found', !!this.apps.size);
+    try {
+      for await (const appDiffs of appChanges) {
+        await this.syncApps(appDiffs);
+        this.fire(undefined);
+        await vscode.commands.executeCommand('setContext', 'heroku.app-found', !!this.apps.size);
+      }
+    } catch {
+      // noop
     }
   }
 
@@ -462,12 +527,13 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * @returns Promise<void>
    */
   private async syncApps(appDiffs: AppsDiff): Promise<void> {
-    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) ?? {};
+    const { accessToken } =
+      (await vscode.authentication.getSession('heroku:auth:login', [], { createIfNone: true })) ?? {};
     Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
 
     const { added, removed } = appDiffs;
     if (added.size) {
-      const appsNotFound = [];
+      let appsNotFound = [];
       const addedArray = Array.from(added).filter((appName) => !this.apps.has(appName));
       const appResults = await Promise.allSettled(
         addedArray.map((appName) => this.appService.info(appName, this.requestInit))
@@ -476,13 +542,14 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         const result = appResults[i];
         if (result.status === 'fulfilled') {
           const app = result.value;
-          this.apps.set(app.name, app);
+          this.apps.set(app.name ?? '', app);
           this.elementTypeMap.set(app as T, 'App');
           this.appToResourceMap.set(app, { dynos: [], formations: [], addOns: [], categories: [] });
         } else {
           appsNotFound.push(addedArray[i]);
         }
       }
+      appsNotFound = appsNotFound.filter((name: string) => !this.apps.has(name));
       if (appsNotFound.length) {
         void this.showAppsNotFound(appsNotFound);
       }

@@ -54,14 +54,53 @@ export function isInsideRangeBoundary(node: sh.Node | null, position: vscode.Pos
     return false;
   }
 
-  const begin = { line: node.Pos().Line(), character: node.Pos().Col() };
-  const end = { line: node.End().Line(), character: node.End().Col() };
-  const line = position.line + 1;
-  const character = position.character;
+  const begin = nodePosToVScodePosition(node.Pos());
+  const end = nodePosToVScodePosition(node.End());
+  const { line, character } = position;
 
   if (line < begin.line || line > end.line) {
     return false;
   }
 
   return begin.line === line && character >= begin.character && character <= end.character;
+}
+
+/**
+ * Determines if the specified node is a sh.ParamExp.
+ *
+ * @param node The node to test
+ * @returns boolean
+ */
+export function isParamExpansion(node: sh.Node): node is sh.ParamExp {
+  return sh.syntax.NodeType(node) === 'ParamExp';
+}
+
+/**
+ * Determines if the specified node is a sh.Assign
+ *
+ * @param node The node to test
+ * @returns boolean
+ */
+export function isAssignmentOperation(node: sh.Node): node is sh.Assign {
+  return sh.syntax.NodeType(node) === 'Assign';
+}
+
+/**
+ * Get the vscode position for the specified node
+ *
+ * @param pos The node positon to convert to a vscode position
+ * @returns the vscode position for the specified node
+ */
+export function nodePosToVScodePosition(pos: sh.Pos): vscode.Position {
+  return new vscode.Position(pos.Line() - 1, pos.Col() - 1);
+}
+
+/**
+ * Get the vscode range for the specified node
+ *
+ * @param node The node to get the vscode range from
+ * @returns the vscode range for the specified node
+ */
+export function getVscodeRangeFromNode(node: sh.Node): vscode.Range {
+  return new vscode.Range(nodePosToVScodePosition(node.Pos()), nodePosToVScodePosition(node.End()));
 }

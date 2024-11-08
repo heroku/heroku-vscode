@@ -21,9 +21,9 @@ suite('The LoginCommand', () => {
         public [Symbol.dispose]() {}
       })() as childProcess.ChildProcess;
 
-      setTimeout(() => cp.stderr?.emit('data', 'Press any key to open up the browser to login or q to exit:'));
-      setTimeout(() => cp.stdout?.emit('data', 'Logged in as'));
-      setTimeout(() => cp.emit('exit', 0));
+      setTimeout(() => cp.stderr?.emit('data', 'Press any key to open up the browser to login or q to exit:'), 50);
+      setTimeout(() => cp.stdout?.emit('data', 'Logged in as'), 50);
+      setTimeout(() => cp.emit('exit', 0), 50);
       return cp;
     });
   });

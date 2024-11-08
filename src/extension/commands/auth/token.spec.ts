@@ -19,7 +19,7 @@ suite('The TokenCommand', () => {
         public [Symbol.dispose]() {}
       })() as childProcess.ChildProcess;
       setTimeout(() => cp.stdout?.emit('data', 'abc-123'));
-      setTimeout(() => cp.emit('exit', 0));
+      setTimeout(() => cp.emit('exit', 0), 50);
       return cp;
     });
   });

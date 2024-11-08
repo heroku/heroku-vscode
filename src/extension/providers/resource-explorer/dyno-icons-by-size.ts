@@ -12,6 +12,7 @@ export const dynoIconsBySize = {
   '2X': new vscode.ThemeIcon('hk-icon-dynomite-2x-16', themeColor),
   PX: new vscode.ThemeIcon('hk-icon-dynomite-px-16', themeColor),
   'Performance-M': new vscode.ThemeIcon('hk-icon-dynomite-pm-16', themeColor),
+  'Private-M': new vscode.ThemeIcon('hk-icon-dynomite-pm-16', themeColor),
   Performance: new vscode.ThemeIcon('hk-icon-dynomite-ps-16', themeColor),
   'Performance-L': new vscode.ThemeIcon('hk-icon-dynomite-pl-16', themeColor),
   'Performance-L-RAM': new vscode.ThemeIcon('hk-icon-dynomite-pl-16', themeColor),

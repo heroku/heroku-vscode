@@ -60,6 +60,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
   private installedAddonsByServiceId: Map<string, AddOn> = new Map();
   private listElementByAddonId = new Map<string, HTMLLIElement>();
   private plansById = new Map<string, Plan>();
+  private selectedValue: string | undefined;
 
   /**
    * Constructs a new HerokuAddOnsMarketplace
@@ -113,6 +114,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
       documentFragment.appendChild(option);
     }
     this.categoryDropdown.appendChild(documentFragment);
+    requestAnimationFrame(() => (this.categoryDropdown.value = this.selectedValue ?? ''));
   }
 
   /**
@@ -172,18 +174,16 @@ export class HerokuAddOnsMarketplace extends FASTElement {
    * @param event The event dispatched by the dropdown.
    */
   private setSelectedValue = (event?: Event): void => {
-    let selectedValue: string | undefined;
-    let selectedCategory: number | undefined;
     if (event) {
-      selectedValue = (event?.target as Option).value;
-      selectedCategory = parseInt(selectedValue, 10);
+      this.selectedValue = (event?.target as Option).value;
     }
+    const selectedCategory = parseInt(this.selectedValue ?? 'NaN', 10);
 
-    if (!selectedValue) {
+    if (!this.selectedValue) {
       return this.renderAddonCards(this.categories?.map((category) => category.addons).flat());
     }
 
-    if (selectedValue === 'installed') {
+    if (this.selectedValue === 'installed') {
       const installedElementAddons = this.categories
         ?.map((category) => category.addons)
         .flat()
@@ -396,6 +396,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
    */
   private onAddonsMessage = (categories: ElementsCategory[], installedAddons: AddOn[]): void => {
     this.categories = categories;
+    this.installedAddonsByServiceId.clear();
     installedAddons.forEach((addon) => this.installedAddonsByServiceId.set(addon.addon_service.id, addon));
     this.prepareCategoryOptions();
     this.setSelectedValue();
@@ -435,5 +436,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
     button.innerHTML = isInstalledAddon ? 'Modify&nbsp;plan' : 'install';
     button.disabled = false;
     button.appearance = 'secondary';
+    button.addEventListener('click', this.onInstallClick);
+    button.removeEventListener('click', this.onSubmitOrUpdate);
   };
 }

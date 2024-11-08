@@ -1,5 +1,5 @@
 import EventEmitter from 'node:events';
-import type { App, Dyno, Formation } from '@heroku-cli/schema';
+import type { App, Dyno, Formation, TeamApp } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
 import { StartLogSession, type LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 
@@ -40,17 +40,17 @@ export type AttachmentUpdatedInfo = { app: App; type: string; configVar: string 
 /**
  * AttachmentDetachedInfo encapsulates the details of an attachment detached event.
  */
-export type AttachmentDetachedInfo = { app: App; type: string; configVar: string; ref: string };
+export type AttachmentDetachedInfo = { app: App; configVar: string; ref: string };
 
 /**
  * AttachmentAttachedInfo encapsulates the details of an attachment attached event.
  */
-export type AttachmentAttachedInfo = { app: App; type: string; configVar: string; ref: string };
+export type AttachmentAttachedInfo = { app: App; configVar: string; ref: string };
 
 /**
  * AttachmentProvisionedInfo encapsulates the details of an attachment provisioned event.
  */
-export type AttachmentProvisionedInfo = { app: App; type: string; ref: string };
+export type AttachmentProvisionedInfo = { app: App; ref: string };
 
 /**
  * StartingProcessInfo encapsulates the details of a starting process event.
@@ -62,7 +62,6 @@ export type StartingProcessInfo = { app: App; type: string; dynoName: string; co
  */
 export type ScaledToInfo = {
   app: App;
-  type: string;
   dynoType: Dyno['type'];
   quantity: Formation['quantity'];
   size: Formation['size'];
@@ -119,7 +118,7 @@ export enum LogStreamEvents {
   STARTING_PROCESS = 'startingProcess'
 }
 
-type ReadOnlyAppArray = ReadonlyArray<App & { logSession?: LogSessionStream }> | undefined;
+type ReadOnlyAppArray = ReadonlyArray<(App | TeamApp) & { logSession?: LogSessionStream }> | undefined;
 
 /**
  * LogStreamClient is a component for handling and processing log streams from multiple Heroku applications.
@@ -149,14 +148,11 @@ export class LogStreamClient extends EventEmitter {
    * events containing the details.
    */
   private regexLibrary = {
-    // "app[web.1]:" - captures 'app' and 'web.1'
-    processType: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]:)/,
+    // "app[web.1]: State changed from starting to up" - captures 'app', 'web.1', 'starting' and 'up' values
+    stateChanged: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]: )(?:State changed from )(\w+)(?: to )(\w+)/,
 
-    // "State changed from starting to up" - captures 'starting' and 'up' values
-    stateChanged: /\b(?:State changed from )(\w+)(?: to )(\w+)\b/,
-
-    // "Update LOGDNA by user@heroku.com" - captures 'LOGDNA'
-    attachmentsUpdate: /(?:Update )([A-Z_\s]+)(?:by)/,
+    // "app[heroku-postgres]: Update DATABSE by user@heroku.com" - captures 'app', 'heroku-postgres' and 'DATABSE'
+    attachmentsUpdate: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]: )(?:Update )([A-Z_\s]+)(?:by)/,
 
     // Detach LOGDNA (@ref:logdna-deep-31633) - captures 'LOGDNA' and 'logdna-deep-31633'
     attachmentsDetach: /(?:Detach )([A-Z_\s]+)(?:\(@ref:)([a-zA-Z0-9-]+)/,
@@ -170,8 +166,8 @@ export class LogStreamClient extends EventEmitter {
     // "Scaled to web@2:Standard-1X" - captures 'web', '2' and 'Standard-1X'
     scaledTo: /\b(?:Scaled to )([a-zA-Z]+)(?:@)([0-9]+)(?::)([a-zA-Z0-9-_]+)\b/,
 
-    //  Starting process with command `npm start` - captures 'Starting process with command ' and '`npm start`'
-    startingProcess: /(Starting process with command )(`.*?`)/
+    // heroku[web.1]: Starting process with command `npm start` - captures 'app', 'web.1', 'Starting process with command ' and '`npm start`'
+    startingProcess: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]: )(?:Starting process with command )(`.*?`)/
   };
 
   #apps: ReadOnlyAppArray;
@@ -312,39 +308,36 @@ export class LogStreamClient extends EventEmitter {
       if (!line) {
         continue;
       }
-      const [, type, dynoName] = this.regexLibrary.processType.exec(line) ?? [];
-      const [, from, to] = this.regexLibrary.stateChanged.exec(line) ?? [];
-      const [, updateConfigVar] = this.regexLibrary.attachmentsUpdate.exec(line) ?? [];
+      const [, type, dynoName, from, to] = this.regexLibrary.stateChanged.exec(line) ?? [];
+      const [, , attachmentName, updateConfigVar] = this.regexLibrary.attachmentsUpdate.exec(line) ?? [];
       const [, detachConfigVar, detachRef] = this.regexLibrary.attachmentsDetach.exec(line) ?? [];
       const [, attachConfigVar, attachRef] = this.regexLibrary.attachmentsAttach.exec(line) ?? [];
       const [, provisioningRef] = this.regexLibrary.provisioningCompleted.exec(line) ?? [];
       const [, dynoType, quantity, size] = this.regexLibrary.scaledTo.exec(line) ?? [];
-      const [, , command] = this.regexLibrary.startingProcess.exec(line) ?? [];
+      const [, processType, targetDyno, command] = this.regexLibrary.startingProcess.exec(line) ?? [];
 
       if (from && to) {
         this.emit(LogStreamEvents.STATE_CHANGED, { app, type, dynoName, from, to });
       } else if (updateConfigVar) {
-        this.emit(LogStreamEvents.ATTACHMENT_UPDATED, { app, type, configVar: updateConfigVar.trim() });
+        this.emit(LogStreamEvents.ATTACHMENT_UPDATED, { app, type: attachmentName, configVar: updateConfigVar.trim() });
       } else if (detachConfigVar) {
         this.emit(LogStreamEvents.ATTACHMENT_DETACHED, {
           app,
-          type,
           configVar: detachConfigVar.trim(),
           ref: detachRef
         });
       } else if (attachConfigVar) {
         this.emit(LogStreamEvents.ATTACHMENT_ATTACHED, {
           app,
-          type,
           configVar: attachConfigVar.trim(),
           ref: attachRef
         });
       } else if (provisioningRef) {
-        this.emit(LogStreamEvents.PROVISIONING_COMPLETED, { app, type, ref: provisioningRef });
+        this.emit(LogStreamEvents.PROVISIONING_COMPLETED, { app, ref: provisioningRef });
       } else if (size) {
-        this.emit(LogStreamEvents.SCALED_TO, { app, type, dynoType, quantity: parseInt(quantity, 10), size });
+        this.emit(LogStreamEvents.SCALED_TO, { app, dynoType, quantity: parseInt(quantity, 10), size });
       } else if (command) {
-        this.emit(LogStreamEvents.STARTING_PROCESS, { app, type, dynoName, command });
+        this.emit(LogStreamEvents.STARTING_PROCESS, { app, type: processType, dynoName: targetDyno, command });
       }
     }
   };

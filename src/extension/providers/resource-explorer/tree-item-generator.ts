@@ -1,3 +1,4 @@
+import EventEmitter from 'node:events';
 import { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
 import { ShowAddonsViewCommand } from '../../commands/add-on/show-addons-view';
@@ -26,7 +27,8 @@ export function getFormationTreeItem(formation: Formation): vscode.TreeItem {
     label: formation.type,
     description: `${formation.size} - ${formation.quantity} ${formation.quantity === 1 ? 'Dyno' : 'Dynos'}`,
     iconPath: new vscode.ThemeIcon('hk-icon-formation-16', new vscode.ThemeColor('hk.purple.2')),
-    contextValue
+    contextValue,
+    resourceUri: vscode.Uri.parse(`heroku:/formation/${formation.size}`)
   } as vscode.TreeItem;
 }
 
@@ -86,13 +88,13 @@ const iconUrls: Record<string, string> = {};
  *
  * @param context The extension context
  * @param addOn The AddOn to convert to a TreeItem
- * @param categoryNode The parent node of the add-on
+ * @param notifier The event emitter to notify when the add-on is added
  * @returns The TreeItem from the specified Dyno
  */
 export async function getAddOnTreeItem(
   context: vscode.ExtensionContext,
   addOn: AddOn,
-  categoryNode: vscode.TreeItem
+  notifier: EventEmitter
 ): Promise<vscode.TreeItem> {
   if (addOn.name === 'Search Elements Marketplace') {
     return {
@@ -102,7 +104,7 @@ export async function getAddOnTreeItem(
       command: {
         command: ShowAddonsViewCommand.COMMAND_ID,
         title: 'Find more add-ons',
-        arguments: [addOn.app.id, context.extensionUri, categoryNode]
+        arguments: [addOn.app.id, context.extensionUri, notifier]
       }
     };
   }
@@ -126,7 +128,9 @@ export async function getAddOnTreeItem(
     label: addOn.addon_service.name,
     description: `- ${addOn.state}`,
     tooltip: `${addOn.name}`,
-    iconPath: addOn.state === 'provisioning' ? new vscode.ThemeIcon('loading~spin') : vscode.Uri.parse(iconUrl)
+    iconPath: addOn.state === 'provisioning' ? new vscode.ThemeIcon('loading~spin') : vscode.Uri.parse(iconUrl),
+    contextValue: `heroku:addon:${addOn.addon_service.name}`,
+    resourceUri: vscode.Uri.parse(`heroku:/addon/${addOn.addon_service.name}`)
   } as vscode.TreeItem;
 }
 
@@ -150,7 +154,7 @@ export function getDynoTreeItem(dyno: Dyno): vscode.TreeItem {
     description: `${dyno.command} - ${dyno.state}`,
     iconPath: getDynoIconPath(dyno),
     tooltip: `${dyno.app.name} - ${dyno.size}`,
-    contextValue: `dyno:${dyno.state}`,
+    contextValue: `heroku:dyno:${dyno.state}`,
     resourceUri: vscode.Uri.parse(`heroku:/dyno/${dyno.state}`)
   } as vscode.TreeItem;
 }

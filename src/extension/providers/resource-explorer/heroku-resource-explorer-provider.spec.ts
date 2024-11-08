@@ -114,6 +114,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('getChildren should return apps when no element is provided', async () => {
+    await provider.getChildren(); // <-- first call initializes the git config watcher
     await new Promise((resolve) => provider.event(resolve));
     const children = await provider.getChildren();
     assert.strictEqual(children.length, 1);
@@ -121,6 +122,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('getChildren should return app categories when an app is provided', async () => {
+    await provider.getChildren();
     await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const children = (await provider.getChildren(app)) as vscode.TreeItem[];
@@ -132,6 +134,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('getChildren should return formations when FORMATIONS category is provided', async () => {
+    await provider.getChildren();
     await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const categories = (await provider.getChildren(app)) as vscode.TreeItem[];
@@ -160,6 +163,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('onFormationScaledTo should update formation quantity and fire event', async () => {
+    await provider.getChildren();
     await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const categories = (await provider.getChildren(app)) as vscode.TreeItem[]; // gets the categories
@@ -177,6 +181,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('onDynoStateChanged should update dyno state and fire event', async () => {
+    await provider.getChildren();
     await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const categories = (await provider.getChildren(app)) as vscode.TreeItem[]; // gets the categories
@@ -195,6 +200,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('onDynoStateChanged should add the new dyno when startup occurs', async () => {
+    await provider.getChildren();
     await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const categories = (await provider.getChildren(app)) as vscode.TreeItem[]; // gets the categories

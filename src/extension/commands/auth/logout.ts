@@ -10,7 +10,7 @@ import type { HerokuCommandCompletionInfo } from '../heroku-command';
  * when the user asks to be signed out of Heroku
  */
 export class LogoutCommand extends HerokuCommand<HerokuCommandCompletionInfo> {
-  public static COMMAND_ID = 'heroku:auth:logout';
+  public static COMMAND_ID = 'heroku:auth:logout' as const;
 
   /**
    * Runs the `heroku auth:logout` command in a child
