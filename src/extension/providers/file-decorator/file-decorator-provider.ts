@@ -23,6 +23,7 @@ export class FildeDecoratorProvider
   public stateToDecorator: Record<Dyno['state'], vscode.FileDecoration> = {
     up: { badge: '🟢', tooltip: 'Dyno is up' },
     provisioning: { badge: '🔵', tooltip: 'Dyno is provisioning' },
+    created: { badge: '🔵', tooltip: 'Dyno is creating' },
     idle: { badge: '🟡', tooltip: 'Dyno is idle' },
     stopping: { badge: '🟡', tooltip: 'Dyno is stopping' },
     starting: { badge: '🟡', tooltip: 'Dyno is starting' },
@@ -46,10 +47,15 @@ export class FildeDecoratorProvider
    * @returns The file decoration for the resource, or null if no decoration is provided.
    */
   public provideFileDecoration(uri: vscode.Uri): vscode.ProviderResult<vscode.FileDecoration> {
-    if (uri.scheme === 'heroku') {
-      const [, kind, state] = uri.path.split('/');
-
-      return kind === 'dyno' ? this.stateToDecorator[state] : null;
+    if (uri.scheme !== 'heroku') {
+      return null;
+    }
+    const [, kind, state] = uri.path.split('/');
+    switch (kind) {
+      case 'dyno':
+        return this.stateToDecorator[state];
+      case 'category':
+        return { color: new vscode.ThemeColor('hk.gray') };
     }
     return null;
   }

@@ -29,6 +29,10 @@
       {
         "view": "heroku:getting-started",
         "contents": "%heroku:getting-started:contents%"
+      },
+      {
+        "view": "heroku:resource-explorer:treeview",
+        "contents": "%heroku:loading:contents%"
       }
     ],
     "viewsContainers": {
@@ -45,17 +49,17 @@
         {
           "id": "heroku:auth:login",
           "name": "%view.heroku.name%",
-          "when": "!heroku.authenticated"
+          "when": "heroku:login:required"
         },
         {
           "id": "heroku:resource-explorer:treeview",
           "name": "%view.heroku.resourceExplorer%",
-          "when": "heroku.authenticated && heroku.app-found"
+          "when": "!heroku:login:required && !heroku:get:started"
         },
         {
           "id": "heroku:getting-started",
           "name": "%view.heroku.name%",
-          "when": "heroku.authenticated && !heroku.app-found"
+          "when": "!heroku:login:required && heroku:get:started"
         }
       ]
     },
@@ -1995,12 +1999,12 @@
         {
           "command": "heroku:user:ps:autoscale:disable",
           "group": "ps:autoscale",
-          "when": "viewItem =~ /^(heroku:dyno)/"
+          "when": "viewItem =~ /^(heroku:formation)/"
         },
         {
           "command": "heroku:user:ps:autoscale:enable",
           "group": "ps:autoscale",
-          "when": "viewItem =~ /^(heroku:dyno)/"
+          "when": "viewItem =~ /^(heroku:formation)/"
         }
       ],
       "heroku:user:ci:config": [
@@ -2361,7 +2365,7 @@
           "group": "inline"
         },
         {
-          "when": "viewItem =~ /^(formation):(scale-up|scale-down)/",
+          "when": "viewItem =~ /^(heroku:formation):(scale-up|scale-down)/",
           "command": "heroku:scale-formation",
           "group": "inline"
         },
@@ -2373,7 +2377,7 @@
         {
           "when": "viewItem =~ /(heroku):(app)/",
           "command": "heroku:open-app",
-          "group": "inline"
+          "group": "inline@1"
         },
         {
           "when": "viewItem =~ /(heroku):(app)/",
@@ -2383,7 +2387,7 @@
         {
           "when": "viewItem =~ /(heroku):(app)/",
           "command": "heroku:access-settings",
-          "group": "inline"
+          "group": "inline@0"
         },
         {
           "when": "viewItem === heroku:app",
@@ -2393,7 +2397,7 @@
         {
           "when": "viewItem === heroku:app",
           "command": "heroku:start-log-session",
-          "group": "inline"
+          "group": "inline@2"
         },
         {
           "when": "viewItem === heroku:app:log-session-started",
@@ -2403,7 +2407,7 @@
         {
           "when": "viewItem === heroku:app:log-session-started",
           "command": "heroku:end-log-session",
-          "group": "inline"
+          "group": "inline@2"
         },
         {
           "command": "heroku:user:addons:attach",
@@ -2473,7 +2477,7 @@
         {
           "command": "heroku:user:ps",
           "group": "",
-          "when": "viewItem =~ /^(heroku:dyno)/"
+          "when": "viewItem =~ /^(heroku:formation)/"
         },
         {
           "command": "heroku:user:ps:restart",
@@ -2483,7 +2487,7 @@
         {
           "command": "heroku:user:ps:scale",
           "group": "ps",
-          "when": "viewItem =~ /^(heroku:dyno)/"
+          "when": "viewItem =~ /^(heroku:formation)/"
         },
         {
           "command": "heroku:user:ps:stop",
@@ -2493,12 +2497,12 @@
         {
           "command": "heroku:user:ps:type",
           "group": "ps",
-          "when": "viewItem =~ /^(heroku:dyno)/"
+          "when": "viewItem =~ /^(heroku:formation)/"
         },
         {
           "command": "heroku:user:ps:wait",
           "group": "ps",
-          "when": "viewItem =~ /^(heroku:dyno)/"
+          "when": "viewItem =~ /^(heroku:formation)/"
         },
         {
           "command": "heroku:user:pipelines:add",
@@ -3368,7 +3372,7 @@
       {
         "command": "heroku:user:ps:type",
         "category": "Heroku ps",
-        "title": "Manage dyno sizes"
+        "title": "Change dyno sizes"
       },
       {
         "command": "heroku:user:ps:wait",

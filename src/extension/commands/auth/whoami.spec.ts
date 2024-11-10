@@ -6,34 +6,57 @@ import * as vscode from 'vscode';
 import { HerokuCommand } from '../heroku-command';
 import { EventEmitter } from 'node:stream';
 import { WhoAmI } from './whoami';
+import { randomUUID } from 'node:crypto';
+import { TokenCommand } from './token';
+import { Account } from '@heroku-cli/schema';
 
 suite('The WhoamiCommand', () => {
-  let execStub: sinon.SinonStub;
+  let fetchStub: sinon.SinonStub;
+  let getSessionStub: sinon.SinonStub;
+  let vsCodeExecCommandStub: sinon.SinonStub;
+
+  const sessionObject = {
+    account: {
+      id: 'Heroku',
+      label: 'tester-123@heroku.com'
+    },
+    id: randomUUID(),
+    scopes: [],
+    accessToken: randomUUID()
+  };
 
   setup(() => {
-    execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
-      const cp = new (class extends EventEmitter {
-        public stdout = new EventEmitter();
-
-        public [Symbol.dispose]() {}
-      })() as childProcess.ChildProcess;
-      setTimeout(() => cp.stdout?.emit('data', 'tester-321@heroku.com'));
-      setTimeout(() => cp.emit('exit', 0));
-      return cp;
+    fetchStub = sinon.stub(globalThis, 'fetch');
+    getSessionStub = sinon.stub(vscode.authentication, 'getSession').callsFake(async (providerId: string) => {
+      if (providerId === 'heroku:auth:login') {
+        return sessionObject;
+      }
+      return undefined;
     });
+    vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
+    vsCodeExecCommandStub.withArgs(TokenCommand.COMMAND_ID, sinon.match.any).resolves(randomUUID());
+
+    vsCodeExecCommandStub.callThrough();
   });
 
   teardown(() => {
-    execStub.restore();
+    sinon.restore();
   });
 
   test('is registered', async () => {
     const commands = await vscode.commands.getCommands(true);
-    const tokenCommand = commands.find((command) => command === WhoAmI.COMMAND_ID);
-    assert.ok(!!tokenCommand, 'The WhoamI command is not registered');
+    const command = commands.find((command) => command === WhoAmI.COMMAND_ID);
+    assert.ok(!!command, 'The WhoamI command is not registered');
   });
 
   test('successfully returns the user', async () => {
+    let account = {
+      id: randomUUID(),
+      email: 'tester-321@heroku.com'
+    } as Account;
+    fetchStub.onFirstCall().callsFake(async () => {
+      return new Response(JSON.stringify(account));
+    });
     const result = await vscode.commands.executeCommand<string>(WhoAmI.COMMAND_ID);
     assert.equal(result, 'tester-321@heroku.com', `Output was ${result} but expected abc-123`);
   });

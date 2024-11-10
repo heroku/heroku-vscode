@@ -26,16 +26,6 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
   }
 
   /**
-   * Tests whether the specified object is an OutputChannel
-   *
-   * @param obj The object to test
-   * @returns boolean indicating whether the object is an OutputChannel
-   */
-  protected static isOutputChannel(obj: unknown): obj is vscode.OutputChannel {
-    return !!obj && typeof obj === 'object' && 'appendLine' in obj;
-  }
-
-  /**
    * Waits for the specified child process to complete.
    * Completion is defied as exiting with or without a code
    * or the child process closing, whichever is first.
@@ -49,7 +39,7 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
    * @param outputWriter The output channel or terminal to write to. This can be used to pipe the Heroku CLI stdout or sdterr messages.
    * @returns HerokuCommandCompletionInfo
    */
-  protected static async waitForCompletion(
+  public static async waitForCompletion(
     childProcess: ChildProcess,
     outputWriter?: vscode.OutputChannel | vscode.Terminal
   ): Promise<HerokuCommandCompletionInfo> {
@@ -93,6 +83,16 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
     ]);
 
     return { exitCode, output, errorMessage };
+  }
+
+  /**
+   * Tests whether the specified object is an OutputChannel
+   *
+   * @param obj The object to test
+   * @returns boolean indicating whether the object is an OutputChannel
+   */
+  protected static isOutputChannel(obj: unknown): obj is vscode.OutputChannel {
+    return !!obj && typeof obj === 'object' && 'appendLine' in obj;
   }
 
   /**

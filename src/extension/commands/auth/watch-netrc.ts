@@ -1,10 +1,9 @@
-import { watch, stat } from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
+import { watch } from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { HerokuCommand } from '../heroku-command';
 import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
 import { createSessionObject } from '../../utils/create-session-object';
+import { getNetrcFileLocation } from '../../utils/netrc-locator';
 import { TokenCommand } from './token';
 import { WhoAmI } from './whoami';
 
@@ -16,37 +15,6 @@ export class WatchNetrc extends HerokuCommand<
   AsyncIterable<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
 > {
   public static COMMAND_ID = 'heroku:watchnetrc' as const;
-
-  /**
-   * Finds the absolute path to the .netrc file
-   * on disk based on the operating system. This
-   * code was copied directly from `netrc-parser`
-   * and optimized
-   *
-   * @see [netrc-parser](https://github.com/jdx/node-netrc-parser/blob/master/src/netrc.ts#L177)
-   *
-   * @returns the file path of the .netrc on disk.
-   */
-  protected static async getNetrcFileLocation(): Promise<string> {
-    let home: string | undefined = '';
-    if (os.platform() === 'win32') {
-      home =
-        process.env.HOME ??
-        (process.env.HOMEDRIVE && process.env.HOMEPATH && path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)) ??
-        process.env.USERPROFILE;
-    }
-    if (!home) {
-      home = os.homedir() ?? os.tmpdir();
-    }
-    let file = path.join(home, os.platform() === 'win32' ? '_netrc' : '.netrc');
-
-    try {
-      await stat(file + '.gpg');
-      return (file += '.gpg');
-    } catch {
-      return file;
-    }
-  }
 
   /**
    * Create a file watcher for the .netrc file on disk.
@@ -65,7 +33,7 @@ export class WatchNetrc extends HerokuCommand<
     context: vscode.ExtensionContext,
     sessionKey: string
   ): Promise<AsyncIterable<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>> {
-    const file = await WatchNetrc.getNetrcFileLocation();
+    const file = await getNetrcFileLocation();
     const iterator = watch(file, { signal });
     const outputChannel = this.outputChannel as vscode.OutputChannel;
 
@@ -74,14 +42,13 @@ export class WatchNetrc extends HerokuCommand<
         if (event.eventType !== 'change') {
           continue;
         }
-
         const accessToken = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
         if (!accessToken) {
           const sessionJson = await context.secrets.get(sessionKey);
           if (sessionJson) {
             await context.secrets.delete(sessionKey);
             const session = JSON.parse(sessionJson) as vscode.AuthenticationSession;
-            await vscode.commands.executeCommand('setContext', 'heroku.authenticated', false);
+            await vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
             outputChannel.appendLine(`${session.account.label} signed out of Heroku`);
             yield { added: undefined, removed: [session], changed: undefined };
           }
@@ -89,7 +56,7 @@ export class WatchNetrc extends HerokuCommand<
           const whoami = await vscode.commands.executeCommand<string>(WhoAmI.COMMAND_ID);
           const session = createSessionObject(whoami, accessToken, []);
           await context.secrets.store(sessionKey, JSON.stringify(session));
-          await vscode.commands.executeCommand('setContext', 'heroku.authenticated', true);
+          await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);
           outputChannel.appendLine(`Logged in to Heroku as ${whoami}`);
           yield { added: [session], removed: undefined, changed: undefined };
         }

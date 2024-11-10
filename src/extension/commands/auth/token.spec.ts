@@ -4,7 +4,6 @@ import * as childProcess from 'node:child_process';
 
 import * as vscode from 'vscode';
 import { HerokuCommand } from '../heroku-command';
-import type { HerokuCommandCompletionInfo } from '../heroku-command';
 import { EventEmitter } from 'node:stream';
 import { TokenCommand } from './token';
 
@@ -18,7 +17,7 @@ suite('The TokenCommand', () => {
 
         public [Symbol.dispose]() {}
       })() as childProcess.ChildProcess;
-      setTimeout(() => cp.stdout?.emit('data', 'abc-123'));
+      setTimeout(() => cp.stdout?.emit('data', 'machine api.heroku.com\n password abc-123'));
       setTimeout(() => cp.emit('exit', 0), 50);
       return cp;
     });

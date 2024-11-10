@@ -24,7 +24,10 @@ const prefixToContextValue = {
   buildpacks: 'heroku:app',
   webhooks: 'heroku:app',
 
-  ps: 'heroku:dyno',
+  ps: 'heroku:formation',
+  'ps:stop': 'heroku:dyno',
+  'ps:start': 'heroku:dyno',
+  'ps:restart': 'heroku:dyno',
   pg: 'heroku:addon:heroku-postgresql',
   redis: 'heroku:addon:heroku-redis',
   addons: 'heroku:addon',
@@ -144,7 +147,16 @@ for (let commandId in manifest.commands) {
 
   // The context value
   // @see https://code.visualstudio.com/api/references/vscode-api#TreeItem
-  const contextValue = prefixToContextValue[rootPrefix];
+  let contextValue;
+  let idx = parts.length + 1;
+  while (idx--) {
+    const prefix = parts.slice(0, idx).join(':');
+    if (!prefixToContextValue[prefix]) {
+      continue;
+    }
+    contextValue = prefixToContextValue[prefix];
+    break;
+  }
   if (!contextValue) {
     continue;
   }

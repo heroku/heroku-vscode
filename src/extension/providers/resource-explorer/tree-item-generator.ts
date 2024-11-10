@@ -2,7 +2,7 @@ import EventEmitter from 'node:events';
 import { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
 import { ShowAddonsViewCommand } from '../../commands/add-on/show-addons-view';
-import { dynoIconsBySize } from './dyno-icons-by-size';
+import { dynoIconsBySize } from '../../utils/dyno-icons-by-size';
 
 /**
  * Consumes a Formation object and returns a TreeItem
@@ -13,7 +13,7 @@ import { dynoIconsBySize } from './dyno-icons-by-size';
 export function getFormationTreeItem(formation: Formation): vscode.TreeItem {
   const canIncreaseDynoCount =
     (!/(Free|Eco|Hobby|Basic|)/.test(formation.size) && formation.quantity < 100) || !formation.quantity;
-  let contextValue = `formation`;
+  let contextValue = `heroku:formation`;
   if (canIncreaseDynoCount) {
     contextValue += ':scale-up';
   }
@@ -62,22 +62,26 @@ export function getAppCategories(appIdentifier: string): vscode.TreeItem[] {
     {
       id: appIdentifier + ':formations',
       label: 'FORMATIONS',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      resourceUri: vscode.Uri.parse(`heroku:/category/formations`)
     },
     {
       id: appIdentifier + ':dynos',
       label: 'DYNOS',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      resourceUri: vscode.Uri.parse(`heroku:/category/dynos`)
     },
     {
       id: appIdentifier + ':addons',
       label: 'ADD-ONS',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      resourceUri: vscode.Uri.parse(`heroku:/category/add-ons`)
     },
     {
       id: appIdentifier + ':settings',
       label: 'SETTINGS',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded
+      collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+      resourceUri: vscode.Uri.parse(`heroku:/category/settings`)
     }
   ];
 }
@@ -203,8 +207,8 @@ export function getSettingsCategories(app: App): vscode.TreeItem[] {
  * @returns string The path of the dyno icon
  */
 function getDynoIconPath(dyno: Dyno): string | vscode.ThemeIcon {
-  if (dyno.state === 'starting') {
+  if (/^(starting|stopping|provisioning)$/.test(dyno.state)) {
     return new vscode.ThemeIcon('loading~spin');
   }
-  return dynoIconsBySize[dyno.size as keyof typeof dynoIconsBySize];
+  return dynoIconsBySize[dyno.size];
 }

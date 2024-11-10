@@ -1,4 +1,5 @@
 {
+  "description": "The Heroku CLI is used to manage Heroku apps from the command line. It is built using [oclif](https://oclif.io).\nFor more about Heroku see <https://www.heroku.com/home>\nTo get started see <https://devcenter.heroku.com/start>",
   "commands": {
     "console": {
       "aliases": [],

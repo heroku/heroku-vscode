@@ -57,7 +57,7 @@ export class AuthenticationProvider
     }
     const session: vscode.AuthenticationSession = createSessionObject(whoami, accessToken, scopes ?? []);
     await this.context.secrets.store(AuthenticationProvider.SESSION_KEY, JSON.stringify(session));
-    await vscode.commands.executeCommand('setContext', 'heroku.authenticated', true);
+    await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);
     return [session];
   }
 
@@ -85,7 +85,7 @@ export class AuthenticationProvider
     await this.context.secrets.store(AuthenticationProvider.SESSION_KEY, JSON.stringify(session));
     void this.watchNetrc();
 
-    await vscode.commands.executeCommand('setContext', 'heroku.authenticated', true);
+    await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);
 
     const outputChannel = getOutputChannel({
       outputChannelId: HerokuOutputChannel.Authentication
@@ -110,7 +110,7 @@ export class AuthenticationProvider
       }
     }
     void this.watchNetrc();
-    await vscode.commands.executeCommand('setContext', 'heroku.authenticated', false);
+    await vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
   }
 
   /**
