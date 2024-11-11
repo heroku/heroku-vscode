@@ -15,11 +15,13 @@ export type CommandFlagAndArgUnion = Command.Arg &
  */
 export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
   protected commandName: keyof typeof manifest.commands | undefined;
+  protected targetDataModel: T | undefined;
   /**
    * @inheritdoc
    */
   public async run(commandName: keyof typeof manifest.commands, targetDataModel: T): Promise<void> {
     this.commandName = commandName;
+    this.targetDataModel = targetDataModel;
     const command = await this.buidCommandShellScript(commandName, targetDataModel);
     if (!command) {
       return;

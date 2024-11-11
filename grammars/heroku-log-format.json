@@ -93,6 +93,9 @@
             },
             {
               "include": "#state-provisioning"
+            },
+            {
+              "include": "#state-created"
             }
           ]
         },
@@ -109,6 +112,9 @@
             },
             {
               "include": "#state-provisioning"
+            },
+            {
+              "include": "#state-created"
             }
           ]
         }
@@ -128,6 +134,10 @@
     },
     "state-provisioning": {
       "match": "(provisioning)",
+      "name": "keyword app-name.heroku-logs strong"
+    },
+    "state-created": {
+      "match": "(created)",
       "name": "keyword app-name.heroku-logs strong"
     },
     "exit-status": {

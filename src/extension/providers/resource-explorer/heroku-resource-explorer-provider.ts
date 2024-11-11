@@ -98,8 +98,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (!this.#logStreamClient) {
       this.#logStreamClient = new LogStreamClient();
       this.#logStreamClient.addListener(LogStreamEvents.SCALED_TO, this.onFormationScaledTo);
-      this.#logStreamClient.addListener(LogStreamEvents.STATE_CHANGED, this.onDynoStateChanged);
-      this.#logStreamClient.addListener(LogStreamEvents.STARTING_PROCESS, this.onDynoProcessStarting);
+      this.#logStreamClient.addListener(LogStreamEvents.STATE_CHANGED, this.onDynoProcessStartingOrStateChanged);
+      this.#logStreamClient.addListener(LogStreamEvents.STARTING_PROCESS, this.onDynoProcessStartingOrStateChanged);
       this.#logStreamClient.addListener(LogStreamEvents.PROVISIONING_COMPLETED, this.onAttachmentProvisioned);
       this.#logStreamClient.addListener(LogStreamEvents.ATTACHMENT_DETACHED, this.onAttachmentDetached);
 
@@ -203,25 +203,10 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    */
   private onFormationScaledTo = (data: ScaledToInfo): void => {
     const { app, quantity, size } = data;
-    const { dynos, formations, categories } = this.appToResourceMap.get(app)!;
+    const { formations, categories } = this.appToResourceMap.get(app)!;
     const formation = formations.find((f) => f.size === size);
     if (formation) {
       Reflect.set(formation, 'quantity', quantity);
-
-      const dynosCategory = categories.find((cat) => cat.label === 'DYNOS');
-      // down scaling will shut down Dynos which cannot be restarted.
-      // These dynos need to be removed since they are no longer valid
-      // but we want to display the visual indicator to the user that they have
-      // been successfully stopped which occurs in the onDynoStateChanged.
-      // This means we'll wait a bit before removing the Dynos from the tree.
-      if (dynos.length > quantity) {
-        void (async (): Promise<void> => {
-          dynos.length = quantity;
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-          this.fire(dynosCategory as T);
-        })();
-      }
-
       this.fire(formation as T);
     } else {
       // We might have added a new formation or
@@ -231,32 +216,6 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       formations.length = 0;
       this.fire(formationsCategory as T);
     }
-  };
-
-  /**
-   * Handler for the dyno state change event.
-   *
-   * @param data The data dispatched when a dyno state is changed.
-   */
-  private onDynoStateChanged = (data: StateChangedInfo): void => {
-    const { app, dynoName, to } = data;
-    const { dynos } = this.appToResourceMap.get(app)!;
-    const dyno = dynos.find((d) => d.name === dynoName);
-    if (!dyno) {
-      return;
-    }
-
-    if (dyno.state !== to) {
-      Reflect.set(dyno, 'state', to);
-      this.fire(dyno as T);
-    }
-
-    // Not all add-on vendors use the Heroku-provided
-    // log drain to write provisioning/deprovisioning
-    // logs. Since Dynos are restarted with *most* changes
-    // to an add-on, we must check for add-ons being
-    // provisioned/deprovisioned when dynos restart.
-    void this.queueAddOnSynchronization(app);
   };
 
   /**
@@ -296,6 +255,12 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     this.syncAddonsPending = false;
   }
 
+  /**
+   * Handler triggered when an addon was created
+   * in the Elements Markeyplace webview.
+   *
+   * @param addon The addon that was created
+   */
   private onAddonCreated = (addon: AddOn): void => {
     const app = this.apps.get(addon.app.name)!;
     void this.queueAddOnSynchronization(app);
@@ -306,18 +271,32 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    *
    * @param data The data dispached when a dyno is starting.
    */
-  private onDynoProcessStarting = (data: StartingProcessInfo): void => {
+  private onDynoProcessStartingOrStateChanged = (data: StartingProcessInfo | StateChangedInfo): void => {
     const { app, dynoName } = data;
     const dynos = this.appToResourceMap.get(app)!.dynos;
     let dyno = dynos.find((d) => d.name === dynoName);
 
     if (!dyno) {
       void (async (): Promise<void> => {
-        dyno = await this.dynoService.info(app.id, dynoName, this.requestInit);
-        if (!dyno) {
+        // Dynos that are newly proisioning are 404
+        // for a little while...not sure why.
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        try {
+          dyno = await this.dynoService.info(app.id, dynoName, this.requestInit);
+        } catch {
+          // 404, 401
           return;
         }
-        if (!dynos.some((d) => d.id === dyno?.id)) {
+        // Logs do not stream in order sometimes
+        // and dyno names are recycled while dyno
+        // id's are not. This means we could get a
+        // dyno that has already been added. Check
+        // if we have a dyno with the same name and
+        // id and update it. Otherwise, add it.
+        const maybeExistingDyno = dynos.find((d) => d.name === dyno?.name);
+        if (maybeExistingDyno) {
+          Object.assign(maybeExistingDyno, dyno);
+        } else {
           dynos.push(dyno);
         }
         dynos.sort((a, b) => {
@@ -336,8 +315,35 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         this.fire(dynosCategory as T);
       })();
     } else {
-      Reflect.set(dyno, 'state', 'starting');
+      const state = 'to' in data ? data.to : 'starting';
+      Reflect.set(dyno, 'state', state);
       this.fire(dyno as T);
+      // Not all add-on vendors use the Heroku-provided
+      // log drain to write provisioning/deprovisioning
+      // logs. Since Dynos are restarted with *most* changes
+      // to an add-on, we must check for add-ons being
+      // provisioned/deprovisioned when dynos restart.
+      void this.queueAddOnSynchronization(app);
+      // down scaling will shut down Dynos which cannot be restarted.
+      // These dynos need to be removed since they are no longer valid
+      // but we want to display the visual indicator to the user that they have
+      // been successfully stopped which occurs in the onDynoStateChanged.
+      if (state === 'down') {
+        // Does this dyno need to be removed?
+        void (async (): Promise<void> => {
+          try {
+            await this.dynoService.info(app.id, dynoName, this.requestInit);
+          } catch {
+            // not found - remove it
+            const idx = dynos.findIndex((d) => d.name === dynoName);
+            if (idx > -1) {
+              dynos.splice(idx, 1);
+              const dynosCategory = this.appToResourceMap.get(app)!.categories.find((cat) => cat.label === 'DYNOS');
+              this.fire(dynosCategory as T);
+            }
+          }
+        })();
+      }
     }
   };
 
@@ -513,7 +519,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       for await (const appDiffs of appChanges) {
         await this.syncApps(appDiffs);
         this.fire(undefined);
-        await vscode.commands.executeCommand('setContext', 'heroku.app-found', !!this.apps.size);
+        await vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
       }
     } catch {
       // noop

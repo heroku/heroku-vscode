@@ -203,7 +203,7 @@
   "ps:restart": "Restart",
   "ps:scale": "Scale",
   "ps:stop": "Stop",
-  "ps:type": "Manage dyno sizes",
+  "ps:type": "Change dyno sizes",
   "ps:wait": "Wait for dynos to run latest version",
   "redis:cli": "Open Redis prompt",
   "redis:credentials": "Display Redis credentials info",

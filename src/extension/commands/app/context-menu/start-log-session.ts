@@ -77,8 +77,9 @@ export class StartLogSession extends AbortController implements LogSessionStream
   private streamListeners: Set<LogStreamCallback> = new Set();
   private muteListeners: Set<(muted: boolean) => void> = new Set();
   private maxLines = 100;
-  private lastHeartbeatTime = 0;
-  private timeoutId: NodeJS.Timeout | undefined;
+  private heartbeatTimeoutId: NodeJS.Timeout | undefined;
+  private logSessionDuration = 15 * 60 * 1000;
+  private reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 
   // Backing property for the readonly app getter
   #app: (App & { logSession?: StartLogSession }) | undefined;
@@ -230,7 +231,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
     try {
       await this.startLogSession();
     } catch {
-      this.scheduleTimeout();
+      this.scheduleHeartbeatTimeout();
     }
 
     Reflect.set(app, 'logSession', this);
@@ -267,20 +268,25 @@ export class StartLogSession extends AbortController implements LogSessionStream
   }
 
   /**
-   * Begins reading from the log stream and appends the output to the output channel.
+   * Begins reading from the log stream and appends
+   * the output to the output channel.
    *
-   * @param reader The readable stream to begin reading from
    * @returns Promise<void>
    */
-  private async beginReading(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
+  private async beginReading(): Promise<void> {
+    const logSessionStart = Date.now();
     try {
       while (!this.signal.aborted) {
-        const { done, value } = await reader.read();
-        if (done) {
-          this.app!.logSession = undefined;
+        this.scheduleHeartbeatTimeout();
+        const { done, value } = await this.reader!.read();
+        // Log sessions appear to max out at 15 min
+        // even though a null byte hearbeat will still
+        // be present. If we exceed 15 min, break the loop
+        // and let the heartbeat timeout restart things.
+        if (done || Date.now() - logSessionStart > this.logSessionDuration) {
+          await this.reader?.cancel();
           break;
         }
-        this.scheduleTimeout();
         if (value.length > 1) {
           const str = Buffer.from(value).toString();
           this.streamListeners.forEach((cb) => void cb(str, this.app as App));
@@ -295,6 +301,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
         }
       }
     } catch (e) {
+      // Aborted, cancelled or fetch failed
       if (e instanceof DOMException) {
         return;
       }
@@ -313,11 +320,11 @@ export class StartLogSession extends AbortController implements LogSessionStream
       if (!this.muted) {
         StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, this.#app!.name);
       }
-      const reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+      this.reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
       // Since the stream is a log runnning process
       // we want this function to complete without
       // having to wait for the stream to end.
-      void this.beginReading(reader);
+      void this.beginReading();
     } else {
       throw new Error(`Failed to fetch logs: ${response.statusText}`);
     }
@@ -332,10 +339,15 @@ export class StartLogSession extends AbortController implements LogSessionStream
    * log stream reader is no longer sending the null byte
    * heartbeat.
    */
-  private scheduleTimeout(): void {
-    clearTimeout(this.timeoutId);
-    this.timeoutId = setTimeout(() => {
-      delete this.#app!.logSession;
+  private scheduleHeartbeatTimeout(): void {
+    clearTimeout(this.heartbeatTimeoutId);
+    if (this.signal.aborted) {
+      this.app!.logSession = undefined;
+      return;
+    }
+    this.heartbeatTimeoutId = setTimeout(() => {
+      this.app!.logSession = undefined;
+      void this.reader?.cancel();
       void this.run(this.#app!, this.#muted);
     }, 30_000);
   }

@@ -107,6 +107,8 @@ suite('HerokuResourceExplorerProvider', () => {
     elementTypeMap = Reflect.get(provider, 'elementTypeMap') as Map<unknown, unknown>;
     childParentMap = Reflect.get(provider, 'childParentMap') as Map<unknown, unknown>;
     appToResourceMap = Reflect.get(provider, 'appToResourceMap') as Map<unknown, unknown>;
+    // const tm = setTimeout;
+    // sinon.stub(globalThis, 'setTimeout').callsFake((cb: () => void) => tm(cb, 1))
   });
 
   teardown(() => {
@@ -212,7 +214,7 @@ suite('HerokuResourceExplorerProvider', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 1100)); // wait for the stream to get setup
     stream.emit('data', 'heroku[web.2]: Starting process with command `npm start`\n');
-    await new Promise((resolve) => setTimeout(resolve, 100)); // wait for proisified emit to complete
+    await new Promise((resolve) => setTimeout(resolve, 5100)); // wait for proisified emit to complete
 
     dynos = await provider.getChildren(dynosCategory);
 

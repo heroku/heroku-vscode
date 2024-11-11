@@ -18,8 +18,8 @@ import { HerokuRedisCommandRunner } from './commands/heroku-cli/heroku-redis-com
  *
  * @param context The extension context provided by VSCode
  */
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  await context.secrets.delete(AuthenticationProvider.SESSION_KEY);
+export function activate(context: vscode.ExtensionContext): void {
+  void context.secrets.delete(AuthenticationProvider.SESSION_KEY);
 
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
   context.subscriptions.push(
@@ -38,8 +38,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     shellCommandDecorator.activate(context),
     ...registerCommandsfromManifest()
   );
-
-  void vscode.commands.executeCommand('setContext', 'heroku.app-found', true);
 }
 
 /**
