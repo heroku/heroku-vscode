@@ -5,7 +5,7 @@ import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
 import { createSessionObject } from '../../utils/create-session-object';
 import { getNetrcFileLocation } from '../../utils/netrc-locator';
 import { TokenCommand } from './token';
-import { WhoAmI } from './whoami';
+import { WhoAmI, WhoAmIResult } from './whoami';
 
 @herokuCommand({ outputChannelId: HerokuOutputChannel.Authentication })
 /**
@@ -42,7 +42,12 @@ export class WatchNetrc extends HerokuCommand<
         if (event.eventType !== 'change') {
           continue;
         }
-        const accessToken = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
+        let accessToken: string | undefined;
+        try {
+          accessToken = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
+        } catch {
+          // noop
+        }
         if (!accessToken) {
           const sessionJson = await context.secrets.get(sessionKey);
           if (sessionJson) {
@@ -53,7 +58,13 @@ export class WatchNetrc extends HerokuCommand<
             yield { added: undefined, removed: [session], changed: undefined };
           }
         } else {
-          const whoami = await vscode.commands.executeCommand<string>(WhoAmI.COMMAND_ID);
+          let whoami: string;
+          try {
+            const { account } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
+            whoami = account.email;
+          } catch {
+            return { added: undefined, removed: undefined, changed: undefined };
+          }
           const session = createSessionObject(whoami, accessToken, []);
           await context.secrets.store(sessionKey, JSON.stringify(session));
           await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);

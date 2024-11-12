@@ -52,6 +52,8 @@ suite('HerokuResourceExplorerProvider', () => {
       .withArgs('heroku:auth:login')
       .resolves(sessionObject);
 
+    sinon.stub(vscode.commands, 'registerCommand').withArgs('heroku:sync-with-dashboard').callsFake;
+
     vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
     vsCodeExecCommandStub.withArgs(WatchConfig.COMMAND_ID, sinon.match.any).resolves(
       (function* () {
@@ -107,8 +109,6 @@ suite('HerokuResourceExplorerProvider', () => {
     elementTypeMap = Reflect.get(provider, 'elementTypeMap') as Map<unknown, unknown>;
     childParentMap = Reflect.get(provider, 'childParentMap') as Map<unknown, unknown>;
     appToResourceMap = Reflect.get(provider, 'appToResourceMap') as Map<unknown, unknown>;
-    // const tm = setTimeout;
-    // sinon.stub(globalThis, 'setTimeout').callsFake((cb: () => void) => tm(cb, 1))
   });
 
   teardown(() => {
@@ -120,6 +120,7 @@ suite('HerokuResourceExplorerProvider', () => {
     await new Promise((resolve) => provider.event(resolve));
     const children = await provider.getChildren();
     assert.strictEqual(children.length, 1);
+    Reflect.deleteProperty(children[0], 'logSession');
     assert.deepStrictEqual(children[0], mockApp);
   });
 

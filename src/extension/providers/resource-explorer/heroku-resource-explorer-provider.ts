@@ -69,6 +69,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected childParentMap = new WeakMap<T, T>();
 
   protected abortWatchGitConfig: AbortController | undefined;
+
   protected syncAddonsPending = false;
 
   /**
@@ -87,6 +88,11 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();
     this.addonsViewEmitter.on('addonCreated', this.onAddonCreated);
+
+    context.subscriptions.push(
+      vscode.authentication.onDidChangeSessions(this.reSyncAllApps),
+      vscode.commands.registerCommand('heroku:sync-with-dashboard', this.reSyncAllApps)
+    );
   }
 
   /**
@@ -228,7 +234,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       return;
     }
     this.syncAddonsPending = true;
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // wait for log chatter to settle a bit
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // wait for log chatter to settle a bit
     const { addOns, categories } = this.appToResourceMap.get(app)!;
     const addonsSet = new Set(addOns.map((a) => a.id));
 
@@ -356,7 +362,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     const { app, ref } = data;
     const { addOns } = this.appToResourceMap.get(app)!;
     if (addOns) {
-      const addOn = addOns.find((a) => a.id === ref);
+      const addOn = addOns.find((a) => a.name === ref);
       if (addOn) {
         Reflect.set(addOn, 'state', 'provisioned');
         this.fire(addOn as T);
@@ -518,8 +524,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     try {
       for await (const appDiffs of appChanges) {
         await this.syncApps(appDiffs);
-        this.fire(undefined);
         await vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
+        this.fire(undefined);
       }
     } catch {
       // noop
@@ -533,8 +539,11 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * @returns Promise<void>
    */
   private async syncApps(appDiffs: AppsDiff): Promise<void> {
-    const { accessToken } =
-      (await vscode.authentication.getSession('heroku:auth:login', [], { createIfNone: true })) ?? {};
+    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) ?? {};
+
+    if (!accessToken) {
+      return;
+    }
     Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
 
     const { added, removed } = appDiffs;
@@ -565,4 +574,15 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     }
     this.logStreamClient.apps = Array.from(this.apps.values());
   }
+
+  /**
+   * Force the resource explorer to re-retrieve all app data.
+   */
+  private reSyncAllApps = (): void => {
+    this.logStreamClient.apps = [];
+    this.abortWatchGitConfig?.abort();
+    this.apps.clear();
+    void vscode.commands.executeCommand('setContext', 'heroku:get:started', false);
+    void this.watchGitConfig();
+  };
 }

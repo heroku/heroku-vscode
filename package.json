@@ -5,7 +5,7 @@
   "repository": "https://github.com/heroku/heroku-vscode",
   "version": "0.0.1",
   "engines": {
-    "vscode": ">=1.92.0",
+    "vscode": ">=1.95.0",
     "node": ">=22.0.0"
   },
   "categories": [
@@ -2677,12 +2677,23 @@
         {
           "submenu": "heroku:user:spaces:vpn"
         }
+      ],
+      "view/title": [
+        {
+          "command": "heroku:sync-with-dashboard",
+          "group": "navigation"
+        }
       ]
     },
     "commands": [
       {
         "command": "heroku:addons:show-addons-view",
         "title": "Find more add-ons"
+      },
+      {
+        "command": "heroku:sync-with-dashboard",
+        "title": "Sync with dashboard",
+        "icon": "$(hk-icon-sync-16)"
       },
       {
         "command": "heroku:scale-formation",
