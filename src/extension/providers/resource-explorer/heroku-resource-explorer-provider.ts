@@ -87,6 +87,11 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();
     this.addonsViewEmitter.on('addonCreated', this.onAddonCreated);
+
+    context.subscriptions.push(
+      vscode.authentication.onDidChangeSessions(this.reSyncAllApps),
+      vscode.commands.registerCommand('heroku:sync-with-dashboard', this.reSyncAllApps)
+    );
   }
 
   /**
@@ -356,7 +361,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     const { app, ref } = data;
     const { addOns } = this.appToResourceMap.get(app)!;
     if (addOns) {
-      const addOn = addOns.find((a) => a.id === ref);
+      const addOn = addOns.find((a) => a.name === ref);
       if (addOn) {
         Reflect.set(addOn, 'state', 'provisioned');
         this.fire(addOn as T);
@@ -565,4 +570,15 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     }
     this.logStreamClient.apps = Array.from(this.apps.values());
   }
+
+  /**
+   * Force the resource explorer to re-retrieve all app data.
+   */
+  private reSyncAllApps = (): void => {
+    this.logStreamClient.apps = [];
+    this.abortWatchGitConfig?.abort();
+    this.apps.clear();
+    void vscode.commands.executeCommand('setContext', 'heroku:get:started', false);
+    void this.watchGitConfig();
+  };
 }
