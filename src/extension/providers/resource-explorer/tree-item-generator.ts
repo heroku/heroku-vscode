@@ -210,5 +210,5 @@ function getDynoIconPath(dyno: Dyno): string | vscode.ThemeIcon {
   if (/^(starting|stopping|provisioning)$/.test(dyno.state)) {
     return new vscode.ThemeIcon('loading~spin');
   }
-  return dynoIconsBySize[dyno.size];
+  return dynoIconsBySize[dyno.size] ?? new vscode.ThemeIcon('hk-icon-dynomite-default-16');
 }
