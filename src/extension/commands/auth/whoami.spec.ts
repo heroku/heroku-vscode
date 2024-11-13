@@ -1,19 +1,19 @@
 import * as assert from 'node:assert';
 import sinon from 'sinon';
 import * as childProcess from 'node:child_process';
-
 import * as vscode from 'vscode';
-import { HerokuCommand } from '../heroku-command';
-import { EventEmitter } from 'node:stream';
-import { WhoAmI } from './whoami';
+import { WhoAmI, type WhoAmIResult } from './whoami';
 import { randomUUID } from 'node:crypto';
 import { TokenCommand } from './token';
-import { Account } from '@heroku-cli/schema';
+import type { Account } from '@heroku-cli/schema';
+import { HerokuCommand } from '../heroku-command';
+import { EventEmitter } from 'node:stream';
 
 suite('The WhoamiCommand', () => {
   let fetchStub: sinon.SinonStub;
   let getSessionStub: sinon.SinonStub;
   let vsCodeExecCommandStub: sinon.SinonStub;
+  let execStub: sinon.SinonStub;
 
   const sessionObject = {
     account: {
@@ -33,8 +33,18 @@ suite('The WhoamiCommand', () => {
       }
       return undefined;
     });
+    execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
+      const cp = new (class extends EventEmitter {
+        public stdout = new EventEmitter();
+
+        public [Symbol.dispose]() {}
+      })() as childProcess.ChildProcess;
+      setTimeout(() => cp.stdout?.emit('data', sessionObject.accessToken));
+      setTimeout(() => cp.emit('exit', 0), 50);
+      return cp;
+    });
     vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
-    vsCodeExecCommandStub.withArgs(TokenCommand.COMMAND_ID, sinon.match.any).resolves(randomUUID());
+    vsCodeExecCommandStub.withArgs(TokenCommand.COMMAND_ID, sinon.match.any).resolves(sessionObject.accessToken);
 
     vsCodeExecCommandStub.callThrough();
   });
@@ -57,7 +67,8 @@ suite('The WhoamiCommand', () => {
     fetchStub.onFirstCall().callsFake(async () => {
       return new Response(JSON.stringify(account));
     });
-    const result = await vscode.commands.executeCommand<string>(WhoAmI.COMMAND_ID);
-    assert.equal(result, 'tester-321@heroku.com', `Output was ${result} but expected abc-123`);
+    const result = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
+    assert.deepStrictEqual(account, result.account);
+    assert.deepStrictEqual(result.token, sessionObject.accessToken);
   });
 });
