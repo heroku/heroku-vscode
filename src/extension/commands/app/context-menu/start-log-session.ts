@@ -275,37 +275,30 @@ export class StartLogSession extends AbortController implements LogSessionStream
    */
   private async beginReading(): Promise<void> {
     const logSessionStart = Date.now();
-    try {
-      while (!this.signal.aborted) {
-        this.scheduleHeartbeatTimeout();
-        const { done, value } = await this.reader!.read();
-        // Log sessions appear to max out at 15 min
-        // even though a null byte hearbeat will still
-        // be present. If we exceed 15 min, break the loop
-        // and let the heartbeat timeout restart things.
-        if (done || Date.now() - logSessionStart > this.logSessionDuration) {
-          await this.reader?.cancel();
-          break;
-        }
-        if (value.length > 1) {
-          const str = Buffer.from(value).toString();
-          this.streamListeners.forEach((cb) => void cb(str, this.app as App));
-          this.buffer += str;
 
-          if (!this.muted) {
-            this.outputChannel?.append(str);
-          }
-          if (this.buffer.split('\n').length > this.maxLines) {
-            this.buffer = this.buffer.split('\n').slice(-this.maxLines).join('\n');
-          }
+    while (!this.signal.aborted) {
+      this.scheduleHeartbeatTimeout();
+      const { done, value } = await this.reader!.read();
+      // Log sessions appear to max out at 15 min
+      // even though a null byte hearbeat will still
+      // be present. If we exceed 15 min, break the loop
+      // and let the heartbeat timeout restart things.
+      if (done || this.signal.aborted || Date.now() - logSessionStart > this.logSessionDuration) {
+        await this.reader?.cancel();
+        break;
+      }
+      if (value.length > 1) {
+        const str = Buffer.from(value).toString();
+        this.streamListeners.forEach((cb) => void cb(str, this.app as App));
+        this.buffer += str;
+
+        if (!this.muted) {
+          this.outputChannel?.append(str);
+        }
+        if (this.buffer.split('\n').length > this.maxLines) {
+          this.buffer = this.buffer.split('\n').slice(-this.maxLines).join('\n');
         }
       }
-    } catch (e) {
-      // Aborted, cancelled or fetch failed
-      if (e instanceof DOMException) {
-        return;
-      }
-      throw e;
     }
   }
 
@@ -315,7 +308,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
    */
   private async startLogSession(): Promise<void> {
     const logSession = await this.fetchLogSession(this.#app!);
-    const response = await fetch(logSession.logplex_url, { signal: this.signal });
+    const response = await fetch(logSession.logplex_url);
     if (response.ok) {
       if (!this.muted) {
         StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, this.#app!.name);
