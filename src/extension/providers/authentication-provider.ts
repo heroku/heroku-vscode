@@ -33,7 +33,7 @@ export class AuthenticationProvider
   /**
    * @inheritdoc
    */
-  public async getSessions(scopes?: readonly string[] | undefined): Promise<readonly vscode.AuthenticationSession[]> {
+  public async getSessions(scopes?: readonly string[] | undefined): Promise<vscode.AuthenticationSession[]> {
     const sessionJson = await this.context.secrets.get(AuthenticationProvider.SESSION_KEY);
     let accessToken: string | undefined;
     let whoami: string | undefined;
