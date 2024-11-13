@@ -52,6 +52,7 @@ suite('HerokuResourceExplorerProvider', () => {
       .withArgs('heroku:auth:login')
       .resolves(sessionObject);
 
+    sinon.stub(vscode.commands, 'registerCommand').withArgs('heroku:sync-with-dashboard').callsFake;
     vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
     vsCodeExecCommandStub.withArgs(WatchConfig.COMMAND_ID, sinon.match.any).resolves(
       (function* () {
@@ -119,6 +120,7 @@ suite('HerokuResourceExplorerProvider', () => {
     await provider.getChildren(); // <-- first call initializes the git config watcher
     await new Promise((resolve) => provider.event(resolve));
     const children = await provider.getChildren();
+    Reflect.deleteProperty(children[0], 'logSession');
     assert.strictEqual(children.length, 1);
     assert.deepStrictEqual(children[0], mockApp);
   });
