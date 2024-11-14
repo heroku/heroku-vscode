@@ -36,7 +36,7 @@ export class HerokuPsRunner extends HerokuContextMenuCommandRunner {
   ): Promise<void> {
     await super.hydrateArgs(userInputByArg, args, dynoOrFormation);
 
-    if (args.dyno?.required && dynoOrFormation) {
+    if (args.dyno && dynoOrFormation) {
       userInputByArg.set('dyno', this.isNamedObject(dynoOrFormation) ? dynoOrFormation.name : '');
     }
 
