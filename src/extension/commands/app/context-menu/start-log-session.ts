@@ -246,6 +246,14 @@ export class StartLogSession extends AbortController implements LogSessionStream
   }
 
   /**
+   * @inheritdoc
+   */
+  public abort(reason?: unknown): void {
+    super.abort(reason);
+    void this.reader?.cancel();
+  }
+
+  /**
    * Fetches a log session from the API.
    *
    * @param app The app to fetch a log session for.
