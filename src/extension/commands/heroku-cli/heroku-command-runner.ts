@@ -121,8 +121,6 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
       env: { ...process.env, FORCE_COLOR: '3' },
       cwd: vscode.workspace.workspaceFolders?.[0].uri.path
     });
-    const { promise, resolve } = Promise.withResolvers();
-    herokuProcess.once('exit', (code: number, signal: string) => resolve(code ?? signal));
 
     // We want to distinguish between user input
     // and the Heroku CLI output. The Duplex stream
@@ -202,7 +200,10 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     // Once the Heroku CLI has exited,
     // wait for the user to close the
     // terminal or press q to quit.
-    await promise;
+    await new Promise((resolve) =>
+      herokuProcess.once('exit', (code: number, signal: string) => resolve(code ?? signal))
+    );
+
     const message = herokuProcess.exitCode ? 'Failed -' : 'Completed -';
     writeEmitter.fire(`\n${message} Press "q" to quit:`);
   }

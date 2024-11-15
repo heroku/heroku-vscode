@@ -64,7 +64,8 @@
       ]
     },
     "capabilities": {
-      "hoverProvider": true
+      "hoverProvider": true,
+      "virtualWorkspaces": true
     },
     "languages": [
       {

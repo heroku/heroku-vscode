@@ -2,6 +2,7 @@ import EventEmitter from 'node:events';
 import type { App, Dyno, Formation, TeamApp } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
 import { StartLogSession, type LogSessionStream } from '../../commands/app/context-menu/start-log-session';
+import { diff } from '../../utils/diff';
 
 /**
  * LogStreamEventMap is a type alias for a map of log stream events.
@@ -195,8 +196,7 @@ export class LogStreamClient extends EventEmitter {
     const appsSet = new Set(this.#apps);
     const newAppsSet = new Set(value);
 
-    const toAttach = newAppsSet.difference(appsSet);
-    const toDetach = appsSet.difference(newAppsSet);
+    const { added: toAttach, removed: toDetach } = diff(appsSet, newAppsSet);
 
     this.detachLogStreams(Array.from(toDetach));
     this.#apps = value;

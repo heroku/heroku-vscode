@@ -255,8 +255,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         }
       }
     });
-
-    if (addonsSet.difference(pristineAddonsSet).size || pristineAddonsSet.difference(addonsSet).size) {
+    const { added, removed } = diff(addonsSet, pristineAddonsSet);
+    if (added.size || removed.size) {
       this.fire(addOnsCategory as T);
       this.addonsViewEmitter.emit('installedAddOnsChanged');
     }
@@ -578,6 +578,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (added.size || removed.size) {
       this.fire(undefined);
     }
+    void vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
   }
 
   /**
