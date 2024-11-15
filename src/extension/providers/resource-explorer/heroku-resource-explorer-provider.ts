@@ -5,10 +5,11 @@ import DynoService from '@heroku-cli/schema/services/dyno-service.js';
 import vscode from 'vscode';
 
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
+import { diff } from '../../utils/diff';
 import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
 
-import { GitRemoteAppsDiff as AppsDiff, WatchConfig } from '../../commands/git/watch-config';
 import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
+import { findGitConfigFileLocation, getHerokuAppNames } from '../../utils/git-utils';
 import {
   LogStreamClient,
   LogStreamEvents,
@@ -35,6 +36,7 @@ import '../../commands/app/context-menu/end-log-session';
 import '../../commands/dyno/scale-formation';
 import '../../commands/dyno/restart-dyno';
 
+type AppDiffs = { added: Set<string>; removed: Set<string> };
 /**
  * Represents an App that can have a LogSession
  */
@@ -68,7 +70,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
-  protected abortWatchGitConfig: AbortController | undefined;
+  protected watchGitConfigDisposable: vscode.Disposable | undefined;
   protected syncAddonsPending = false;
 
   /**
@@ -198,7 +200,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * @inheritdoc
    */
   public dispose(): void {
-    this.abortWatchGitConfig?.abort();
+    this.watchGitConfigDisposable?.dispose();
+    this.watchGitConfigDisposable = undefined;
   }
 
   /**
@@ -512,35 +515,38 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * Watches the git config for changes.
    */
   private async watchGitConfig(): Promise<void> {
-    if (this.abortWatchGitConfig && !this.abortWatchGitConfig.signal.aborted) {
+    if (this.watchGitConfigDisposable) {
       return;
     }
-    this.abortWatchGitConfig = new AbortController();
-    const appChanges = await vscode.commands.executeCommand<AsyncIterable<AppsDiff>>(
-      WatchConfig.COMMAND_ID,
-      this.abortWatchGitConfig
-    );
-    try {
-      for await (const appDiffs of appChanges) {
-        await this.syncApps(appDiffs);
-        this.fire(undefined);
-        await vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
+    const configPath = await findGitConfigFileLocation();
+    const uri = vscode.Uri.file(configPath);
+    const gitConfigWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(uri, '*'));
+    let apps = new Set(await getHerokuAppNames());
+
+    this.watchGitConfigDisposable = gitConfigWatcher.onDidCreate(async () => {
+      const maybeChangedApps = new Set(await getHerokuAppNames());
+      const { added, removed } = diff(apps, maybeChangedApps);
+
+      if (added.size || removed.size) {
+        apps = maybeChangedApps;
+        await this.syncApps({ added, removed });
       }
-    } catch {
-      // noop
-    }
+    });
+    await this.syncApps({ added: apps, removed: new Set() });
   }
 
   /**
    * Syncs the apps based on the provided app diffs.
    *
-   * @param appDiffs AppsDiff
+   * @param appDiffs The app diffs to sync
    * @returns Promise<void>
    */
-  private async syncApps(appDiffs: AppsDiff): Promise<void> {
-    const { accessToken } =
-      (await vscode.authentication.getSession('heroku:auth:login', [], { createIfNone: true })) ?? {};
-    Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
+  private async syncApps(appDiffs: AppDiffs): Promise<void> {
+    const session = await vscode.authentication.getSession('heroku:auth:login', []);
+    if (!session?.accessToken) {
+      return;
+    }
+    Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${session.accessToken}`);
 
     const { added, removed } = appDiffs;
     if (added.size) {
@@ -569,6 +575,9 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       removed.forEach((appName) => this.apps.delete(appName));
     }
     this.logStreamClient.apps = Array.from(this.apps.values());
+    if (added.size || removed.size) {
+      this.fire(undefined);
+    }
   }
 
   /**
@@ -576,7 +585,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    */
   private reSyncAllApps = (): void => {
     this.logStreamClient.apps = [];
-    this.abortWatchGitConfig?.abort();
+    this.watchGitConfigDisposable?.dispose();
+    this.watchGitConfigDisposable = undefined;
     this.apps.clear();
     void vscode.commands.executeCommand('setContext', 'heroku:get:started', false);
     void this.watchGitConfig();
