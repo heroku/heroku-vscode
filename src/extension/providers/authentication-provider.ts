@@ -45,6 +45,8 @@ export class AuthenticationProvider
       const session = JSON.parse(sessionJson) as vscode.AuthenticationSession;
       accessToken = session.accessToken;
       whoami = session.account.label;
+      this.outputChannel.appendLine(`Using existing session for ${whoami}`);
+      return [session];
     }
 
     if (!accessToken || !whoami) {
@@ -52,19 +54,22 @@ export class AuthenticationProvider
         const { account, token: gpgToken } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
         whoami = account.email;
         accessToken = gpgToken;
-      } catch {
-        // noop
+      } catch (error) {
+        const { message } = error as Error;
+        this.outputChannel.appendLine(`Failed to get session: ${message}`);
       }
     }
 
     if (!accessToken || !whoami) {
       await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
       await vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
+      this.outputChannel.appendLine('No session found, prompting for login');
       return [];
     }
     const session: vscode.AuthenticationSession = createSessionObject(whoami as string, accessToken, scopes ?? []);
     await this.context.secrets.store(AuthenticationProvider.SESSION_KEY, JSON.stringify(session));
     await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);
+    this.outputChannel.appendLine(`Created session for ${session.account.label}`);
     return [session];
   }
 
@@ -107,6 +112,7 @@ export class AuthenticationProvider
       const session = JSON.parse(sessionJson) as vscode.AuthenticationSession;
       if (session.id === sessionId) {
         await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
+        this.fire({ added: undefined, removed: [session], changed: undefined });
       }
     }
     await vscode.commands.executeCommand('setContext', 'heroku:login:required', true);

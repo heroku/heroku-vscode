@@ -8,6 +8,7 @@ import { TokenCommand } from './token';
 import type { Account } from '@heroku-cli/schema';
 import { HerokuCommand } from '../heroku-command';
 import { EventEmitter } from 'node:stream';
+import Sinon from 'sinon';
 
 suite('The WhoamiCommand', () => {
   let fetchStub: sinon.SinonStub;
@@ -26,6 +27,7 @@ suite('The WhoamiCommand', () => {
   };
 
   setup(() => {
+    WhoAmI.account = undefined;
     fetchStub = sinon.stub(globalThis, 'fetch');
     getSessionStub = sinon.stub(vscode.authentication, 'getSession').callsFake(async (providerId: string) => {
       if (providerId === 'heroku:auth:login') {
@@ -64,9 +66,7 @@ suite('The WhoamiCommand', () => {
       id: randomUUID(),
       email: 'tester-321@heroku.com'
     } as Account;
-    fetchStub.onFirstCall().callsFake(async () => {
-      return new Response(JSON.stringify(account));
-    });
+    fetchStub.withArgs('https://api.heroku.com/account').resolves(new Response(JSON.stringify(account)));
     const result = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
     assert.deepStrictEqual(account, result.account);
     assert.deepStrictEqual(result.token, sessionObject.accessToken);

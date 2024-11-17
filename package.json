@@ -5,7 +5,7 @@
   "repository": "https://github.com/heroku/heroku-vscode",
   "version": "0.0.1",
   "engines": {
-    "vscode": ">=1.95.0",
+    "vscode": ">=1.93.1",
     "node": ">=22.0.0"
   },
   "categories": [
@@ -15,9 +15,6 @@
     "onStartupFinished",
     "onLanguage:shellscript",
     "onAuthenticationRequest:<Heroku>"
-  ],
-  "extensionDependencies": [
-    "vscode.git"
   ],
   "main": "./out/extension/index.js",
   "contributes": {
@@ -4158,7 +4155,7 @@
     "@types/node": "22.x",
     "@types/proxyquire": "^1.3.31",
     "@types/sinon": "^17.0.3",
-    "@types/vscode": "1.95.0",
+    "@types/vscode": "1.93.0",
     "@types/vscode-webview": "1.57.5",
     "@typescript-eslint/eslint-plugin": "7.17.0",
     "@typescript-eslint/parser": "7.18.0",

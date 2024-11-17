@@ -12,7 +12,9 @@ import { HerokuContextMenuCommandRunner } from './commands/heroku-cli/heroku-con
 import { HerokuPsRunner } from './commands/heroku-cli/heroku-ps-runner';
 import { HerokuAddOnCommandRunner } from './commands/heroku-cli/heroku-addon-command-runner';
 import { HerokuRedisCommandRunner } from './commands/heroku-cli/heroku-redis-command-runner';
+import { WhoAmI, WhoAmIResult } from './commands/auth/whoami';
 
+const authProviderId = 'heroku:auth:login';
 /**
  * Called when the extension is activated by VSCode
  *
@@ -24,11 +26,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
   context.subscriptions.push(
     vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
-    vscode.authentication.registerAuthenticationProvider(
-      'heroku:auth:login',
-      'Heroku',
-      new AuthenticationProvider(context)
-    ),
+
+    vscode.authentication.registerAuthenticationProvider(authProviderId, 'Heroku', new AuthenticationProvider(context)),
+    vscode.authentication.onDidChangeSessions(onDidChangeSessions),
+
     vscode.window.registerTreeDataProvider(
       'heroku:resource-explorer:treeview',
       new HerokuResourceExplorerProvider(context)
@@ -38,6 +39,36 @@ export function activate(context: vscode.ExtensionContext): void {
     shellCommandDecorator.activate(context),
     ...registerCommandsfromManifest()
   );
+  void onDidChangeSessions({ provider: { id: authProviderId, label: 'Heroku' } });
+}
+
+/**
+ *
+ * @param event The event dispatched by the auth provider
+ */
+async function onDidChangeSessions(event: vscode.AuthenticationSessionsChangeEvent): Promise<void> {
+  if (event.provider.id !== authProviderId) {
+    return;
+  }
+  const session = await vscode.authentication.getSession(authProviderId, []);
+  const { account, token } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
+
+  if (!session?.accessToken && token) {
+    const items = ['Cancel', 'Manage trusted extensions'];
+    const choice = await vscode.window.showWarningMessage(
+      'Your Heroku accout it not accesible to the extension.',
+      ...items
+    );
+    if (choice === items[1]) {
+      void vscode.commands.executeCommand('_manageTrustedExtensionsForAccount', {
+        providerId: authProviderId,
+        accountLabel: account.email
+      });
+    } else {
+      void vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
+    }
+    return;
+  }
 }
 
 /**
