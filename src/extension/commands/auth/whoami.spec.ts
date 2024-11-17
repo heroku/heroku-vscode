@@ -8,6 +8,7 @@ import { TokenCommand } from './token';
 import type { Account } from '@heroku-cli/schema';
 import { HerokuCommand } from '../heroku-command';
 import { EventEmitter } from 'node:stream';
+import Sinon from 'sinon';
 
 suite('The WhoamiCommand', () => {
   let fetchStub: sinon.SinonStub;
