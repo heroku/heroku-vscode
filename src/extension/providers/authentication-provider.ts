@@ -1,8 +1,7 @@
 import vscode, { EventEmitter } from 'vscode';
-import { LoginCommand } from '../commands/auth/login';
+import { AuthCompletionInfo, LoginCommand } from '../commands/auth/login';
 import { WhoAmI, type WhoAmIResult } from '../commands/auth/whoami';
 import { LogoutCommand } from '../commands/auth/logout';
-import type { HerokuCommandCompletionInfo } from '../commands/heroku-command';
 import { HerokuOutputChannel, getOutputChannel } from '../meta/command';
 import { createSessionObject } from '../utils/create-session-object';
 import { getNetrcFileLocation } from '../utils/netrc-locator';
@@ -77,13 +76,18 @@ export class AuthenticationProvider
    * @inheritdoc
    */
   public async createSession(scopes: readonly string[]): Promise<vscode.AuthenticationSession> {
-    const { errorMessage, exitCode } = await vscode.commands.executeCommand<HerokuCommandCompletionInfo>(
+    const { errorMessage, exitCode, authType } = await vscode.commands.executeCommand<AuthCompletionInfo>(
       LoginCommand.COMMAND_ID
     );
 
     if (exitCode !== 0) {
       throw new Error(errorMessage);
     }
+
+    if (authType === 'terminal') {
+      throw new Error('Auth must be completed in a Terminal');
+    }
+
     let session: vscode.AuthenticationSession | undefined;
     try {
       const { account, token: accessToken } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);

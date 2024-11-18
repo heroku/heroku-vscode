@@ -5,13 +5,15 @@ import * as childProcess from 'node:child_process';
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
 import * as vscode from 'vscode';
-import { LoginCommand } from './login';
+import { AuthCompletionInfo, LoginCommand } from './login';
 import { HerokuCommand } from '../heroku-command';
 import { setup, teardown } from 'mocha';
 import { EventEmitter } from 'node:stream';
 
 suite('The LoginCommand', () => {
   let execStub: sinon.SinonStub;
+  let createTerminalStub: sinon.SinonStub;
+  let mockTerminal: { show: sinon.SinonStub; sendText: sinon.SinonStub };
 
   setup(() => {
     execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
@@ -26,14 +28,22 @@ suite('The LoginCommand', () => {
       setTimeout(() => cp.emit('exit', 0), 50);
       return cp;
     });
+
+    mockTerminal = {
+      show: sinon.stub(),
+      sendText: sinon.stub()
+    };
+
+    createTerminalStub = sinon
+      .stub(vscode.window, 'createTerminal')
+      .returns(mockTerminal as unknown as vscode.Terminal);
   });
 
   teardown(() => {
-    execStub.restore();
+    sinon.restore();
   });
 
   test('is registered', async () => {
-    const allCommands = (await vscode.commands.getCommands()).filter((cmd) => cmd.includes('git'));
     const commands = await vscode.commands.getCommands(true);
     const command = commands.find((command) => command === LoginCommand.COMMAND_ID);
     assert.ok(!!command, 'The LoginCommand is not registered.');
@@ -42,5 +52,44 @@ suite('The LoginCommand', () => {
   test('authenticates successfully using the happy path', async () => {
     const result = await vscode.commands.executeCommand<{ exitCode: number }>(LoginCommand.COMMAND_ID);
     assert.equal(result?.exitCode, 0, 'The LoginCommand did not complete successfully.');
+  });
+
+  test('Delegates auth to the terminal in interactive mode when the extension is running in a container', async () => {
+    // Mock the environment to simulate running in a container
+    const originalEnv = process.env;
+    process.env.REMOTE_CONTAINERS = 'true';
+
+    try {
+      const result = await vscode.commands.executeCommand<AuthCompletionInfo>(LoginCommand.COMMAND_ID);
+
+      // Verify the terminal was created and used correctly
+      assert.ok(createTerminalStub.calledOnce, 'Terminal should be created');
+      assert.ok(
+        createTerminalStub.calledWith('auth', vscode.env.shell, []),
+        'Terminal should be created with correct parameters'
+      );
+
+      // Verify the correct command was sent to the terminal
+      assert.ok(mockTerminal.show.calledOnce, 'Terminal should be shown');
+      assert.ok(
+        mockTerminal.sendText.calledWith('heroku auth:login --interactive', true),
+        'Correct auth command should be sent to terminal'
+      );
+
+      // Verify the returned result
+      assert.deepStrictEqual(
+        result,
+        {
+          authType: 'terminal',
+          errorMessage: '',
+          exitCode: 0,
+          output: ''
+        },
+        'Should return correct completion info for terminal auth'
+      );
+    } finally {
+      // Cleanup
+      process.env = originalEnv;
+    }
   });
 });

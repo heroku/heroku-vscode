@@ -28,7 +28,12 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
       if (session?.accessToken) {
         this.outputChannel?.appendLine(`Successfully authenticated as ${session.account.label}`);
       }
-    } catch {
+    } catch (error) {
+      // This means the terminal must be used for auth
+      // and a prompt has been initiated.
+      if (error instanceof Error && error.message.includes('Auth must be completed in a Terminal')) {
+        return;
+      }
       const affirmative = 'Retry';
       const action = await vscode.window.showErrorMessage(
         'Authentication was unsucessful. Try again?',

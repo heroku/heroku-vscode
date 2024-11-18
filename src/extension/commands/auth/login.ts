@@ -1,7 +1,12 @@
 import type { ChildProcess } from 'node:child_process';
+import vscode from 'vscode';
 
 import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
 import { HerokuCommand, HerokuCommandCompletionInfo } from '../heroku-command';
+
+export type AuthCompletionInfo = HerokuCommandCompletionInfo & {
+  authType: 'browser' | 'terminal';
+};
 
 @herokuCommand({
   outputChannelId: HerokuOutputChannel.Authentication
@@ -10,7 +15,7 @@ import { HerokuCommand, HerokuCommandCompletionInfo } from '../heroku-command';
  * The login command delegates authentication to
  * the HerokuCLI using the browser auth flows.
  */
-export class LoginCommand extends HerokuCommand<HerokuCommandCompletionInfo> {
+export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
   public static COMMAND_ID = 'heroku:auth:login' as const;
 
   /**
@@ -42,9 +47,18 @@ export class LoginCommand extends HerokuCommand<HerokuCommandCompletionInfo> {
    *
    * @returns The result of the Heroku CLI command
    */
-  public async run(): Promise<HerokuCommandCompletionInfo> {
-    using cliAuthProcess = HerokuCommand.exec('heroku auth:login', { signal: this.signal, timeout: 120 * 1000 });
+  public async run(): Promise<AuthCompletionInfo> {
+    // If we're running in container, do not use the
+    // browser since we're probably going to get an
+    // "IP Mismatch" error.
+    if (this.isRunningInContainer()) {
+      const terminal = vscode.window.createTerminal('auth', vscode.env.shell, []);
+      terminal.show();
+      terminal.sendText('heroku auth:login --interactive', true);
+      return { authType: 'terminal', errorMessage: '', exitCode: 0, output: '' };
+    }
 
+    using cliAuthProcess = HerokuCommand.exec('heroku auth:login', { signal: this.signal, timeout: 120 * 1000 });
     cliAuthProcess.stderr?.once('data', (data: string) => LoginCommand.onData(data, cliAuthProcess));
 
     let success = false;
@@ -59,6 +73,20 @@ export class LoginCommand extends HerokuCommand<HerokuCommandCompletionInfo> {
     if (success) {
       result.exitCode = 0;
     }
-    return result;
+    return { ...result, authType: 'browser' };
+  }
+
+  /**
+   * Determines if the extension is running in a container
+   * such as a GitHub Codespace, Code Builder or Docker
+   *
+   * @returns true if the extenion is running in a container.
+   */
+  private isRunningInContainer(): boolean {
+    return (
+      process.env['REMOTE_CONTAINERS'] === 'true' ||
+      process.env['DOCKER_BUILDKIT'] === '1' ||
+      process.env['SF_CONTAINER_MODE'] === 'true'
+    );
   }
 }
