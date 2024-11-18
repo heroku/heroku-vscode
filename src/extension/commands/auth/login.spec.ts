@@ -13,7 +13,8 @@ import { EventEmitter } from 'node:stream';
 suite('The LoginCommand', () => {
   let execStub: sinon.SinonStub;
   let createTerminalStub: sinon.SinonStub;
-  let mockTerminal: { show: sinon.SinonStub; sendText: sinon.SinonStub };
+  let mockTerminal: { show: sinon.SinonStub; sendText: sinon.SinonStub; dispose: sinon.SinonStub };
+  const logFile = vscode.Uri.parse('auth-result.log');
 
   setup(() => {
     execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {
@@ -31,8 +32,22 @@ suite('The LoginCommand', () => {
 
     mockTerminal = {
       show: sinon.stub(),
-      sendText: sinon.stub()
+      sendText: sinon.stub(),
+      dispose: sinon.stub()
     };
+
+    sinon.stub(vscode.workspace, 'createFileSystemWatcher').returns({
+      onDidChange: (cb: CallableFunction) => cb(),
+      onDidCreate: () => {},
+      onDidDelete: () => {},
+      dispose: () => {}
+    } as unknown as vscode.FileSystemWatcher);
+
+    sinon.stub(vscode.workspace, 'fs').value({
+      readFile: async () => Buffer.from('Logged in as tester123@heroku.com')
+    } as unknown as vscode.FileSystem);
+
+    sinon.stub(vscode.Uri, 'file').returns(logFile);
 
     createTerminalStub = sinon
       .stub(vscode.window, 'createTerminal')
@@ -64,15 +79,11 @@ suite('The LoginCommand', () => {
 
       // Verify the terminal was created and used correctly
       assert.ok(createTerminalStub.calledOnce, 'Terminal should be created');
-      assert.ok(
-        createTerminalStub.calledWith('auth', vscode.env.shell, []),
-        'Terminal should be created with correct parameters'
-      );
 
       // Verify the correct command was sent to the terminal
       assert.ok(mockTerminal.show.calledOnce, 'Terminal should be shown');
       assert.ok(
-        mockTerminal.sendText.calledWith('heroku auth:login --interactive', true),
+        mockTerminal.sendText.calledWith(`heroku auth:login --interactive 2>&1 | tee ${logFile.fsPath}`, true),
         'Correct auth command should be sent to terminal'
       );
 
@@ -83,7 +94,7 @@ suite('The LoginCommand', () => {
           authType: 'terminal',
           errorMessage: '',
           exitCode: 0,
-          output: ''
+          output: 'Logged in as tester123@heroku.com'
         },
         'Should return correct completion info for terminal auth'
       );

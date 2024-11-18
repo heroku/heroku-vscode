@@ -2,7 +2,8 @@ import { type ReadableStreamDefaultReader } from 'node:stream/web';
 import LogSessionService from '@heroku-cli/schema/services/log-session-service.js';
 import * as vscode from 'vscode';
 import type { App, LogSession } from '@heroku-cli/schema';
-import { herokuCommand, HerokuOutputChannel, type RunnableCommand } from '../../../meta/command';
+import { herokuCommand, type RunnableCommand } from '../../../meta/command';
+import { logExtensionEvent } from '../../../utils/logger';
 
 /**
  * Represents a callback to be executed when a chunk
@@ -54,7 +55,7 @@ export type LogSessionStream = AbortController & {
   onDidUpdateMute: (cb: (muted: boolean) => void) => void;
 };
 
-@herokuCommand({ outputChannelId: HerokuOutputChannel.LogOutput, languageId: 'heroku-logs' })
+@herokuCommand()
 /**
  * Command used to start a log session for
  * the supplied App object and pipe the output
@@ -326,7 +327,9 @@ export class StartLogSession extends AbortController implements LogSessionStream
       // we want this function to complete without
       // having to wait for the stream to end.
       void this.beginReading();
+      logExtensionEvent(`Log stream started for ${this.#app!.name}`);
     } else {
+      logExtensionEvent(`Failed to start log stream: ${response.statusText}`);
       throw new Error(`Failed to fetch logs: ${response.statusText}`);
     }
   }
@@ -344,6 +347,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
     clearTimeout(this.heartbeatTimeoutId);
     if (this.signal.aborted) {
       this.app!.logSession = undefined;
+      logExtensionEvent(`Log session aborted for ${this.app!.name}`);
       return;
     }
     this.heartbeatTimeoutId = setTimeout(() => {

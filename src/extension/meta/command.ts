@@ -23,9 +23,9 @@ export type CommandDecoratorConfig = {
 };
 
 export enum HerokuOutputChannel {
-  Authentication = 'Heroku Authentication',
   CommandOutput = 'Heroku Command Output',
-  LogOutput = 'Heroku Log Output'
+  LogOutput = 'Heroku Log Output',
+  ExtensionDebugLogs = 'Heroku Extension Log Output'
 }
 
 const commandOutputChannels = new Map<string, vscode.OutputChannel>();
@@ -42,7 +42,7 @@ export function getOutputChannel(config?: CommandDecoratorConfig | undefined): v
     return;
   }
   const { outputChannelId, languageId } = config;
-  let outputChannel = commandOutputChannels.get(outputChannelId as string);
+  let outputChannel = commandOutputChannels.get(`${outputChannelId}${languageId ?? ''}`);
   if (!outputChannel) {
     outputChannel = commandOutputChannels
       .set(outputChannelId, vscode.window.createOutputChannel(outputChannelId, languageId))

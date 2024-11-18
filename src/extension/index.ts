@@ -13,6 +13,8 @@ import { HerokuPsRunner } from './commands/heroku-cli/heroku-ps-runner';
 import { HerokuAddOnCommandRunner } from './commands/heroku-cli/heroku-addon-command-runner';
 import { HerokuRedisCommandRunner } from './commands/heroku-cli/heroku-redis-command-runner';
 import { WhoAmI, WhoAmIResult } from './commands/auth/whoami';
+import { logExtensionEvent } from './utils/logger';
+import { WelcomeViewSignIn } from './commands/auth/welcome-view-sign-in';
 
 const authProviderId = 'heroku:auth:login';
 /**
@@ -51,19 +53,17 @@ async function onDidChangeSessions(event: vscode.AuthenticationSessionsChangeEve
     return;
   }
   const session = await vscode.authentication.getSession(authProviderId, []);
-  const { account, token } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
+  const { token } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
 
   if (!session?.accessToken && token) {
-    const items = ['Cancel', 'Manage trusted extensions'];
+    logExtensionEvent('Heroku accout it not accesible to the extension');
+    const items = ['Cancel', 'Log in again'];
     const choice = await vscode.window.showWarningMessage(
       'Your Heroku accout it not accesible to the extension.',
       ...items
     );
     if (choice === items[1]) {
-      void vscode.commands.executeCommand('_manageTrustedExtensionsForAccount', {
-        providerId: authProviderId,
-        accountLabel: account.email
-      });
+      void vscode.commands.executeCommand(WelcomeViewSignIn.COMMAND_ID);
     } else {
       void vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
     }

@@ -1,16 +1,16 @@
 import type { ChildProcess } from 'node:child_process';
+import os from 'node:os';
 import vscode from 'vscode';
 
-import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
+import { herokuCommand } from '../../meta/command';
 import { HerokuCommand, HerokuCommandCompletionInfo } from '../heroku-command';
+import { logExtensionEvent } from '../../utils/logger';
 
 export type AuthCompletionInfo = HerokuCommandCompletionInfo & {
   authType: 'browser' | 'terminal';
 };
 
-@herokuCommand({
-  outputChannelId: HerokuOutputChannel.Authentication
-})
+@herokuCommand()
 /**
  * The login command delegates authentication to
  * the HerokuCLI using the browser auth flows.
@@ -52,10 +52,7 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
     // browser since we're probably going to get an
     // "IP Mismatch" error.
     if (this.isRunningInContainer()) {
-      const terminal = vscode.window.createTerminal('auth', vscode.env.shell, []);
-      terminal.show();
-      terminal.sendText('heroku auth:login --interactive', true);
-      return { authType: 'terminal', errorMessage: '', exitCode: 0, output: '' };
+      return this.runInTerminal();
     }
 
     using cliAuthProcess = HerokuCommand.exec('heroku auth:login', { signal: this.signal, timeout: 120 * 1000 });
@@ -74,6 +71,93 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
       result.exitCode = 0;
     }
     return { ...result, authType: 'browser' };
+  }
+
+  /**
+   *
+   *
+   * @returns the result from running auth in a terminal
+   */
+  private async runInTerminal(): Promise<AuthCompletionInfo> {
+    const stdoutFileLoc = vscode.Uri.file(`${os.tmpdir()}/${Date.now()}-auth-result.log`);
+    const successWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(stdoutFileLoc, '*'));
+
+    // stdout, stderr
+    const resultPromise = new Promise<AuthCompletionInfo>((resolve) => {
+      successWatcher.onDidChange(async (file: vscode.Uri) => {
+        const buffer = await vscode.workspace.fs.readFile(file);
+        const result = buffer.toString();
+
+        const resultLc = result.toLocaleLowerCase();
+
+        // Auth success
+        if (resultLc.includes('logged in as')) {
+          resolve({
+            authType: 'terminal',
+            errorMessage: '',
+            exitCode: 0,
+            output: result
+          });
+        }
+        // Auth failed
+        if (resultLc.includes('error:')) {
+          resolve({
+            authType: 'terminal',
+            errorMessage: result,
+            exitCode: 1,
+            output: ''
+          });
+        }
+      });
+    });
+
+    const timeoutPromise = new Promise<AuthCompletionInfo>((resolve) => {
+      // Timed out
+      setTimeout(
+        () =>
+          resolve({
+            authType: 'terminal',
+            errorMessage: 'Authentication timed out after 60 seconds',
+            exitCode: 1,
+            output: ''
+          }),
+        60_000
+      );
+    });
+
+    // user closed the terminal before auth could complete
+    let terminalClosedDisposable: vscode.Disposable | undefined;
+    const terminalClosePromise = new Promise<AuthCompletionInfo>((resolve) => {
+      terminalClosedDisposable = vscode.window.onDidCloseTerminal((closedTerminal) => {
+        if (closedTerminal === terminal) {
+          resolve({
+            authType: 'terminal',
+            errorMessage: 'Terminal closed before auth could complete',
+            exitCode: 1,
+            output: ''
+          });
+        }
+      });
+    });
+
+    const terminal = vscode.window.createTerminal({
+      shellPath: vscode.env.shell,
+      message: 'Heroku Interactive Authentication',
+      isTransient: true,
+      iconPath: new vscode.ThemeIcon('hk-icon-logo-outline-16'),
+      name: 'Heroku Auth'
+    } as vscode.TerminalOptions);
+    terminal.show();
+    terminal.sendText(`heroku auth:login --interactive 2>&1 | tee ${stdoutFileLoc.fsPath}`, true);
+
+    logExtensionEvent(`using ${stdoutFileLoc.fsPath} to log auth responses from sever`);
+
+    const result = await Promise.race([resultPromise, terminalClosePromise, timeoutPromise]);
+    successWatcher.dispose();
+    terminal.dispose();
+    terminalClosedDisposable?.dispose();
+
+    return result;
   }
 
   /**

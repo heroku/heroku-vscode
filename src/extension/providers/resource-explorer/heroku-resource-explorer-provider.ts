@@ -9,6 +9,7 @@ import { diff } from '../../utils/diff';
 import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
 import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 import { findGitConfigFileLocation, getHerokuAppNames } from '../../utils/git-utils';
+import { logExtensionEvent } from '../../utils/logger';
 import {
   LogStreamClient,
   LogStreamEvents,
@@ -96,7 +97,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   }
 
   /**
-   * Gets the LogStreamClient
+   * Gets the LogStreamClient creating it and attaching
+   * listeners if it wasn't previously defined.
    *
    * @returns The LogStreamClient
    */
@@ -276,21 +278,27 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   /**
    * Handler for the dyno process starting event.
    *
-   * @param data The data dispached when a dyno is starting.
+   * @param data The data dispached when a dyno is starting
+   * @param retryCount The number of times to retry fetching a dyno from the API before giving up
    */
-  private onDynoProcessStartingOrStateChanged = (data: StartingProcessInfo | StateChangedInfo): void => {
+  private onDynoProcessStartingOrStateChanged = (
+    data: StartingProcessInfo | StateChangedInfo,
+    retryCount = 5
+  ): void => {
     const { app, dynoName } = data;
     const dynos = this.appToResourceMap.get(app)!.dynos;
     let dyno = dynos.find((d) => d.name === dynoName);
 
     if (!dyno) {
       void (async (): Promise<void> => {
-        // Dynos that are newly proisioning are 404
-        // for a little while...not sure why.
-        await new Promise((resolve) => setTimeout(resolve, 5000));
         try {
           dyno = await this.dynoService.info(app.id, dynoName, this.requestInit);
         } catch {
+          // Dynos that are newly proisioning are 404
+          // for a little while on some formations...not sure why.
+          if (retryCount > 0) {
+            setTimeout(() => void this.onDynoProcessStartingOrStateChanged(data, retryCount - 1), 1000);
+          }
           // 404, 401
           return;
         }
@@ -523,6 +531,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       configPath = await findGitConfigFileLocation();
     } catch {
       // not a git directory
+      logExtensionEvent('Cannot watch git config: not a git directory');
     }
 
     if (configPath) {
@@ -536,6 +545,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
         if (added.size || removed.size) {
           apps = maybeChangedApps;
+          logExtensionEvent('Git config changed: syncing apps');
           await this.syncApps({ added, removed });
         }
       });
@@ -552,10 +562,16 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    */
   private async syncApps(appDiffs: AppDiffs): Promise<void> {
     const session = await vscode.authentication.getSession('heroku:auth:login', []);
+
     if (!session?.accessToken) {
-      this.apps.clear();
-      this.logStreamClient.apps = [];
-      this.fire(undefined);
+      logExtensionEvent('Cannot sync apps: session is unavailable');
+      // Only do this if we have apps else it will
+      // be an infinite async loop.
+      if (this.apps.size) {
+        this.apps.clear();
+        this.logStreamClient.apps = [];
+        this.fire(undefined);
+      }
       return;
     }
     Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${session.accessToken}`);
@@ -576,6 +592,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
           this.appToResourceMap.set(app, { dynos: [], formations: [], addOns: [], categories: [] });
         } else {
           appsNotFound.push(addedArray[i]);
+          logExtensionEvent(`App not found: ${addedArray[i]}`);
         }
       }
       appsNotFound = appsNotFound.filter((name: string) => !this.apps.has(name));
@@ -590,6 +607,14 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (added.size || removed.size) {
       this.fire(undefined);
     }
+
+    const logMessage = this.apps.size
+      ? `Displaying ${Array.from(this.apps.values())
+          .map((a) => a.name)
+          .join(', ')} in TreeView`
+      : 'No apps found';
+    logExtensionEvent(logMessage);
+
     void vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
   }
 
@@ -597,6 +622,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * Force the resource explorer to re-retrieve all app data.
    */
   private reSyncAllApps = (): void => {
+    logExtensionEvent('Re-syncing all apps');
     this.logStreamClient.apps = [];
     this.watchGitConfigDisposable?.dispose();
     this.watchGitConfigDisposable = undefined;
