@@ -1,6 +1,27 @@
+import path from 'node:path';
+import { exec as execProcess } from 'node:child_process';
+import { promisify } from 'node:util';
 import * as vscode from 'vscode';
-import { API, GitExtension, Repository } from 'git-extension';
+import { API, GitExtension, Repository } from '../git';
 import { logExtensionEvent } from './logger';
+const exec = promisify(execProcess);
+
+/**
+ * Finds the git config file location and returns it
+ * or undefined if not found.
+ *
+ * @returns string
+ */
+export async function findGitConfigFileLocation(): Promise<string> {
+  const [ws] = vscode.workspace.workspaceFolders ?? [];
+  const cwd = ws?.uri.path ?? '.';
+  const { stdout, stderr } = await exec('git rev-parse --git-dir', { cwd });
+  if (stderr) {
+    throw new Error(stderr);
+  }
+  const configPath = path.join(cwd, stdout.trim(), 'config');
+  return configPath;
+}
 
 /**
  * Gets an array of Heroku app names from the git remotes or
@@ -9,23 +30,29 @@ import { logExtensionEvent } from './logger';
  * @returns string[] An array of app names derived from the git remotes.
  */
 export async function getHerokuAppNames(): Promise<string[]> {
-  const rootRepository = await getRootRepository();
-  const remotes = rootRepository?.state.remotes;
-
-  if (!remotes) {
-    return [];
+  let ws: vscode.WorkspaceFolder | undefined;
+  while (!ws) {
+    [ws] = vscode.workspace.workspaceFolders ?? [];
+    if (ws) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  const herokuRemotes = remotes.filter(
-    (remote) => remote.name.includes('heroku') && !!remote.pushUrl?.includes('heroku')
-  );
+  const { stdout, stderr } = await exec('git remote -v', { cwd: ws?.uri.path ?? '.' });
+  if (stderr) {
+    throw new Error(stderr);
+  }
+  const lines = stdout.trim().split('\n');
+  const remotes = lines.map((line) => line.trim().split(/\s+/)).map(([name, url, kind]) => ({ name, url, kind }));
+  const herokuRemotes = remotes.filter((remote) => remote.name.includes('heroku') && !!remote.url?.includes('heroku'));
 
   const appNames = new Set<string>();
   for (const herokuRemote of herokuRemotes ?? []) {
-    const { pushUrl } = herokuRemote;
-    if (!URL.canParse(pushUrl!)) {
+    const { url } = herokuRemote;
+    if (!URL.canParse(url)) {
       continue;
     }
-    const { pathname } = new URL(pushUrl!);
+    const { pathname } = new URL(url);
     appNames.add(pathname.replaceAll(/(\/|.git)/g, ''));
   }
   return Array.from(appNames.values());
@@ -41,29 +68,18 @@ export async function getGitExtensionApi(): Promise<API> {
   const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
   if (!gitExtension) {
     const message =
-      'The VSCode Git extension was requested but was not found. Please verify that the VSCode Git extension is installed and enabled.';
+      'The VSCode Git extension was requested but was not found. Please verify that the VSCode Git extension install and enabled.';
     logExtensionEvent(message);
     throw new ReferenceError(message);
   }
   if (!gitExtension.isActive) {
     await gitExtension.activate();
   }
-  const api = gitExtension.exports.getAPI(1);
-  if (api.state === 'uninitialized') {
-    const d = await new Promise<vscode.Disposable>((resolve) => {
-      const disposable = api.onDidChangeState((state) => {
-        if (state === 'initialized') {
-          resolve(disposable);
-        }
-      });
-    });
-    d.dispose();
-  }
-  return api;
+  return gitExtension.exports.getAPI(1);
 }
 
 /**
- * Gets the root repository
+ * Gets the root repostiory
  *
  * @returns the repository object or undefined if this is not a git repository
  */
@@ -73,87 +89,6 @@ export async function getRootRepository(): Promise<Repository | undefined> {
   if (!ws) {
     return undefined;
   }
-  return gitExtension?.repositories.find((repo) => repo.rootUri.path === ws.uri.path);
-}
-
-/**
- * Creates a github session and returns it.
- * This session grants read-only access to repositories
- * and represents a minimal set of permissions to search
- * for and read the contents of public repositories.
- *
- * @returns The authentication session or undefined if the user disallows it or fails to authenticate
- */
-export async function getGithubSession(): Promise<vscode.AuthenticationSession | undefined> {
-  const session = await vscode.authentication.getSession('github', ['repo', 'read:user'], { createIfNone: true });
-  if (!session) {
-    logExtensionEvent('No GitHub session found');
-    const response = await vscode.window.showInformationMessage(
-      'You must sign in to GitHub for this operation',
-      'Sign in to GitHub'
-    );
-    if (response === 'Sign in to GitHub') {
-      return getGithubSession();
-    }
-    // User insists on not sining in to github - that's ok. We'll ask again later.
-    return undefined;
-  }
-  return session;
-}
-
-/**
- * Gets the owner and repository name from the git repository
- * based on the provided URI.
- *
- * @param uri The URI of the git repository
- *
- * @returns An object containing the owner and repo name, or undefined if not found
- */
-export async function getGitRepositoryInfoByUri(uri: vscode.Uri): Promise<{ owner: string; repo: string } | undefined> {
-  try {
-    const api = await getGitExtensionApi();
-
-    // Get remote URLs from the repository state
-    const remotes = api.getRepository(uri)?.state.remotes;
-    if (!remotes?.length) {
-      return undefined;
-    }
-
-    // Try to find origin first, fall back to any remote if origin doesn't exist
-    const remote = remotes.find((r) => r.name === 'origin') ?? remotes[0];
-    const remoteUrl = remote.fetchUrl ?? remote.pushUrl;
-
-    if (!remoteUrl) {
-      return undefined;
-    }
-
-    // Handle different Git URL formats
-    let match: RegExpMatchArray | null;
-
-    // Handle SSH URL format (git@github.com:owner/repo.git)
-    if (remoteUrl.startsWith('git@')) {
-      match = remoteUrl.match(/git@github\.com:([^/]+)\/([^.]+)(?:\.git)?/);
-    }
-    // Handle HTTPS URL format (https://github.com/owner/repo.git)
-    else {
-      try {
-        const url = new URL(remoteUrl);
-        match = url.pathname.match(/\/([^/]+)\/([^.]+)(?:\.git)?/);
-      } catch {
-        return undefined;
-      }
-    }
-
-    if (!match || match.length < 3) {
-      return undefined;
-    }
-
-    return {
-      owner: match[1],
-      repo: match[2]
-    };
-  } catch (error) {
-    logExtensionEvent(`Error getting repository info: ${(error as Error).message}`);
-    return undefined;
-  }
+  const rootRepository = gitExtension?.repositories.find((repo) => repo.rootUri.path === ws.uri.path);
+  return rootRepository;
 }

@@ -31,3 +31,10 @@ export function logExtensionEvent(message: string, process = 'vscode'): void {
 export function showExtensionLogs(): void {
   logger.show();
 }
+
+/**
+ * Shows the output channel
+ */
+export function showExtenionLogs(): void {
+  logger.show();
+}
