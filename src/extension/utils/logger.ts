@@ -23,3 +23,10 @@ export function logExtensionEvent(message: string): void {
   const messageWithTimestamp = `[${timestamp}] heroku[vscode] ${message}`;
   logger.appendLine(messageWithTimestamp);
 }
+
+/**
+ * Shows the output channel
+ */
+export function showExtenionLogs(): void {
+  logger.show();
+}

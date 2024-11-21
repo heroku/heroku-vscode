@@ -7,7 +7,7 @@ import {
   isHerokuCallExpression,
   isLiteral
 } from '../lexers/lexer-utils';
-import { ExecuteCommandFromEditor } from './heroku-cli/execute-command-from-editor';
+import { ExecuteCommandFromEditor } from '../commands/heroku-cli/execute-command-from-editor';
 
 /**
  * The HerokuShellCommandDecorator is used to provide
@@ -91,10 +91,7 @@ export class HerokuShellCommandDecorator {
    * @returns The decoration
    */
   protected getDecoration(extensionUri: vscode.Uri): vscode.TextEditorDecorationType {
-    if (this.decoration) {
-      return this.decoration;
-    }
-    this.decoration = vscode.window.createTextEditorDecorationType({
+    return (this.decoration ??= vscode.window.createTextEditorDecorationType({
       dark: {
         gutterIconPath: vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'logo-mark.svg'),
         gutterIconSize: '.5rem',
@@ -106,8 +103,7 @@ export class HerokuShellCommandDecorator {
       },
       gutterIconSize: 'contain',
       gutterIconPath: vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'logo-mark.svg')
-    });
-    return this.decoration;
+    }));
   }
 }
 
@@ -133,7 +129,7 @@ export function activate(context: vscode.ExtensionContext): vscode.Disposable {
     vscode.window.onDidChangeVisibleTextEditors(changeFunction),
     vscode.workspace.onDidChangeTextDocument(changeFunction)
   ];
-  decorator.decorateHerokuCommands(context);
+  changeFunction();
   return {
     dispose(): void {
       decorator.dispose();

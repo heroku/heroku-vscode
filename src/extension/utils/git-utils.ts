@@ -2,6 +2,8 @@ import path from 'node:path';
 import { exec as execProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as vscode from 'vscode';
+import { API, GitExtension, Repository } from '../git';
+import { logExtensionEvent } from './logger';
 const exec = promisify(execProcess);
 
 /**
@@ -54,4 +56,39 @@ export async function getHerokuAppNames(): Promise<string[]> {
     appNames.add(pathname.replaceAll(/(\/|.git)/g, ''));
   }
   return Array.from(appNames.values());
+}
+
+/**
+ * Gets the git extension api. If it is not installed,
+ * it will be installed.
+ *
+ * @returns the git api
+ */
+export async function getGitExtensionApi(): Promise<API> {
+  const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
+  if (!gitExtension) {
+    const message =
+      'The VSCode Git extension was requested but was not found. Please verify that the VSCode Git extension install and enabled.';
+    logExtensionEvent(message);
+    throw new ReferenceError(message);
+  }
+  if (!gitExtension.isActive) {
+    await gitExtension.activate();
+  }
+  return gitExtension.exports.getAPI(1);
+}
+
+/**
+ * Gets the root repostiory
+ *
+ * @returns the repository object or undefined if this is not a git repository
+ */
+export async function getRootRepository(): Promise<Repository | undefined> {
+  const gitExtension = await getGitExtensionApi();
+  const [ws] = vscode.workspace.workspaceFolders ?? [];
+  if (!ws) {
+    return undefined;
+  }
+  const rootRepository = gitExtension?.repositories.find((repo) => repo.rootUri.path === ws.uri.path);
+  return rootRepository;
 }

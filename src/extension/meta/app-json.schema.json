@@ -1,0 +1,230 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "maxLength": 30
+    },
+    "description": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "website": {
+      "type": "string",
+      "format": "uri"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri"
+    },
+    "logo": {
+      "type": "string",
+      "format": "uri"
+    },
+    "success_url": {
+      "type": "string"
+    },
+    "scripts": {
+      "type": "object",
+      "properties": {
+        "postdeploy": {
+          "type": "string"
+        },
+        "pr-predestroy": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "env": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-Z][A-Z0-9_]*$": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "generator": {
+              "type": "string",
+              "enum": ["secret"]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "formation": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_-]+$": {
+          "type": "object",
+          "properties": {
+            "quantity": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "size": {
+              "type": "string",
+              "enum": [
+                "free",
+                "eco",
+                "hobby",
+                "basic",
+                "standard-1x",
+                "standard-2x",
+                "1x-classic",
+                "2x-classic",
+                "private-s",
+                "private-m",
+                "private-l",
+                "private-l-ram",
+                "private-xl",
+                "private-2xl",
+                "performance",
+                "performance-m",
+                "performance-l",
+                "performance-l-ram",
+                "performance-xl",
+                "performance-2xl",
+                "shield-s",
+                "shield-m",
+                "shield-l",
+                "shield-xl",
+                "shield-2xl"
+              ]
+            }
+          },
+          "required": ["quantity"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "addons": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "plan": {
+                "type": "string"
+              },
+              "as": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              }
+            },
+            "required": ["plan"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "buildpacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": ["url"],
+        "additionalProperties": false
+      }
+    },
+    "environments": {
+      "type": "object",
+      "properties": {
+        "test": {
+          "type": "object",
+          "properties": {
+            "scripts": {
+              "type": "object",
+              "properties": {
+                "test": {
+                  "type": "string"
+                }
+              }
+            },
+            "env": {
+              "type": "object",
+              "patternProperties": {
+                "^[A-Z][A-Z0-9_]*$": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "generator": {
+                      "type": "string",
+                      "enum": ["secret"]
+                    }
+                  }
+                }
+              }
+            },
+            "addons": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "plan": {
+                        "type": "string"
+                      },
+                      "as": {
+                        "type": "string"
+                      },
+                      "options": {
+                        "type": "object"
+                      }
+                    },
+                    "required": ["plan"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "stack": {
+      "type": "string",
+      "enum": ["heroku-18", "heroku-20", "heroku-22"]
+    },
+    "image": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
