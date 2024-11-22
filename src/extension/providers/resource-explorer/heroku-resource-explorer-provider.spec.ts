@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import * as gitUtils from '../../utils/git-utils';
 import { Readable, Writable } from 'node:stream';
 import type { HerokuResourceExplorerProvider } from './heroku-resource-explorer-provider';
+import { GitExtension, Repository } from '../../git';
 
 suite('HerokuResourceExplorerProvider', () => {
   let provider: HerokuResourceExplorerProvider;
@@ -93,14 +94,41 @@ suite('HerokuResourceExplorerProvider', () => {
     sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
 
     const HerokuResourceExplorerProviderCtor = proxyquire('./heroku-resource-explorer-provider', {
-      getHerokuAppNames: () => Promise.resolve(['app1']),
-      findGitConfigFileLocation: () => Promise.resolve('/path/to/git/config')
+      getHerokuAppNames: () => Promise.resolve(['app1'])
     }).HerokuResourceExplorerProvider;
 
     provider = new HerokuResourceExplorerProviderCtor(mockContext);
 
     elementTypeMap = Reflect.get(provider, 'elementTypeMap') as Map<unknown, unknown>;
     childParentMap = Reflect.get(provider, 'childParentMap') as Map<unknown, unknown>;
+    const mockWorkspaceFolder: vscode.WorkspaceFolder = {
+      uri: vscode.Uri.file('/test/path')
+    } as vscode.WorkspaceFolder;
+    sinon.replace(vscode.extensions, 'getExtension', (): any => {
+      return {
+        isActive: true,
+        exports: {
+          getAPI: () => ({
+            repositories: [
+              {
+                rootUri: vscode.Uri.file('/test/path'),
+                state: {
+                  onDidChange: () => ({ dispose() {} }),
+                  remotes: [
+                    {
+                      name: 'heroku',
+                      pushUrl: 'https://git.heroku.com/app1.git',
+                      isReadOnly: false
+                    }
+                  ]
+                }
+              } as unknown as Repository
+            ]
+          })
+        } as unknown as GitExtension
+      } as vscode.Extension<GitExtension>;
+    });
+    sinon.replaceGetter(vscode.workspace, 'workspaceFolders', () => [mockWorkspaceFolder]);
   });
 
   teardown(() => {

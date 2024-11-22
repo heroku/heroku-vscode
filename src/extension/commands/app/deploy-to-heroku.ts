@@ -199,12 +199,14 @@ export class DeployToHeroku extends HerokuCommand<void> {
     try {
       await vscode.workspace.fs.stat(this.appJsonUri);
     } catch {
-      await vscode.window.showErrorMessage('Nn app.json file found. Deployment cannot continue', 'OK');
+      await vscode.window.showErrorMessage('No app.json file found. Deployment cannot continue', 'OK');
+      return false;
     }
     try {
       await vscode.workspace.fs.stat(this.procFileUri);
     } catch {
       await vscode.window.showErrorMessage('No Procfile found. Deployment cannot continue', 'OK');
+      return false;
     }
     // The user has no git repo initialized in this
     // workspace. Since Heroku requires a location

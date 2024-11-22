@@ -1,80 +1,72 @@
-import proxyquire from 'proxyquire';
 import assert from 'assert';
 import sinon from 'sinon';
+import vscode from 'vscode';
+import type { GitExtension, Remote, Repository } from '../git';
+import { getHerokuAppNames } from './git-utils';
 
 suite('Git Utils', () => {
-  let gitUtils: { findGitConfigFileLocation: CallableFunction; getHerokuAppNames: CallableFunction };
-  let execStub: sinon.SinonStub;
-  let vscodeStub: {};
+  let gitRemotes: Remote[];
 
   setup(() => {
-    execStub = sinon.stub();
-    vscodeStub = {
-      workspace: {
-        workspaceFolders: [{ uri: { path: '/test/path' } }]
+    gitRemotes = [
+      {
+        name: 'heroku',
+        pushUrl: 'https://git.heroku.com/app1.git',
+        isReadOnly: false
+      },
+      {
+        name: 'heroku-staging',
+        pushUrl: 'https://git.heroku.com/app2-staging.git',
+        isReadOnly: false
+      },
+      {
+        name: 'origin',
+        pushUrl: 'https://github.com/user/repo.git',
+        isReadOnly: false
       }
-    };
-
-    gitUtils = proxyquire('./git-utils', {
-      'node:child_process': { exec: execStub },
-      vscode: vscodeStub
+    ];
+    const mockWorkspaceFolder: vscode.WorkspaceFolder = {
+      uri: vscode.Uri.file('/test/path')
+    } as vscode.WorkspaceFolder;
+    sinon.replace(vscode.extensions, 'getExtension', (): any => {
+      return {
+        isActive: true,
+        exports: {
+          getAPI: () => ({
+            repositories: [
+              {
+                rootUri: vscode.Uri.file('/test/path'),
+                state: { remotes: gitRemotes }
+              } as unknown as Repository
+            ]
+          })
+        } as unknown as GitExtension
+      } as vscode.Extension<GitExtension>;
     });
+    sinon.replaceGetter(vscode.workspace, 'workspaceFolders', () => [mockWorkspaceFolder]);
   });
 
   teardown(() => {
     sinon.restore();
   });
 
-  suite('findGitConfigFileLocation', () => {
-    test('should return the git config file location', async () => {
-      execStub.yields(null, { stdout: '.git' });
-
-      const result = await gitUtils.findGitConfigFileLocation();
-      assert.strictEqual(result, '/test/path/.git/config');
-      assert(execStub.calledOnce);
-      assert.strictEqual(execStub.firstCall.args[0], 'git rev-parse --git-dir');
-    });
-
-    test('should throw an error if git command fails', async () => {
-      execStub.yields(null, { stderr: 'Git error' });
-
-      await assert.rejects(async () => await gitUtils.findGitConfigFileLocation(), { message: 'Git error' });
-    });
-  });
-
   suite('getHerokuAppNames', () => {
     test('should return an array of Heroku app names', async () => {
-      const gitRemotes = `
-        heroku\thttps://git.heroku.com/app1.git (fetch)
-        heroku\thttps://git.heroku.com/app1.git (push)
-        origin\thttps://github.com/user/repo.git (fetch)
-        origin\thttps://github.com/user/repo.git (push)
-        heroku-staging\thttps://git.heroku.com/app2-staging.git (fetch)
-        heroku-staging\thttps://git.heroku.com/app2-staging.git (push)
-      `;
-      execStub.yields(null, { stdout: gitRemotes });
-
-      const result = await gitUtils.getHerokuAppNames();
+      const result = await getHerokuAppNames();
       assert.deepStrictEqual(result, ['app1', 'app2-staging']);
-      assert(execStub.calledOnce);
-      assert.strictEqual(execStub.firstCall.args[0], 'git remote -v');
     });
 
     test('should return an empty array if no Heroku remotes are found', async () => {
-      const gitRemotes = `
-        origin\thttps://github.com/user/repo.git (fetch)
-        origin\thttps://github.com/user/repo.git (push)
-      `;
-      execStub.yields(null, { stdout: gitRemotes });
+      gitRemotes = [
+        {
+          name: 'origin',
+          pushUrl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+          isReadOnly: false
+        }
+      ];
 
-      const result = await gitUtils.getHerokuAppNames();
+      const result = await getHerokuAppNames();
       assert.deepStrictEqual(result, []);
-    });
-
-    test('should throw an error if git command fails', async () => {
-      execStub.yields(null, { stderr: 'Git error' });
-
-      await assert.rejects(async () => await gitUtils.getHerokuAppNames(), { message: 'Git error' });
     });
   });
 });

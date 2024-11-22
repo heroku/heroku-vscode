@@ -8,7 +8,7 @@ import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { diff } from '../../utils/diff';
 import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
 import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
-import { findGitConfigFileLocation, getHerokuAppNames } from '../../utils/git-utils';
+import { getHerokuAppNames, getRootRepository } from '../../utils/git-utils';
 import { logExtensionEvent } from '../../utils/logger';
 import {
   LogStreamClient,
@@ -525,31 +525,19 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (this.watchGitConfigDisposable) {
       return;
     }
-    let configPath: string | undefined;
-    let apps: Set<string> = new Set();
-    try {
-      configPath = await findGitConfigFileLocation();
-    } catch {
-      // not a git directory
-      logExtensionEvent('Cannot watch git config: not a git directory');
-    }
+    let apps: Set<string> = new Set(await getHerokuAppNames());
+    const rootRepository = await getRootRepository();
 
-    if (configPath) {
-      const uri = vscode.Uri.file(configPath);
-      const gitConfigWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(uri, '*'));
-      apps = new Set(await getHerokuAppNames());
+    this.watchGitConfigDisposable = rootRepository?.state.onDidChange(async () => {
+      const maybeChangedApps = new Set(await getHerokuAppNames());
+      const { added, removed } = diff(apps, maybeChangedApps);
 
-      this.watchGitConfigDisposable = gitConfigWatcher.onDidCreate(async () => {
-        const maybeChangedApps = new Set(await getHerokuAppNames());
-        const { added, removed } = diff(apps, maybeChangedApps);
-
-        if (added.size || removed.size) {
-          apps = maybeChangedApps;
-          logExtensionEvent('Git config changed: syncing apps');
-          await this.syncApps({ added, removed });
-        }
-      });
-    }
+      if (added.size || removed.size) {
+        apps = maybeChangedApps;
+        logExtensionEvent('Git config changed: syncing apps');
+        await this.syncApps({ added, removed });
+      }
+    });
 
     await this.syncApps({ added: apps, removed: new Set() });
   }
