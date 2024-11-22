@@ -1,6 +1,6 @@
 import zlib from 'node:zlib';
-import tar from 'tar-stream';
 import vscode from 'vscode';
+import * as tar from 'tar-stream';
 import { getRootRepository } from './git-utils';
 
 /**

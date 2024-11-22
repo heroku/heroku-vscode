@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import * as gitUtils from '../../utils/git-utils';
 import { Readable, Writable } from 'node:stream';
 import type { HerokuResourceExplorerProvider } from './heroku-resource-explorer-provider';
-import { GitExtension, Repository } from '../../../../@types/git';
+import { GitExtension, Repository } from '../../git';
 
 suite('HerokuResourceExplorerProvider', () => {
   let provider: HerokuResourceExplorerProvider;
@@ -50,6 +50,8 @@ suite('HerokuResourceExplorerProvider', () => {
       .withArgs('heroku:auth:login')
       .resolves(sessionObject);
 
+    sinon.stub(vscode.commands, 'registerCommand').withArgs('heroku:sync-with-dashboard').callsFake;
+
     // LogStream stub
     stream = new Writable();
     const readable = Readable.from(
@@ -90,7 +92,6 @@ suite('HerokuResourceExplorerProvider', () => {
       .resolves(new Response(JSON.stringify({ ...mockDyno, name: 'web.2', id: randomUUID() })));
 
     sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
-    sinon.stub(vscode.commands, 'registerCommand');
 
     const HerokuResourceExplorerProviderCtor = proxyquire('./heroku-resource-explorer-provider', {
       getHerokuAppNames: () => Promise.resolve(['app1'])
@@ -196,7 +197,7 @@ suite('HerokuResourceExplorerProvider', () => {
     const fireStub = sinon.stub(provider, 'fire');
     await new Promise((resolve) => setTimeout(resolve, 1100)); // wait for the stream to get setup
     stream.emit('data', 'app[api]: Scaled to web@2:Standard-1X\n');
-    await new Promise((resolve) => setTimeout(resolve, 0)); // wait for promisified emit to complete
+    await new Promise((resolve) => setTimeout(resolve, 0)); // wait for proisified emit to complete
 
     assert.strictEqual(formation.quantity, 2);
     assert.ok(fireStub.calledWith(formation));
@@ -215,7 +216,7 @@ suite('HerokuResourceExplorerProvider', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 1100)); // wait for the stream to get setup
     stream.emit('data', 'heroku[web.1]: State changed from up to down\n');
-    await new Promise((resolve) => setTimeout(resolve, 0)); // wait for promisified emit to complete
+    await new Promise((resolve) => setTimeout(resolve, 0)); // wait for proisified emit to complete
 
     assert.strictEqual(dyno.state, 'down');
     assert.ok(fireStub.calledWith(dyno));
@@ -234,7 +235,7 @@ suite('HerokuResourceExplorerProvider', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 1100)); // wait for the stream to get setup
     stream.emit('data', 'heroku[web.2]: Starting process with command `npm start`\n');
-    await new Promise((resolve) => setTimeout(resolve, 5100)); // wait for promisified emit to complete
+    await new Promise((resolve) => setTimeout(resolve, 5100)); // wait for proisified emit to complete
 
     dynos = await provider.getChildren(dynosCategory);
 

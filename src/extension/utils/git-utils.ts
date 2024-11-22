@@ -1,27 +1,6 @@
-import path from 'node:path';
-import { exec as execProcess } from 'node:child_process';
-import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import { API, GitExtension, Repository } from '../git';
 import { logExtensionEvent } from './logger';
-const exec = promisify(execProcess);
-
-/**
- * Finds the git config file location and returns it
- * or undefined if not found.
- *
- * @returns string
- */
-export async function findGitConfigFileLocation(): Promise<string> {
-  const [ws] = vscode.workspace.workspaceFolders ?? [];
-  const cwd = ws?.uri.path ?? '.';
-  const { stdout, stderr } = await exec('git rev-parse --git-dir', { cwd });
-  if (stderr) {
-    throw new Error(stderr);
-  }
-  const configPath = path.join(cwd, stdout.trim(), 'config');
-  return configPath;
-}
 
 /**
  * Gets an array of Heroku app names from the git remotes or
@@ -38,21 +17,23 @@ export async function getHerokuAppNames(): Promise<string[]> {
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  const { stdout, stderr } = await exec('git remote -v', { cwd: ws?.uri.path ?? '.' });
-  if (stderr) {
-    throw new Error(stderr);
+  const rootRepository = await getRootRepository();
+  const remotes = rootRepository?.state.remotes;
+
+  if (!remotes) {
+    return [];
   }
-  const lines = stdout.trim().split('\n');
-  const remotes = lines.map((line) => line.trim().split(/\s+/)).map(([name, url, kind]) => ({ name, url, kind }));
-  const herokuRemotes = remotes.filter((remote) => remote.name.includes('heroku') && !!remote.url?.includes('heroku'));
+  const herokuRemotes = remotes.filter(
+    (remote) => remote.name.includes('heroku') && !!remote.pushUrl?.includes('heroku')
+  );
 
   const appNames = new Set<string>();
   for (const herokuRemote of herokuRemotes ?? []) {
-    const { url } = herokuRemote;
-    if (!URL.canParse(url)) {
+    const { pushUrl } = herokuRemote;
+    if (!URL.canParse(pushUrl!)) {
       continue;
     }
-    const { pathname } = new URL(url);
+    const { pathname } = new URL(pushUrl!);
     appNames.add(pathname.replaceAll(/(\/|.git)/g, ''));
   }
   return Array.from(appNames.values());
@@ -68,14 +49,25 @@ export async function getGitExtensionApi(): Promise<API> {
   const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
   if (!gitExtension) {
     const message =
-      'The VSCode Git extension was requested but was not found. Please verify that the VSCode Git extension install and enabled.';
+      'The VSCode Git extension was requested but was not found. Please verify that the VSCode Git extension is installed and enabled.';
     logExtensionEvent(message);
     throw new ReferenceError(message);
   }
   if (!gitExtension.isActive) {
     await gitExtension.activate();
   }
-  return gitExtension.exports.getAPI(1);
+  const api = gitExtension.exports.getAPI(1);
+  if (api.state === 'uninitialized') {
+    const d = await new Promise<vscode.Disposable>((resolve) => {
+      const disposable = api.onDidChangeState((state) => {
+        if (state === 'initialized') {
+          resolve(disposable);
+        }
+      });
+    });
+    d.dispose();
+  }
+  return api;
 }
 
 /**
@@ -89,6 +81,5 @@ export async function getRootRepository(): Promise<Repository | undefined> {
   if (!ws) {
     return undefined;
   }
-  const rootRepository = gitExtension?.repositories.find((repo) => repo.rootUri.path === ws.uri.path);
-  return rootRepository;
+  return gitExtension?.repositories.find((repo) => repo.rootUri.path === ws.uri.path);
 }

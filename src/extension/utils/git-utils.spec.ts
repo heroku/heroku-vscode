@@ -1,7 +1,7 @@
 import assert from 'assert';
 import sinon from 'sinon';
 import vscode from 'vscode';
-import type { GitExtension, Remote, Repository } from '../../../@types/git';
+import type { GitExtension, Remote, Repository } from '../git';
 import { getHerokuAppNames } from './git-utils';
 
 suite('Git Utils', () => {

@@ -18,10 +18,9 @@ export class AppJsonDecorator {
     if (!editor) {
       return;
     }
-
+    const rootWorkspaceUri = vscode.workspace.workspaceFolders![0].uri;
     const document = editor.document;
-    const isRootAppJson =
-      document.uri.fsPath === vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'app.json').fsPath;
+    const isRootAppJson = document.uri.fsPath === vscode.Uri.joinPath(rootWorkspaceUri, 'app.json').fsPath;
     if (!isRootAppJson) {
       return;
     }
