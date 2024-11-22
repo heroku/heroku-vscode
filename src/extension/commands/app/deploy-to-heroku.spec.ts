@@ -2,12 +2,11 @@ import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import assert from 'node:assert';
 import { DeployToHeroku } from './deploy-to-heroku';
-import { GitExtension, Repository } from '../../git';
+import { Branch, GitExtension, Repository } from '../../git';
 import SourceService from '@heroku-cli/schema/services/source-service.js';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
 import AppService from '@heroku-cli/schema/services/app-service.js';
-import BuildService from '@heroku-cli/schema/services/build-service.js';
-import { App } from '@heroku-cli/schema';
+import { SourceBlob } from '@heroku-cli/schema';
 
 suite('DeployToHeroku Tests', () => {
   let command: DeployToHeroku;
@@ -16,16 +15,8 @@ suite('DeployToHeroku Tests', () => {
   let mockAuthentication: sinon.SinonStubbedInstance<typeof vscode.authentication>;
   let mockCommands: sinon.SinonStubbedInstance<typeof vscode.commands>;
   let mockSourcesService: Pick<SourceService, 'create'> & { create: sinon.SinonStub };
-  let mockAppSetupService: Pick<AppSetupService, 'create' | 'info'> & {
-    create: sinon.SinonStub;
-    info: sinon.SinonStub;
-  };
-  let mockBuildService: Pick<BuildService, 'create' | 'info'> & {
-    create: sinon.SinonStub;
-    info: sinon.SinonStub;
-  };
+  let mockAppSetupService: Pick<AppSetupService, 'create'> & { create: sinon.SinonStub };
   let mockAppService: Pick<AppService, 'info'> & { info: sinon.SinonStub };
-
   let mockWorkspaceFolder: vscode.WorkspaceFolder;
   let fetchStub: typeof fetch & sinon.SinonStub;
 
@@ -35,12 +26,7 @@ suite('DeployToHeroku Tests', () => {
       create: sinon.stub()
     };
     mockAppSetupService = {
-      create: sinon.stub(),
-      info: sinon.stub()
-    };
-    mockBuildService = {
-      create: sinon.stub(),
-      info: sinon.stub()
+      create: sinon.stub()
     };
     mockAppService = {
       info: sinon.stub()
@@ -48,7 +34,6 @@ suite('DeployToHeroku Tests', () => {
     fetchStub = sinon.stub(globalThis, 'fetch');
     fetchStub
       .withArgs('test-put-url', {
-        signal: sinon.match.any,
         method: 'PUT',
         body: sinon.match.any
       })
@@ -80,8 +65,7 @@ suite('DeployToHeroku Tests', () => {
               {
                 rootUri: vscode.Uri.file('/workspace/app.json'),
                 checkIgnore: () => new Set(),
-                addRemote: sinon.stub().resolves(),
-                state: { remotes: [] }
+                addRemote: sinon.stub().resolves()
               } as unknown as Repository
             ]
           })
@@ -93,7 +77,6 @@ suite('DeployToHeroku Tests', () => {
     sinon.replaceGetter(vscode.workspace, 'workspaceFolders', () => [mockWorkspaceFolder]);
     command = new DeployToHeroku();
     Reflect.set(command, 'appSetupService', mockAppSetupService);
-    Reflect.set(command, 'buildService', mockBuildService);
     Reflect.set(command, 'appService', mockAppService);
     Reflect.set(command, 'sourcesService', mockSourcesService);
   });
@@ -102,23 +85,16 @@ suite('DeployToHeroku Tests', () => {
     sinon.restore();
   });
 
-  test('run() - successful new app deployment flow', async () => {
+  test('run() - successful deployment flow', async () => {
     mockWindow.withProgress.callThrough();
     const mockAccessToken = 'test-token';
+    const mockAppJson = { name: 'test-app' };
     const mockAppSetup = {
-      build: {
-        id: 'test-id',
-        app: {
-          id: 'test-id',
-          name: 'test-app'
-        }
-      },
       app: {
         id: 'test-id',
         name: 'test-app'
       }
     };
-    const mockAppJson = { name: 'test-app' };
 
     mockAuthentication.getSession.resolves({ accessToken: mockAccessToken } as vscode.AuthenticationSession);
     mockWorkspaceFs.stat.resolves();
@@ -130,62 +106,26 @@ suite('DeployToHeroku Tests', () => {
       }
     });
     mockAppSetupService.create.resolves(mockAppSetup);
-    mockAppSetupService.info.resolves(mockAppSetup);
     mockAppService.info.resolves({ git_url: 'test-git-url' });
 
-    await command.run(null, null);
+    await command.run();
 
     assert.ok(mockSourcesService.create.calledOnce);
     assert.ok(mockAppSetupService.create.calledOnce);
-    assert.ok(mockAppSetupService.info.calledOnce);
     assert.ok(mockAppService.info.calledOnce);
   });
 
-  test('run() - successful existing app deployment flow', async () => {
-    mockWindow.withProgress.callThrough();
-    const mockAccessToken = 'test-token';
-    const mockApp = {
-      id: 'test-id',
-      name: 'test-app'
-    };
-    const mockBuild = {
-      id: 'test-id',
-      status: 'successful',
-      app: mockApp
-    };
-
-    mockAuthentication.getSession.resolves({ accessToken: mockAccessToken } as vscode.AuthenticationSession);
-    mockWorkspaceFs.stat.resolves();
-    mockWorkspaceFs.readFile.resolves(new Uint8Array([0, 1]));
-    mockSourcesService.create.resolves({
-      source_blob: {
-        put_url: 'test-put-url',
-        get_url: 'test-get-url'
-      }
-    });
-    mockBuildService.create.resolves(mockBuild);
-    mockAppService.info.resolves({ git_url: 'test-git-url' });
-
-    await command.run(mockApp as App, null);
-
-    assert.ok(mockSourcesService.create.calledOnce);
-    assert.ok(mockBuildService.create.calledOnce);
-    assert.ok(mockBuildService.info.calledOnce);
-  });
-
-  test('validateProcfile() - missing Procfile', async () => {
+  test('validateWorkspace() - missing app.json', async () => {
     mockWorkspaceFs.stat.rejects(new Error('File not found'));
 
-    assert.rejects(command['validateProcfile'](), 'No Procfile found. Deployment cannot continue.');
+    const result = await command['validateWorkspace']();
+
+    assert.ok(!result);
+    assert.equal(mockWindow.showErrorMessage.args[0][0], 'No app.json file found. Deployment cannot continue');
+    assert.equal(mockWindow.showErrorMessage.args[0][1], 'OK');
   });
 
-  test('validateProcfile() - Procfile exists', async () => {
-    mockWorkspaceFs.stat.resolves({});
-
-    assert.doesNotReject(command['validateProcfile']());
-  });
-
-  test('validateAppJson() - valid app.json', async () => {
+  test('validateAndReturnAppJson() - valid app.json', async () => {
     const validAppJson = {
       name: 'test-app',
       description: 'test description'
@@ -193,26 +133,44 @@ suite('DeployToHeroku Tests', () => {
     mockWorkspaceFs.stat.resolves();
     mockWorkspaceFs.readFile.resolves(Buffer.from(JSON.stringify(validAppJson)));
 
-    const result = await command['validateAppJson']();
+    const result = await command['validateAndReturnAppJson']();
 
     assert.deepEqual(result, validAppJson);
   });
 
-  test('validateAppJson() - invalid app.json', async () => {
-    const invalidAppJson = {
-      name: '2134test-app',
-      description: 'test description'
+  test('deployToHeroku() - successful deployment', async () => {
+    const mockSourceBlob = {
+      put_url: 'test-put-url',
+      get_url: 'test-get-url'
     };
-    mockWorkspaceFs.stat.resolves();
-    mockWorkspaceFs.readFile.resolves(Buffer.from(JSON.stringify(invalidAppJson)));
+    const mockAppSetup = {
+      app: {
+        id: 'test-id',
+        name: 'test-app'
+      }
+    };
 
-    assert.rejects(command['validateAppJson']());
+    mockSourcesService.create.resolves({ source_blob: mockSourceBlob });
+    global.fetch = sinon.stub().resolves({ ok: true });
+    mockAppSetupService.create.resolves(mockAppSetup);
+    mockAppService.info.resolves({ git_url: 'test-git-url' });
+
+    const result = await command['deployToHeroku']();
+
+    assert.deepEqual(result, mockAppSetup);
+    assert.ok(mockSourcesService.create.calledOnce);
+    assert.ok(mockAppSetupService.create.calledOnce);
   });
 
-  test('validateAppJson() - app.json missing', async () => {
-    mockWorkspaceFs.stat.rejects();
+  test('askToContinueWithDirtyBranch() - user confirms', async () => {
+    mockWindow.showWarningMessage.resolves('Yes' as unknown as vscode.MessageItem);
+    const branch = { name: 'main' } as Branch;
+    const appJsonChanged = true;
 
-    assert.rejects(command['validateAppJson']());
+    const result = await command['askToContinueWithDirtyBranch'](branch, appJsonChanged);
+
+    assert.ok(result);
+    assert.ok(mockWindow.showWarningMessage.calledOnce);
   });
 
   test('deployToHeroku() - upload failure', async () => {
