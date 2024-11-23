@@ -9,6 +9,7 @@ import { AuthCompletionInfo, LoginCommand } from './login';
 import { HerokuCommand } from '../heroku-command';
 import { setup, teardown } from 'mocha';
 import { EventEmitter } from 'node:stream';
+import { writeFile } from 'node:fs';
 
 suite('The LoginCommand', () => {
   let execStub: sinon.SinonStub;
@@ -37,14 +38,19 @@ suite('The LoginCommand', () => {
     };
 
     sinon.stub(vscode.workspace, 'createFileSystemWatcher').returns({
-      onDidChange: (cb: CallableFunction) => cb(),
+      onDidChange: (cb: CallableFunction) => {
+        cb();
+        return { dispose: async () => void 0 };
+      },
       onDidCreate: () => {},
       onDidDelete: () => {},
       dispose: () => {}
     } as unknown as vscode.FileSystemWatcher);
 
     sinon.stub(vscode.workspace, 'fs').value({
-      readFile: async () => Buffer.from('Logged in as tester123@heroku.com')
+      readFile: async () => Buffer.from('Logged in as tester123@heroku.com'),
+      writeFile: async () => {},
+      delete: async () => {}
     } as unknown as vscode.FileSystem);
 
     sinon.stub(vscode.Uri, 'file').returns(logFile);

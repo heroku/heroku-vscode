@@ -81,32 +81,28 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
   private async runInTerminal(): Promise<AuthCompletionInfo> {
     const stdoutFileLoc = vscode.Uri.file(`${os.tmpdir()}/${Date.now()}-auth-result.log`);
     const successWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(stdoutFileLoc, '*'));
-
+    await vscode.workspace.fs.writeFile(stdoutFileLoc, new Uint8Array());
     // stdout, stderr
+    let watcherDisposable: vscode.Disposable | undefined;
     const resultPromise = new Promise<AuthCompletionInfo>((resolve) => {
-      successWatcher.onDidChange(async (file: vscode.Uri) => {
+      watcherDisposable = successWatcher.onDidChange(async (file: vscode.Uri) => {
         const buffer = await vscode.workspace.fs.readFile(file);
         const result = buffer.toString();
 
         const resultLc = result.toLocaleLowerCase();
-
+        const response: AuthCompletionInfo = {
+          authType: 'terminal',
+          errorMessage: '',
+          exitCode: 0,
+          output: result
+        };
         // Auth success
         if (resultLc.includes('logged in as')) {
-          resolve({
-            authType: 'terminal',
-            errorMessage: '',
-            exitCode: 0,
-            output: result
-          });
+          resolve(response);
         }
         // Auth failed
-        if (resultLc.includes('error:')) {
-          resolve({
-            authType: 'terminal',
-            errorMessage: result,
-            exitCode: 1,
-            output: ''
-          });
+        if (resultLc.includes('error:') || resultLc.includes('command not found')) {
+          resolve({ ...response, exitCode: 1 });
         }
       });
     });
@@ -153,9 +149,13 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
     logExtensionEvent(`using ${stdoutFileLoc.fsPath} to log auth responses from sever`);
 
     const result = await Promise.race([resultPromise, terminalClosePromise, timeoutPromise]);
+
+    // Cleanup
     successWatcher.dispose();
     terminal.dispose();
     terminalClosedDisposable?.dispose();
+    watcherDisposable?.dispose();
+    await vscode.workspace.fs.delete(stdoutFileLoc, { useTrash: false });
 
     return result;
   }

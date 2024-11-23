@@ -44,6 +44,7 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
             'Not now'
           );
           if (action === affirmative) {
+            progess.report({ increment: 100 });
             return this.run();
           }
         }
