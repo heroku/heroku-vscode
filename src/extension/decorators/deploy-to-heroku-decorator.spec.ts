@@ -3,8 +3,9 @@ import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { activate, DeployToHerokuDecorator } from './deploy-to-heroku-decorator';
 import { DeployToHeroku } from '../commands/app/deploy-to-heroku';
+import { mock } from 'node:test';
 
-suite('DeployToHerokuDecorator Tests', () => {
+suite('AppJsonDecorator Tests', () => {
   let decorator: DeployToHerokuDecorator;
   let mockContext: vscode.ExtensionContext;
   let mockEditor: vscode.TextEditor;

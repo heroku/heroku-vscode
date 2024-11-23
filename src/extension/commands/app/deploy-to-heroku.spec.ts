@@ -2,11 +2,10 @@ import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import assert from 'node:assert';
 import { DeployToHeroku } from './deploy-to-heroku';
-import { Branch, GitExtension, Repository } from '../../git';
+import { GitExtension, Repository } from '../../git';
 import SourceService from '@heroku-cli/schema/services/source-service.js';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
 import AppService from '@heroku-cli/schema/services/app-service.js';
-import { SourceBlob } from '@heroku-cli/schema';
 
 suite('DeployToHeroku Tests', () => {
   let command: DeployToHeroku;
@@ -15,7 +14,10 @@ suite('DeployToHeroku Tests', () => {
   let mockAuthentication: sinon.SinonStubbedInstance<typeof vscode.authentication>;
   let mockCommands: sinon.SinonStubbedInstance<typeof vscode.commands>;
   let mockSourcesService: Pick<SourceService, 'create'> & { create: sinon.SinonStub };
-  let mockAppSetupService: Pick<AppSetupService, 'create'> & { create: sinon.SinonStub };
+  let mockAppSetupService: Pick<AppSetupService, 'create' | 'info'> & {
+    create: sinon.SinonStub;
+    info: sinon.SinonStub;
+  };
   let mockAppService: Pick<AppService, 'info'> & { info: sinon.SinonStub };
   let mockWorkspaceFolder: vscode.WorkspaceFolder;
   let fetchStub: typeof fetch & sinon.SinonStub;
@@ -26,7 +28,8 @@ suite('DeployToHeroku Tests', () => {
       create: sinon.stub()
     };
     mockAppSetupService = {
-      create: sinon.stub()
+      create: sinon.stub(),
+      info: sinon.stub()
     };
     mockAppService = {
       info: sinon.stub()
@@ -34,6 +37,7 @@ suite('DeployToHeroku Tests', () => {
     fetchStub = sinon.stub(globalThis, 'fetch');
     fetchStub
       .withArgs('test-put-url', {
+        signal: sinon.match.any,
         method: 'PUT',
         body: sinon.match.any
       })
@@ -106,26 +110,29 @@ suite('DeployToHeroku Tests', () => {
       }
     });
     mockAppSetupService.create.resolves(mockAppSetup);
+    mockAppSetupService.info.resolves({});
     mockAppService.info.resolves({ git_url: 'test-git-url' });
 
-    await command.run();
+    await command.run(null, null);
 
     assert.ok(mockSourcesService.create.calledOnce);
     assert.ok(mockAppSetupService.create.calledOnce);
     assert.ok(mockAppService.info.calledOnce);
   });
 
-  test('validateWorkspace() - missing app.json', async () => {
+  test('validateProcfile() - missing Procfile', async () => {
     mockWorkspaceFs.stat.rejects(new Error('File not found'));
 
-    const result = await command['validateWorkspace']();
-
-    assert.ok(!result);
-    assert.equal(mockWindow.showErrorMessage.args[0][0], 'No app.json file found. Deployment cannot continue');
-    assert.equal(mockWindow.showErrorMessage.args[0][1], 'OK');
+    assert.rejects(command['validateProcfile'](), 'No Procfile found. Deployment cannot continue.');
   });
 
-  test('validateAndReturnAppJson() - valid app.json', async () => {
+  test('validateProcfile() - Procfile exists', async () => {
+    mockWorkspaceFs.stat.resolves({});
+
+    assert.doesNotReject(command['validateProcfile']());
+  });
+
+  test('validateAppJson() - valid app.json', async () => {
     const validAppJson = {
       name: 'test-app',
       description: 'test description'
@@ -133,9 +140,26 @@ suite('DeployToHeroku Tests', () => {
     mockWorkspaceFs.stat.resolves();
     mockWorkspaceFs.readFile.resolves(Buffer.from(JSON.stringify(validAppJson)));
 
-    const result = await command['validateAndReturnAppJson']();
+    const result = await command['validateAppJson']();
 
     assert.deepEqual(result, validAppJson);
+  });
+
+  test('validateAppJson() - invalid app.json', async () => {
+    const invalidAppJson = {
+      name: '2134test-app',
+      description: 'test description'
+    };
+    mockWorkspaceFs.stat.resolves();
+    mockWorkspaceFs.readFile.resolves(Buffer.from(JSON.stringify(invalidAppJson)));
+
+    assert.rejects(command['validateAppJson']());
+  });
+
+  test('validateAppJson() - app.json missing', async () => {
+    mockWorkspaceFs.stat.rejects();
+
+    assert.rejects(command['validateAppJson']());
   });
 
   test('deployToHeroku() - successful deployment', async () => {
@@ -149,7 +173,7 @@ suite('DeployToHeroku Tests', () => {
         name: 'test-app'
       }
     };
-
+    mockAppSetupService.info.resolves({});
     mockSourcesService.create.resolves({ source_blob: mockSourceBlob });
     global.fetch = sinon.stub().resolves({ ok: true });
     mockAppSetupService.create.resolves(mockAppSetup);
@@ -160,17 +184,6 @@ suite('DeployToHeroku Tests', () => {
     assert.deepEqual(result, mockAppSetup);
     assert.ok(mockSourcesService.create.calledOnce);
     assert.ok(mockAppSetupService.create.calledOnce);
-  });
-
-  test('askToContinueWithDirtyBranch() - user confirms', async () => {
-    mockWindow.showWarningMessage.resolves('Yes' as unknown as vscode.MessageItem);
-    const branch = { name: 'main' } as Branch;
-    const appJsonChanged = true;
-
-    const result = await command['askToContinueWithDirtyBranch'](branch, appJsonChanged);
-
-    assert.ok(result);
-    assert.ok(mockWindow.showWarningMessage.calledOnce);
   });
 
   test('deployToHeroku() - upload failure', async () => {
