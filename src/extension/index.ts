@@ -15,7 +15,7 @@ import { WhoAmI, WhoAmIResult } from './commands/auth/whoami';
 import { logExtensionEvent } from './utils/logger';
 import { WelcomeViewSignIn } from './commands/auth/welcome-view-sign-in';
 import * as herokuShellCommandDecorator from './decorators/heroku-shell-command-decorator';
-import * as herokuAppJsonDecorator from './decorators/app-json-decorator';
+import * as herokuAppJsonDecorator from './decorators/deploy-to-heroku-decorator';
 
 const authProviderId = 'heroku:auth:login';
 /**

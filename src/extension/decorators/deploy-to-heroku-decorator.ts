@@ -4,7 +4,7 @@ import { DeployToHeroku } from '../commands/app/deploy-to-heroku';
 /**
  *
  */
-export class AppJsonDecorator {
+export class DeployToHerokuDecorator {
   protected decoration: vscode.TextEditorDecorationType | undefined;
 
   /**
@@ -13,7 +13,7 @@ export class AppJsonDecorator {
    *
    * @param context The extension context
    */
-  public decorateAppJson(context: vscode.ExtensionContext): void {
+  public maybeDecorate(context: vscode.ExtensionContext): void {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       return;
@@ -21,7 +21,8 @@ export class AppJsonDecorator {
     const rootWorkspaceUri = vscode.workspace.workspaceFolders![0].uri;
     const document = editor.document;
     const isRootAppJson = document.uri.fsPath === vscode.Uri.joinPath(rootWorkspaceUri, 'app.json').fsPath;
-    if (!isRootAppJson) {
+    const isRootProcFile = document.uri.fsPath === vscode.Uri.joinPath(rootWorkspaceUri, 'Procfile').fsPath;
+    if (!isRootAppJson && !isRootProcFile) {
       return;
     }
     const hoverMessage = new vscode.MarkdownString(
@@ -70,22 +71,21 @@ export class AppJsonDecorator {
 }
 
 /**
- * Activates the app.json decorator
+ * Activates the deploy to Heroku decorator
  *
  * @param context The extension context
  * @returns A disposable that releases resources and removes listeners
  */
 export function activate(context: vscode.ExtensionContext): vscode.Disposable {
-  const appJsonDecorator = new AppJsonDecorator();
+  const deployToHerokuDecorator = new DeployToHerokuDecorator();
   /**
    * Change function
    */
   function changeFunction(): void {
     const editor = vscode.window.activeTextEditor;
-    if (editor?.document.languageId !== 'json') {
-      return;
+    if (editor?.document.languageId === 'json' || editor?.document.languageId === 'plaintext') {
+      deployToHerokuDecorator.maybeDecorate(context);
     }
-    appJsonDecorator.decorateAppJson(context);
   }
   const disposables: vscode.Disposable[] = [
     vscode.window.onDidChangeVisibleTextEditors(changeFunction),
@@ -95,7 +95,7 @@ export function activate(context: vscode.ExtensionContext): vscode.Disposable {
 
   return {
     dispose(): void {
-      appJsonDecorator.dispose();
+      deployToHerokuDecorator.dispose();
       disposables.forEach((disposable) => void disposable.dispose());
     }
   };

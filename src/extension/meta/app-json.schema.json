@@ -4,7 +4,7 @@
   "properties": {
     "name": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
+      "pattern": "^[A-Za-z][a-zA-Z0-9_:\\- ]*$",
       "maxLength": 30
     },
     "description": {

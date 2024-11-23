@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import * as sinon from 'sinon';
-import { activate, AppJsonDecorator } from './app-json-decorator';
+import { activate, DeployToHerokuDecorator } from './deploy-to-heroku-decorator';
 import { DeployToHeroku } from '../commands/app/deploy-to-heroku';
 import { mock } from 'node:test';
 
 suite('AppJsonDecorator Tests', () => {
-  let decorator: AppJsonDecorator;
+  let decorator: DeployToHerokuDecorator;
   let mockContext: vscode.ExtensionContext;
   let mockEditor: vscode.TextEditor;
   let mockDocument: vscode.TextDocument;
@@ -56,7 +56,7 @@ suite('AppJsonDecorator Tests', () => {
       dispose: sandbox.stub()
     } as unknown as vscode.TextEditorDecorationType);
 
-    decorator = new AppJsonDecorator();
+    decorator = new DeployToHerokuDecorator();
   });
 
   teardown(() => {
@@ -64,7 +64,7 @@ suite('AppJsonDecorator Tests', () => {
   });
 
   test('decorateAppJson should add decorations when file is root app.json', () => {
-    decorator.decorateAppJson(mockContext);
+    decorator.maybeDecorate(mockContext);
 
     assert.strictEqual(
       (mockEditor.setDecorations as sinon.SinonStub).calledOnce,
@@ -86,7 +86,7 @@ suite('AppJsonDecorator Tests', () => {
   test('decorateAppJson should not add decorations when no active editor', () => {
     sandbox.stub(vscode.window, 'activeTextEditor').get(() => undefined);
 
-    decorator.decorateAppJson(mockContext);
+    decorator.maybeDecorate(mockContext);
 
     assert.strictEqual(
       (mockEditor.setDecorations as sinon.SinonStub).called,
@@ -103,7 +103,7 @@ suite('AppJsonDecorator Tests', () => {
 
     Reflect.set(mockEditor.document, 'uri', differentUri);
 
-    decorator.decorateAppJson(mockContext);
+    decorator.maybeDecorate(mockContext);
 
     assert.strictEqual(
       (mockEditor.setDecorations as sinon.SinonStub).called,
