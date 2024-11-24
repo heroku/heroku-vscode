@@ -15,7 +15,7 @@ import { WhoAmI, WhoAmIResult } from './commands/auth/whoami';
 import { logExtensionEvent } from './utils/logger';
 import { WelcomeViewSignIn } from './commands/auth/welcome-view-sign-in';
 import * as herokuShellCommandDecorator from './decorators/heroku-shell-command-decorator';
-import * as herokuAppJsonDecorator from './decorators/deploy-to-heroku-decorator';
+import * as deployToHerokuDecorator from './decorators/deploy-to-heroku-decorator';
 
 const authProviderId = 'heroku:auth:login';
 /**
@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
   context.subscriptions.push(
     herokuShellCommandDecorator.activate(context),
-    herokuAppJsonDecorator.activate(context),
+    deployToHerokuDecorator.activate(context),
     vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
 
     vscode.authentication.registerAuthenticationProvider(authProviderId, 'Heroku', new AuthenticationProvider(context)),
