@@ -2369,6 +2369,16 @@
         },
         {
           "when": "viewItem =~ /(heroku):(app)/",
+          "command": "heroku:deploy-to-heroku",
+          "group": "App@0"
+        },
+        {
+          "when": "viewItem =~ /(heroku):(app)/",
+          "command": "heroku:deploy-to-heroku",
+          "group": "inline@0"
+        },
+        {
+          "when": "viewItem =~ /(heroku):(app)/",
           "command": "heroku:open-app",
           "group": "App@1"
         },
@@ -2385,7 +2395,7 @@
         {
           "when": "viewItem =~ /(heroku):(app)/",
           "command": "heroku:access-settings",
-          "group": "inline@0"
+          "group": "inline@2"
         },
         {
           "when": "viewItem === heroku:app",
@@ -2395,17 +2405,17 @@
         {
           "when": "viewItem === heroku:app",
           "command": "heroku:start-log-session",
-          "group": "inline@2"
+          "group": "inline@3"
         },
         {
           "when": "viewItem === heroku:app:log-session-started",
           "command": "heroku:end-log-session",
-          "group": "App@3"
+          "group": "App@4"
         },
         {
           "when": "viewItem === heroku:app:log-session-started",
           "command": "heroku:end-log-session",
-          "group": "inline@2"
+          "group": "inline@4"
         },
         {
           "command": "heroku:user:addons:attach",
@@ -2707,6 +2717,11 @@
         "command": "heroku:open-app",
         "title": "Open app in browser",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "heroku:deploy-to-heroku",
+        "title": "Deploy to Heroku",
+        "icon": "$(hk-icon-deploy-16)"
       },
       {
         "command": "heroku:start-log-session",
