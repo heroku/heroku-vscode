@@ -27,6 +27,6 @@ export function logExtensionEvent(message: string): void {
 /**
  * Shows the output channel
  */
-export function showExtenionLogs(): void {
+export function showExtensionLogs(): void {
   logger.show();
 }

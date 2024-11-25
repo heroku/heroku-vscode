@@ -1,6 +1,6 @@
 import { herokuCommand } from '../../meta/command';
-import { HerokuCommand } from '../heroku-command';
 import type { HerokuCommandCompletionInfo } from '../heroku-command';
+import { HerokuCommand } from '../heroku-command';
 
 @herokuCommand()
 /**
@@ -18,7 +18,6 @@ export class LogoutCommand extends HerokuCommand<HerokuCommandCompletionInfo> {
    */
   public async run(): Promise<HerokuCommandCompletionInfo> {
     using logoutProcess = HerokuCommand.exec('heroku auth:logout', { signal: this.signal });
-    const result = await HerokuCommand.waitForCompletion(logoutProcess);
-    return result;
+    return await HerokuCommand.waitForCompletion(logoutProcess);
   }
 }
