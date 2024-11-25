@@ -9,14 +9,6 @@ import { logExtensionEvent } from './logger';
  * @returns string[] An array of app names derived from the git remotes.
  */
 export async function getHerokuAppNames(): Promise<string[]> {
-  let ws: vscode.WorkspaceFolder | undefined;
-  while (!ws) {
-    [ws] = vscode.workspace.workspaceFolders ?? [];
-    if (ws) {
-      break;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
   const rootRepository = await getRootRepository();
   const remotes = rootRepository?.state.remotes;
 

@@ -11,7 +11,7 @@ import { HerokuCommand } from '../heroku-command';
 import type { AppJson } from '../../meta/app-json-schema';
 import * as schema from '../../meta/app-json.schema.json';
 import { getHerokuAppNames, getRootRepository } from '../../utils/git-utils';
-import { logExtensionEvent, showExtenionLogs as showExtensionLogs } from '../../utils/logger';
+import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { packSources } from '../../utils/tarball';
 
 /**
@@ -248,7 +248,7 @@ export class DeployToHeroku extends HerokuCommand<void> {
         // Deploy to an existing app based on the user selection
         // provided the app still exists on Heroku and the user has
         // access to it.
-        if (maybeAppName !== 'Create new app') {
+        if (maybeAppName !== '(Create new app)') {
           try {
             targetApp = await this.appService.info(maybeAppName, this.requestInit);
             isExistingDeployment = true;
@@ -266,7 +266,7 @@ export class DeployToHeroku extends HerokuCommand<void> {
     if (!isExistingDeployment && result) {
       // Add the new remote to the workspace
       logExtensionEvent(`Adding remote heroku-${result.name}...`);
-      const app = await this.appService.info(result.app!.id, this.requestInit);
+      const app = await this.appService.info(result.name, this.requestInit);
       const rootRepository = await getRootRepository();
       if (!rootRepository) {
         logExtensionEvent(
