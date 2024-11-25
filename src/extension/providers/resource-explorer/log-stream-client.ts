@@ -2,6 +2,8 @@ import EventEmitter from 'node:events';
 import type { App, Dyno, Formation, TeamApp } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
 import { StartLogSession, type LogSessionStream } from '../../commands/app/context-menu/start-log-session';
+import { diff } from '../../utils/diff';
+import { logExtensionEvent } from '../../utils/logger';
 
 /**
  * LogStreamEventMap is a type alias for a map of log stream events.
@@ -195,8 +197,7 @@ export class LogStreamClient extends EventEmitter {
     const appsSet = new Set(this.#apps);
     const newAppsSet = new Set(value);
 
-    const toAttach = newAppsSet.difference(appsSet);
-    const toDetach = appsSet.difference(newAppsSet);
+    const { added: toAttach, removed: toDetach } = diff(appsSet, newAppsSet);
 
     this.detachLogStreams(Array.from(toDetach));
     this.#apps = value;
@@ -241,6 +242,11 @@ export class LogStreamClient extends EventEmitter {
    * @inheritdoc
    */
   public emit<K extends keyof LogStreamEventMap>(eventName: K, ...args: Parameters<LogStreamEventHandler<K>>): boolean {
+    if (eventName !== LogStreamEvents.STREAM_STARTED) {
+      const app = ('app' in args[0] ? args[0].app : args[0]) as App;
+      logExtensionEvent(`Detected log event: ${eventName} - ${app.name}`);
+    }
+
     return super.emit(eventName, ...args);
   }
 
@@ -257,6 +263,7 @@ export class LogStreamClient extends EventEmitter {
       app.logSession?.detach(this.onLogStreamData);
       app.logSession?.abort();
       app.logSession = undefined;
+      logExtensionEvent(`Detached log stream for ${app.name}`);
     }
   }
 
@@ -278,6 +285,7 @@ export class LogStreamClient extends EventEmitter {
     for (const result of logSessions) {
       const { status } = result;
       if (status === 'rejected') {
+        logExtensionEvent(`Live updates unavaiable: ${result.reason}`);
         continue;
       }
       const logSession = result.value;
@@ -285,6 +293,7 @@ export class LogStreamClient extends EventEmitter {
       logSession.onDidUpdateMute(() => this.emit(LogStreamEvents.MUTED_CHANGED, logSession.app as App));
       this.emit(LogStreamEvents.STREAM_STARTED, logSession.app as App);
       logSession.signal.addEventListener('abort', () => this.emit(LogStreamEvents.STREAM_ENDED, logSession.app as App));
+      logExtensionEvent(`Live updates active for ${logSession.app!.name}`);
     }
   }
 

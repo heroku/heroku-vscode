@@ -1,18 +1,16 @@
 import vscode from 'vscode';
 import { HerokuCommand } from '../heroku-command';
-import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
+import { herokuCommand } from '../../meta/command';
+import { logExtensionEvent } from '../../utils/logger';
 import { LoginCommand } from './login';
 
-@herokuCommand({
-  outputChannelId: HerokuOutputChannel.Authentication
-})
+@herokuCommand()
 /**
  * The WelcomeViewSignIn command is executed when the
  * user uses the "Sign in" button on the welcome screen.
  */
 export class WelcomeViewSignIn extends HerokuCommand<void> {
   public static COMMAND_ID = 'heroku:welcome:signin' as const;
-
   /**
    * Attempts to query the session info from the
    * authentication provider or enters into an
@@ -23,21 +21,36 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
    * @returns void
    */
   public async run(): Promise<void> {
-    try {
-      const session = await vscode.authentication.getSession(LoginCommand.COMMAND_ID, [], { createIfNone: true });
-      if (session?.accessToken) {
-        this.outputChannel?.appendLine(`Successfully authenticated as ${session.account.label}`);
+    await vscode.window.withProgress(
+      {
+        title: 'Authenticating with Heroku...',
+        location: vscode.ProgressLocation.Notification,
+        cancellable: true
+      },
+      async (progess, token) => {
+        try {
+          const cancellationPromise = new Promise((_, reject) => token.onCancellationRequested(reject));
+          const sessionPromise = vscode.authentication.getSession(LoginCommand.COMMAND_ID, [], { createIfNone: true });
+          const session = (await Promise.race([sessionPromise, cancellationPromise])) as vscode.AuthenticationSession;
+
+          if (session?.accessToken) {
+            logExtensionEvent(`Successfully authenticated as ${session.account.label}`);
+          }
+        } catch (error) {
+          const affirmative = 'Retry';
+          const action = await vscode.window.showErrorMessage(
+            'Authentication was unsucessful. Try again?',
+            affirmative,
+            'Not now'
+          );
+          if (action === affirmative) {
+            progess.report({ increment: 100 });
+            return this.run();
+          }
+        }
+        progess.report({ increment: 100 });
       }
-    } catch {
-      const affirmative = 'Retry';
-      const action = await vscode.window.showErrorMessage(
-        'Authentication was unsucessful. Try again?',
-        affirmative,
-        'Not now'
-      );
-      if (action === affirmative) {
-        return this.run();
-      }
-    }
+    );
+    logExtensionEvent('Authenticating with Heroku...');
   }
 }

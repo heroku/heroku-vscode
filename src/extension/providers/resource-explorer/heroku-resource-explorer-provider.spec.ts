@@ -1,23 +1,20 @@
 import * as assert from 'node:assert';
 import sinon from 'sinon';
+import proxyquire from 'proxyquire';
 import * as vscode from 'vscode';
-import { HerokuResourceExplorerProvider } from './heroku-resource-explorer-provider';
 import { App, Dyno, Formation, AddOn } from '@heroku-cli/schema';
 import { randomUUID } from 'node:crypto';
 import * as gitUtils from '../../utils/git-utils';
 import { Readable, Writable } from 'node:stream';
-import { WatchConfig } from '../../commands/git/watch-config';
+import type { HerokuResourceExplorerProvider } from './heroku-resource-explorer-provider';
 
 suite('HerokuResourceExplorerProvider', () => {
   let provider: HerokuResourceExplorerProvider;
   let mockContext: vscode.ExtensionContext;
   let getSessionStub: sinon.SinonStub;
-  let vsCodeExecCommandStub: sinon.SinonStub;
   let fetchStub: sinon.SinonStub;
   let elementTypeMap: Map<unknown, unknown>;
   let childParentMap: Map<unknown, unknown>;
-  let appToResourceMap: Map<unknown, unknown>;
-  let getHerokuAppNamesStub: sinon.SinonStub;
   let stream: Writable;
 
   const mockApp = { id: 'app1', name: 'test-app', organization: { name: 'test-org' } } as App;
@@ -53,14 +50,6 @@ suite('HerokuResourceExplorerProvider', () => {
       .resolves(sessionObject);
 
     sinon.stub(vscode.commands, 'registerCommand').withArgs('heroku:sync-with-dashboard').callsFake;
-    vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
-    vsCodeExecCommandStub.withArgs(WatchConfig.COMMAND_ID, sinon.match.any).resolves(
-      (function* () {
-        yield { added: new Set([mockApp.name]), removed: new Set() };
-      })()
-    );
-
-    vsCodeExecCommandStub.callThrough();
 
     // LogStream stub
     stream = new Writable();
@@ -101,15 +90,17 @@ suite('HerokuResourceExplorerProvider', () => {
       .withArgs('https://api.heroku.com/apps/app1/dynos/web.2')
       .resolves(new Response(JSON.stringify({ ...mockDyno, name: 'web.2', id: randomUUID() })));
 
-    getHerokuAppNamesStub = sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
+    sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
 
-    provider = new HerokuResourceExplorerProvider(mockContext);
+    const HerokuResourceExplorerProviderCtor = proxyquire('./heroku-resource-explorer-provider', {
+      getHerokuAppNames: () => Promise.resolve(['app1']),
+      findGitConfigFileLocation: () => Promise.resolve('/path/to/git/config')
+    }).HerokuResourceExplorerProvider;
+
+    provider = new HerokuResourceExplorerProviderCtor(mockContext);
 
     elementTypeMap = Reflect.get(provider, 'elementTypeMap') as Map<unknown, unknown>;
     childParentMap = Reflect.get(provider, 'childParentMap') as Map<unknown, unknown>;
-    appToResourceMap = Reflect.get(provider, 'appToResourceMap') as Map<unknown, unknown>;
-    // const tm = setTimeout;
-    // sinon.stub(globalThis, 'setTimeout').callsFake((cb: () => void) => tm(cb, 1))
   });
 
   teardown(() => {

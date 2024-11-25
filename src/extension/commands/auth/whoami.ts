@@ -13,6 +13,8 @@ export type WhoAmIResult = { account: Account; token: string };
  */
 export class WhoAmI<T extends WhoAmIResult = WhoAmIResult> extends HerokuCommand<T> {
   public static COMMAND_ID = 'heroku:auth:whoami' as const;
+  public static account: Account | undefined;
+
   protected accountService = new AccountService(fetch, 'https://api.heroku.com');
 
   /**
@@ -20,12 +22,16 @@ export class WhoAmI<T extends WhoAmIResult = WhoAmIResult> extends HerokuCommand
    * the identity of the user or null if no user is
    * signed in.
    *
+   * @param omitToken Omits the bearer token from the results.
    * @returns The identity of the current user or null if no user is signed in.
    */
-  public async run(): Promise<T> {
-    const token = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID); // throws if not logged in
+  public async run(omitToken = false): Promise<T> {
+    const token = omitToken ? undefined : await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
+    if (!token) {
+      return { token: '', account: WhoAmI.account ?? {} } as T;
+    }
     const requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${token}` } };
-    const account = await this.accountService.info(requestInit);
+    const account = (WhoAmI.account ??= await this.accountService.info(requestInit));
     return { token, account } as T;
   }
 }

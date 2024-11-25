@@ -5,10 +5,11 @@ import DynoService from '@heroku-cli/schema/services/dyno-service.js';
 import vscode from 'vscode';
 
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
+import { diff } from '../../utils/diff';
 import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
-
-import { GitRemoteAppsDiff as AppsDiff, WatchConfig } from '../../commands/git/watch-config';
 import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
+import { findGitConfigFileLocation, getHerokuAppNames } from '../../utils/git-utils';
+import { logExtensionEvent } from '../../utils/logger';
 import {
   LogStreamClient,
   LogStreamEvents,
@@ -35,6 +36,7 @@ import '../../commands/app/context-menu/end-log-session';
 import '../../commands/dyno/scale-formation';
 import '../../commands/dyno/restart-dyno';
 
+type AppDiffs = { added: Set<string>; removed: Set<string> };
 /**
  * Represents an App that can have a LogSession
  */
@@ -68,7 +70,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
-  protected abortWatchGitConfig: AbortController | undefined;
+  protected watchGitConfigDisposable: vscode.Disposable | undefined;
   protected syncAddonsPending = false;
 
   /**
@@ -95,7 +97,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   }
 
   /**
-   * Gets the LogStreamClient
+   * Gets the LogStreamClient creating it and attaching
+   * listeners if it wasn't previously defined.
    *
    * @returns The LogStreamClient
    */
@@ -198,7 +201,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * @inheritdoc
    */
   public dispose(): void {
-    this.abortWatchGitConfig?.abort();
+    this.watchGitConfigDisposable?.dispose();
+    this.watchGitConfigDisposable = undefined;
   }
 
   /**
@@ -252,8 +256,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         }
       }
     });
-
-    if (addonsSet.difference(pristineAddonsSet).size || pristineAddonsSet.difference(addonsSet).size) {
+    const { added, removed } = diff(addonsSet, pristineAddonsSet);
+    if (added.size || removed.size) {
       this.fire(addOnsCategory as T);
       this.addonsViewEmitter.emit('installedAddOnsChanged');
     }
@@ -274,21 +278,27 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   /**
    * Handler for the dyno process starting event.
    *
-   * @param data The data dispached when a dyno is starting.
+   * @param data The data dispached when a dyno is starting
+   * @param retryCount The number of times to retry fetching a dyno from the API before giving up
    */
-  private onDynoProcessStartingOrStateChanged = (data: StartingProcessInfo | StateChangedInfo): void => {
+  private onDynoProcessStartingOrStateChanged = (
+    data: StartingProcessInfo | StateChangedInfo,
+    retryCount = 5
+  ): void => {
     const { app, dynoName } = data;
     const dynos = this.appToResourceMap.get(app)!.dynos;
     let dyno = dynos.find((d) => d.name === dynoName);
 
     if (!dyno) {
       void (async (): Promise<void> => {
-        // Dynos that are newly proisioning are 404
-        // for a little while...not sure why.
-        await new Promise((resolve) => setTimeout(resolve, 5000));
         try {
           dyno = await this.dynoService.info(app.id, dynoName, this.requestInit);
         } catch {
+          // Dynos that are newly proisioning are 404
+          // for a little while on some formations...not sure why.
+          if (retryCount > 0) {
+            setTimeout(() => void this.onDynoProcessStartingOrStateChanged(data, retryCount - 1), 1000);
+          }
           // 404, 401
           return;
         }
@@ -512,35 +522,59 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * Watches the git config for changes.
    */
   private async watchGitConfig(): Promise<void> {
-    if (this.abortWatchGitConfig && !this.abortWatchGitConfig.signal.aborted) {
+    if (this.watchGitConfigDisposable) {
       return;
     }
-    this.abortWatchGitConfig = new AbortController();
-    const appChanges = await vscode.commands.executeCommand<AsyncIterable<AppsDiff>>(
-      WatchConfig.COMMAND_ID,
-      this.abortWatchGitConfig
-    );
+    let configPath: string | undefined;
+    let apps: Set<string> = new Set();
     try {
-      for await (const appDiffs of appChanges) {
-        await this.syncApps(appDiffs);
-        this.fire(undefined);
-        await vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
-      }
+      configPath = await findGitConfigFileLocation();
     } catch {
-      // noop
+      // not a git directory
+      logExtensionEvent('Cannot watch git config: not a git directory');
     }
+
+    if (configPath) {
+      const uri = vscode.Uri.file(configPath);
+      const gitConfigWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(uri, '*'));
+      apps = new Set(await getHerokuAppNames());
+
+      this.watchGitConfigDisposable = gitConfigWatcher.onDidCreate(async () => {
+        const maybeChangedApps = new Set(await getHerokuAppNames());
+        const { added, removed } = diff(apps, maybeChangedApps);
+
+        if (added.size || removed.size) {
+          apps = maybeChangedApps;
+          logExtensionEvent('Git config changed: syncing apps');
+          await this.syncApps({ added, removed });
+        }
+      });
+    }
+
+    await this.syncApps({ added: apps, removed: new Set() });
   }
 
   /**
    * Syncs the apps based on the provided app diffs.
    *
-   * @param appDiffs AppsDiff
+   * @param appDiffs The app diffs to sync
    * @returns Promise<void>
    */
-  private async syncApps(appDiffs: AppsDiff): Promise<void> {
-    const { accessToken } =
-      (await vscode.authentication.getSession('heroku:auth:login', [], { createIfNone: true })) ?? {};
-    Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${accessToken}`);
+  private async syncApps(appDiffs: AppDiffs): Promise<void> {
+    const session = await vscode.authentication.getSession('heroku:auth:login', []);
+
+    if (!session?.accessToken) {
+      logExtensionEvent('Cannot sync apps: session is unavailable');
+      // Only do this if we have apps else it will
+      // be an infinite async loop.
+      if (this.apps.size) {
+        this.apps.clear();
+        this.logStreamClient.apps = [];
+        this.fire(undefined);
+      }
+      return;
+    }
+    Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${session.accessToken}`);
 
     const { added, removed } = appDiffs;
     if (added.size) {
@@ -558,6 +592,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
           this.appToResourceMap.set(app, { dynos: [], formations: [], addOns: [], categories: [] });
         } else {
           appsNotFound.push(addedArray[i]);
+          logExtensionEvent(`App not found: ${addedArray[i]}`);
         }
       }
       appsNotFound = appsNotFound.filter((name: string) => !this.apps.has(name));
@@ -569,14 +604,28 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       removed.forEach((appName) => this.apps.delete(appName));
     }
     this.logStreamClient.apps = Array.from(this.apps.values());
+    if (added.size || removed.size) {
+      this.fire(undefined);
+    }
+
+    const logMessage = this.apps.size
+      ? `Displaying ${Array.from(this.apps.values())
+          .map((a) => a.name)
+          .join(', ')} in TreeView`
+      : 'No apps found';
+    logExtensionEvent(logMessage);
+
+    void vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
   }
 
   /**
    * Force the resource explorer to re-retrieve all app data.
    */
   private reSyncAllApps = (): void => {
+    logExtensionEvent('Re-syncing all apps');
     this.logStreamClient.apps = [];
-    this.abortWatchGitConfig?.abort();
+    this.watchGitConfigDisposable?.dispose();
+    this.watchGitConfigDisposable = undefined;
     this.apps.clear();
     void vscode.commands.executeCommand('setContext', 'heroku:get:started', false);
     void this.watchGitConfig();

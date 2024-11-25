@@ -88,10 +88,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
     </html>`;
 
     ShowAddonsViewCommand.addonsPanel = panel;
-    const { promise, resolve } = Promise.withResolvers();
-    panel.onDidDispose(resolve);
-
-    await promise;
+    await new Promise((resolve) => panel.onDidDispose(resolve));
   }
 
   /**
