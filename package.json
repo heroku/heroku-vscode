@@ -1,7 +1,6 @@
 {
   "name": "heroku",
   "displayName": "Heroku",
-  "publisher": "heroku",
   "description": "Heroku VSCode extension",
   "repository": "https://github.com/heroku/heroku-vscode",
   "version": "0.0.1",
@@ -15,16 +14,14 @@
   "activationEvents": [
     "onStartupFinished",
     "onLanguage:shellscript",
-    "onAuthenticationRequest:<Heroku>",
-    "workspaceContains:app.json",
-    "workspaceContains:Procfile"
+    "onAuthenticationRequest:<Heroku>"
   ],
   "main": "./out/extension/index.js",
   "contributes": {
     "jsonValidation": [
       {
         "fileMatch": "app.json",
-        "url": "./out/extension/meta/app-json.schema.json"
+        "url": "./src/extension/meta/app-json.schema.json"
       }
     ],
     "viewsWelcome": [
@@ -34,13 +31,7 @@
       },
       {
         "view": "heroku:getting-started",
-        "contents": "%heroku:getting-started:contents%",
-        "when": "heroku:get:started && !heroku:workspace:has-heroku-files"
-      },
-      {
-        "view": "heroku:getting-started",
-        "contents": "%heroku:getting-started:contents:link-apps%",
-        "when": "heroku:get:started && heroku:workspace:has-heroku-files"
+        "contents": "%heroku:getting-started:contents%"
       },
       {
         "view": "heroku:resource-explorer:treeview",
@@ -1304,58 +1295,58 @@
         "id": "hk.purple",
         "description": "Heroku branding purple",
         "defaults": {
-          "dark": "#9E7CC1",
+          "dark": "#7673C0",
           "highContrast": "#430098",
           "highContrastLight": "#211746",
-          "light": "#430098"
+          "light": "#211746"
         }
       },
       {
         "id": "hk.purple.2",
-        "description": "Heroku branding digital palette purple",
+        "description": "Heroku branding digital pallete purple",
         "defaults": {
           "dark": "#A997BF",
-          "highContrast": "#79589F",
+          "highContrast": "#A997BF",
           "highContrastLight": "#79589F",
           "light": "#79589F"
         }
       },
       {
         "id": "hk.blue",
-        "description": "Heroku branding digital palette blue",
+        "description": "Heroku branding digital pallete blue",
         "defaults": {
           "dark": "#8EBDF1",
-          "highContrast": "#408FEC",
+          "highContrast": "#8EBDF1",
           "highContrastLight": "#408FEC",
           "light": "#408FEC"
         }
       },
       {
         "id": "hk.green",
-        "description": "Heroku branding digital palette green",
+        "description": "Heroku branding digital pallete green",
         "defaults": {
           "dark": "#ABD7B4",
-          "highContrast": "#74C080",
+          "highContrast": "#ABD7B4",
           "highContrastLight": "#74C080",
           "light": "#74C080"
         }
       },
       {
         "id": "hk.orange",
-        "description": "Heroku branding digital palette orange",
+        "description": "Heroku branding digital pallete orange",
         "defaults": {
           "dark": "#FBC595",
-          "highContrast": "#FA9F47",
+          "highContrast": "#FBC595",
           "highContrastLight": "#FA9F47",
           "light": "#FA9F47"
         }
       },
       {
         "id": "hk.red",
-        "description": "Heroku branding digital palette red",
+        "description": "Heroku branding digital pallete red",
         "defaults": {
           "dark": "#E58F8F",
-          "highContrast": "#D64141",
+          "highContrast": "#E58F8F",
           "highContrastLight": "#D64141",
           "light": "#D64141"
         }
@@ -2376,6 +2367,11 @@
           "command": "heroku:deploy-to-heroku",
           "when": "resourceFilename == 'app.json' || resourceFilename == 'Procfile'",
           "group": "0000000aaaaa"
+        },
+        {
+          "command": "heroku:deploy-to-heroku",
+          "when": "resourceFilename == 'app.json' || resourceFilename == 'Procfile'",
+          "group": "inline@1"
         }
       ],
       "view/item/context": [
@@ -4202,7 +4198,7 @@
     "@vscode/test-electron": "2.4.1",
     "eslint": "^8.56.0",
     "eslint-config-salesforce-typescript": "3.4.0",
-    "eslint-plugin-jsdoc": "^50.5.0",
+    "eslint-plugin-jsdoc": "^50.4.3",
     "git-format-staged": "^3.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.0",

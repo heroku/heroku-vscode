@@ -50,8 +50,6 @@ suite('HerokuResourceExplorerProvider', () => {
       .withArgs('heroku:auth:login')
       .resolves(sessionObject);
 
-    sinon.stub(vscode.commands, 'registerCommand').withArgs('heroku:sync-with-dashboard').callsFake;
-
     // LogStream stub
     stream = new Writable();
     const readable = Readable.from(
@@ -92,6 +90,7 @@ suite('HerokuResourceExplorerProvider', () => {
       .resolves(new Response(JSON.stringify({ ...mockDyno, name: 'web.2', id: randomUUID() })));
 
     sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
+    sinon.stub(vscode.commands, 'registerCommand');
 
     const HerokuResourceExplorerProviderCtor = proxyquire('./heroku-resource-explorer-provider', {
       getHerokuAppNames: () => Promise.resolve(['app1'])
