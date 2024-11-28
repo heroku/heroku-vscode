@@ -133,7 +133,7 @@ suite('DeployToHeroku Tests', () => {
     mockAppSetupService.info.resolves(mockAppSetup);
     mockAppService.info.resolves({ git_url: 'test-git-url' });
 
-    await command.run(null, null);
+    await command.run(null, null, vscode.Uri.parse('./'));
 
     assert.ok(mockSourcesService.create.calledOnce);
     assert.ok(mockAppSetupService.create.calledOnce);
@@ -166,7 +166,7 @@ suite('DeployToHeroku Tests', () => {
     mockBuildService.create.resolves(mockBuild);
     mockAppService.info.resolves({ git_url: 'test-git-url' });
 
-    await command.run(mockApp as App, null);
+    await command.run(mockApp as App, null, vscode.Uri.parse('./'));
 
     assert.ok(mockSourcesService.create.calledOnce);
     assert.ok(mockBuildService.create.calledOnce);

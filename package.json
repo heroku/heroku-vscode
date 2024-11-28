@@ -1295,28 +1295,28 @@
         "id": "hk.purple",
         "description": "Heroku branding purple",
         "defaults": {
-          "dark": "#7673C0",
+          "dark": "#9E7CC1",
           "highContrast": "#430098",
           "highContrastLight": "#211746",
-          "light": "#211746"
+          "light": "#430098"
         }
       },
       {
         "id": "hk.purple.2",
-        "description": "Heroku branding digital pallete purple",
+        "description": "Heroku branding digital palette purple",
         "defaults": {
           "dark": "#A997BF",
-          "highContrast": "#A997BF",
+          "highContrast": "#79589F",
           "highContrastLight": "#79589F",
           "light": "#79589F"
         }
       },
       {
         "id": "hk.blue",
-        "description": "Heroku branding digital pallete blue",
+        "description": "Heroku branding digital palette blue",
         "defaults": {
           "dark": "#8EBDF1",
-          "highContrast": "#8EBDF1",
+          "highContrast": "#408FEC",
           "highContrastLight": "#408FEC",
           "light": "#408FEC"
         }
@@ -1326,7 +1326,7 @@
         "description": "Heroku branding digital palette green",
         "defaults": {
           "dark": "#ABD7B4",
-          "highContrast": "#ABD7B4",
+          "highContrast": "#74C080",
           "highContrastLight": "#74C080",
           "light": "#74C080"
         }
@@ -1336,7 +1336,7 @@
         "description": "Heroku branding digital palette orange",
         "defaults": {
           "dark": "#FBC595",
-          "highContrast": "#FBC595",
+          "highContrast": "#FA9F47",
           "highContrastLight": "#FA9F47",
           "light": "#FA9F47"
         }
@@ -1346,7 +1346,7 @@
         "description": "Heroku branding digital palette red",
         "defaults": {
           "dark": "#E58F8F",
-          "highContrast": "#E58F8F",
+          "highContrast": "#D64141",
           "highContrastLight": "#D64141",
           "light": "#D64141"
         }
