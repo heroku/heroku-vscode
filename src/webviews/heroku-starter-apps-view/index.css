@@ -1,92 +1,294 @@
 :host {
   display: flex;
   width: 100%;
-  font-family: var(--vscode-font-family);
-}
-
-#main-heading {
-  font-family: var(--vscode-font-family);
-  font-size: 1.5rem;
-  font-weight: var(--vscode-font-weight);
-  margin-bottom: 1rem;
-}
-
-.hidden {
-  display: none;
 }
 
 section {
-  background: var(--vscode-editor-background);
-  color: var(--vscode-editor-foreground);
-
   width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
 
   > header {
     display: flex;
     align-items: center;
-    position: sticky;
-    top: 0;
-    background: var(--vscode-editor-background);
-    z-index: 100;
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
-    .icon-logo-block-16 {
-      color: var(--heroku-primary);
-      font-size: 4rem;
-      margin-right: 1rem;
-    }
-
-    .title {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      p,
-      h1 {
-        margin: 0.5rem 0;
-      }
-    }
-
-    .search {
+    > div {
       display: flex;
       align-items: center;
     }
-  }
-  .loading-indicator {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-  > .content-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1rem;
-    padding-top: 0;
+
+    > h1 {
+      width: 100%;
+    }
   }
 }
 
-ul.repo-list {
-  overflow: visible;
+.repo-list {
   display: flex;
   flex-direction: column;
   list-style: none;
   padding: 0;
   gap: 0.5rem;
 
-  heroku-repo-card {
+  li {
+    &.hidden {
+      display: none;
+    }
     border: 1px solid var(--vscode-menu-border);
     border-radius: 4px;
     background: var(--vscode-editor-background);
     transition: background-color 0.2s ease;
-    &.expanded:hover {
-      background: initial;
-    }
+
     &:hover {
       background: var(--vscode-list-hoverBackground);
+    }
+
+    .repo-card {
+      display: flex;
+      padding: 1rem;
+      gap: 1rem;
+
+      .repo-main {
+        flex: 1;
+
+        .repo-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+
+          .repo-name {
+            color: var(--vscode-textLink-foreground);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+
+            .repo-url {
+              color: inherit;
+            }
+          }
+
+          .repo-visibility {
+            font-size: 0.8rem;
+            padding: 0.1rem 0.5rem;
+            border: 1px solid var(--vscode-menu-border);
+            border-radius: 1rem;
+            color: var(--vscode-descriptionForeground);
+          }
+        }
+
+        .repo-description {
+          color: var(--vscode-foreground);
+          margin: 0 0 0.75rem;
+          font-size: var(--vscode-font-size);
+        }
+
+        .repo-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1rem;
+          font-size: 0.9rem;
+          color: var(--vscode-descriptionForeground);
+
+          .meta-item {
+            &.language {
+              &::before {
+                content: '';
+                display: inline-block;
+                width: 0.75rem;
+                height: 0.75rem;
+                border-radius: 50%;
+                margin-right: 0.25rem;
+              }
+
+              &[data-language='JavaScript']::before {
+                background-color: #f1e05a;
+              }
+
+              &[data-language='TypeScript']::before {
+                background-color: #3178c6;
+              }
+
+              &[data-language='Python']::before {
+                background-color: #3572a5;
+              }
+
+              &[data-language='Java']::before {
+                background-color: #b07219;
+              }
+
+              &[data-language='Ruby']::before {
+                background-color: #701516;
+              }
+
+              &[data-language='HTML']::before {
+                background-color: #e34c26;
+              }
+
+              &[data-language='CSS']::before {
+                background-color: #563d7c;
+              }
+
+              &[data-language='PHP']::before {
+                background-color: #4f5d95;
+              }
+
+              &[data-language='C++']::before {
+                background-color: #f34b7d;
+              }
+
+              &[data-language='C#']::before {
+                background-color: #178600;
+              }
+
+              &[data-language='Go']::before {
+                background-color: #00add8;
+              }
+
+              &[data-language='Rust']::before {
+                background-color: #dea584;
+              }
+
+              &[data-language='Shell']::before {
+                background-color: #89e051;
+              }
+
+              &[data-language='Vue']::before {
+                background-color: #41b883;
+              }
+
+              &[data-language='Swift']::before {
+                background-color: #f05138;
+              }
+
+              &[data-language='Kotlin']::before {
+                background-color: #a97bff;
+              }
+
+              &[data-language='Dart']::before {
+                background-color: #00b4ab;
+              }
+
+              &[data-language='Dockerfile']::before {
+                background-color: #384d54;
+              }
+
+              &[data-language='Twig']::before {
+                background-color: #c1d026;
+              }
+
+              &[data-language='EJS']::before {
+                background-color: #a91e50;
+              }
+
+              &[data-language='Objective-C']::before {
+                background-color: #438eff;
+              }
+
+              &[data-language='Clojure']::before {
+                background-color: #db5855;
+              }
+
+              &[data-language='Scala']::before {
+                background-color: #c22d40;
+              }
+
+              &[data-language='Haskell']::before {
+                background-color: #5e5086;
+              }
+
+              &[data-language='R']::before {
+                background-color: #198ce7;
+              }
+
+              &[data-language='Perl']::before {
+                background-color: #0298c3;
+              }
+
+              &[data-language='Lua']::before {
+                background-color: #000080;
+              }
+
+              &[data-language='Elixir']::before {
+                background-color: #6e4a7e;
+              }
+
+              &[data-language='Erlang']::before {
+                background-color: #b83998;
+              }
+
+              &[data-language='Julia']::before {
+                background-color: #a270ba;
+              }
+
+              &[data-language='CoffeeScript']::before {
+                background-color: #244776;
+              }
+
+              &[data-language='Assembly']::before {
+                background-color: #6e4c13;
+              }
+
+              &[data-language='MATLAB']::before {
+                background-color: #e16737;
+              }
+
+              &[data-language='Groovy']::before {
+                background-color: #4298b8;
+              }
+
+              &[data-language='F#']::before {
+                background-color: #b845fc;
+              }
+
+              &[data-language='PowerShell']::before {
+                background-color: #012456;
+              }
+
+              &[data-language='SASS']::before {
+                background-color: #a53b70;
+              }
+
+              &[data-language='SCSS']::before {
+                background-color: #c6538c;
+              }
+
+              &[data-language='Less']::before {
+                background-color: #1d365d;
+              }
+
+              &[data-language='WebAssembly']::before {
+                background-color: #654ff0;
+              }
+
+              &[data-language='Markdown']::before {
+                background-color: #083fa1;
+              }
+
+              &[data-language='JSON']::before {
+                background-color: #292929;
+              }
+
+              &[data-language='YAML']::before {
+                background-color: #cb171e;
+              }
+
+              /* Fallback for languages not listed here */
+              &[data-language='other']::before {
+                background-color: #ededed;
+              }
+            }
+          }
+        }
+      }
+
+      .deploy {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+
+        .icon {
+          font-size: 1rem;
+        }
+      }
     }
   }
 }

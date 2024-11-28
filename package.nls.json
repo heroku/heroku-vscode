@@ -8,11 +8,7 @@
   },
 
   "heroku:getting-started:contents": {
-    "message": "It looks like this project is not a Heroku app.\n[$(github)Browse starter apps](command:heroku:welcome:github:browse)"
-  },
-
-  "heroku:getting-started:contents:link-apps": {
-    "message": "We found a workspace that looks like a Heroku app. Let's get you set up.\n[$(link)Link workspace to Heroku app(s)](command:heroku:welcome:link:apps)\n[$(hk-icon-deploy-16)Deploy to Heroku](command:heroku:welcome:deploy-to-heroku)\n[$(github)Browse starter apps](command:heroku:welcome:github:browse)"
+    "message": "It looks like this project is not a Heroku app.\n[Browse starter apps](command:heroku:github:browse)"
   },
 
   "view.heroku.name": {

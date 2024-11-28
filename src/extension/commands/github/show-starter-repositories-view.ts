@@ -1,26 +1,12 @@
-import { promisify } from 'node:util';
-import vscode, { Uri, WebviewPanel } from 'vscode';
-import TeamService from '@heroku-cli/schema/services/team-service.js';
-import SpaceService from '@heroku-cli/schema/services/space-service.js';
-import AppService from '@heroku-cli/schema/services/app-service.js';
-import { DeployPayload } from '@heroku/repo-card';
+import EventEmitter from 'node:events';
+import vscode, { AuthenticationSession, Uri, WebviewPanel } from 'vscode';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
-import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
+import importMap from '../../importmap.json';
+import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
+import { GithubService } from '../../services/github-service';
+import { HerokuCommand } from '../heroku-command';
+import { logExtensionEvent } from '../../utils/logger';
 import { DeployToHeroku } from '../app/deploy-to-heroku';
-import { generateRequestInit } from '../../utils/generate-service-request-init';
-import { getGithubSession } from '../../utils/git-utils';
-import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
-import { CloneRepository } from './clone-repository';
-
-type StarterReposWebviewMessage =
-  | {
-      type: 'deploy';
-      payload: DeployPayload;
-    }
-  | {
-      type: 'connected';
-      payload: never;
-    };
 
 @herokuCommand()
 /**
@@ -29,32 +15,80 @@ type StarterReposWebviewMessage =
  */
 export class ShowStarterRepositories extends AbortController implements RunnableCommand<Promise<void>> {
   public static COMMAND_ID = 'heroku:github:show-starter-repositories' as const;
-  private static webviewPanel: WebviewPanel | undefined;
-  private teamService = new TeamService(fetch, 'https://api.heroku.com');
-  private spaceService = new SpaceService(fetch, 'https://api.heroku.com');
-  private appService = new AppService(fetch, 'https://api.heroku.com');
+  private static addonsPanel: WebviewPanel | undefined;
+  private githubService = new GithubService();
+
+  private notifier: EventEmitter | undefined;
 
   /**
    * Creates and displays a webview for showing
    * the add-on marketplace
    *
    * @param extensionUri The Uri of the extension.
+   * @param notifier The notification emitter.
    * @returns Promise<void>
    */
-  public async run(extensionUri: vscode.Uri): Promise<void> {
-    ShowStarterRepositories.webviewPanel?.dispose();
+  public async run(extensionUri: vscode.Uri, notifier: EventEmitter): Promise<void> {
+    this.notifier = notifier;
 
-    const panel = prepareHerokuWebview(extensionUri, {
-      viewType: 'heroku.getting-started',
-      webviewTitle: 'Heroku Starter Apps',
-      iconUri: vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'marketing-github.svg'),
-      javascriptEntryUri: vscode.Uri.joinPath(extensionUri, 'out', 'webviews', 'heroku-starter-apps-view', 'index.js'),
-      webComponentTag: 'heroku-starter-apps'
-    });
+    ShowStarterRepositories.addonsPanel?.dispose();
+    ShowStarterRepositories.addonsPanel = undefined;
+
+    const options = {
+      enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.joinPath(extensionUri, 'node_modules'),
+        vscode.Uri.joinPath(extensionUri, 'out', 'webviews'),
+        vscode.Uri.joinPath(extensionUri, 'out', 'webviews', 'img'),
+        vscode.Uri.joinPath(extensionUri, 'resources')
+      ]
+    };
+    const panel = vscode.window.createWebviewPanel('GetStarted', 'Heorku Starter Apps', vscode.ViewColumn.One, options);
+    panel.iconPath = vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'marketing-github.svg');
 
     const { webview } = panel;
+
     webview.onDidReceiveMessage(this.onMessage);
-    ShowStarterRepositories.webviewPanel = panel;
+
+    const onDiskPath = vscode.Uri.joinPath(extensionUri, 'out', 'webviews', 'heroku-starter-apps-view', 'index.js');
+    const indexPath = webview.asWebviewUri(onDiskPath);
+    const webViewImportMap = {
+      ...importMap,
+      imports: convertImportMapPathsToUris(webview, importMap.imports, extensionUri)
+    };
+    const malibuIconsUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(extensionUri, 'resources', 'hk-malibu', 'style.css')
+    );
+    const codiconsUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css')
+    );
+
+    webview.html = `
+    <html style="height: 100%;" lang="en">
+    <head>
+      <script type="importmap">
+      ${JSON.stringify(webViewImportMap)}
+      </script>
+
+      <script type="module" src="${indexPath.toString()}"></script>
+      <title></title>
+    </head>
+    <link href="${malibuIconsUri.toString()}" rel="stylesheet" />
+    <link href="${codiconsUri.toString()}" rel="stylesheet" />
+      <body style="min-height: 100%; display: flex;">
+        <heroku-starter-apps>Web Component not available</heroku-starter-apps>
+      </body>
+    </html>`;
+
+    ShowStarterRepositories.addonsPanel = panel;
+    const herokuGettingStartedRepos = await this.githubService.searchRepositories({
+      q: ['heroku-getting-started', 'user:heroku', 'sort:stars']
+    });
+    const referenceAppRepos = await this.githubService.searchRepositories({
+      q: ['', 'user:heroku-reference-apps', 'sort:stars']
+    });
+    await webview.postMessage({ referenceAppRepos, herokuGettingStartedRepos });
+
     await new Promise((resolve) => panel.onDidDispose(resolve));
   }
 
@@ -63,6 +97,7 @@ export class ShowStarterRepositories extends AbortController implements Runnable
    * any pending API requests.
    */
   public [Symbol.dispose](): void {
+    this.notifier?.removeAllListeners();
     this.abort();
   }
 
@@ -70,96 +105,66 @@ export class ShowStarterRepositories extends AbortController implements Runnable
    * Handles messages received from the webview.
    *
    * @param message The message object received from the webview.
+   * @param message.type The message type received from the webview.
+   * @param message.payload The payload received from the webview.
    */
-  private onMessage = async (message: StarterReposWebviewMessage): Promise<void> => {
-    if (message.type === 'connected') {
-      logExtensionEvent('getting Heroku starter repos in GitHub');
-      const requestInit = await generateRequestInit(this.signal);
-
-      logExtensionEvent('getting teams and spaces for user');
-      const [teams, spaces, existingApps, githubSession] = await Promise.allSettled([
-        this.teamService.list(requestInit),
-        this.spaceService.list(requestInit),
-        this.appService.list(requestInit),
-        getGithubSession()
-      ]);
-      await ShowStarterRepositories.webviewPanel?.webview.postMessage({
-        teams: teams.status === 'fulfilled' ? teams.value : undefined,
-        spaces: spaces.status === 'fulfilled' ? spaces.value : undefined,
-        existingApps: existingApps.status === 'fulfilled' ? existingApps.value : undefined,
-        githubAccessToken: githubSession.status === 'fulfilled' ? githubSession.value?.accessToken : undefined
-      });
-    }
-
+  private onMessage = async (message: { type: string; payload: unknown }): Promise<void> => {
     if (message.type === 'deploy') {
-      await this.doDeployment(message.payload);
+      const gitUrl = message.payload as string;
+      // Clone the selected repo at a location chosen by the user
+      let clonedLocation: Uri | undefined;
+      try {
+        clonedLocation = await this.cloneRepo(message.payload as string);
+        if (!clonedLocation) {
+          logExtensionEvent('Aborting deployment to Heroku: user cancelled repository clone step');
+          return;
+        }
+      } catch (error) {
+        const errorMessage = `Aborting deployment to Heroku: failed to clone repository - ${(error as Error).message}`;
+        logExtensionEvent(errorMessage);
+        void vscode.window.showErrorMessage(errorMessage);
+        return;
+      }
+
+      // Deploy the app to Heroku
+      const folderName = gitUrl.split('/').pop()?.replace('.git', '');
+      const folderUri = vscode.Uri.joinPath(clonedLocation, folderName!);
+      const result = await vscode.commands.executeCommand(DeployToHeroku.COMMAND_ID, undefined, undefined, folderUri);
+      debugger;
     }
   };
 
   /**
-   * Performs the deployment to Heroku with the provided options.
    *
-   * @param deploymentOptions the options for deployment to Heroku
+   * @param repoUrl The URL of the repository to clone
+   * @returns The URI of the cloned repository or undefined if the user cancelled the operation
    */
-  private async doDeployment(deploymentOptions: DeployPayload): Promise<void> {
-    const { appName: name, repoName, repoUrl, spaceId, teamId, env, internalRouting } = deploymentOptions;
-    showExtensionLogs();
-    logExtensionEvent(`Clone and deployment to Heroku initiated for: ${repoName}`);
-    const cloneResultPromise = vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: 'Cloning Repo...',
-        cancellable: true
-      },
-      async (progress, token) => {
-        const cancellationPromise: Promise<void> = promisify(token.onCancellationRequested)();
-        const taskPromise = (async (): Promise<Uri | undefined> => {
-          // Clone the selected repo at a location chosen by the user
-          const cloneRepoCommand = new CloneRepository();
-          const clonedLocation = await cloneRepoCommand.run(repoUrl!);
-          if (!clonedLocation) {
-            throw new Error('Aborting deployment to Heroku: user cancelled repository clone step');
-          }
-          progress.report({ increment: 100 });
-          return clonedLocation;
-        })();
+  private async cloneRepo(repoUrl: string): Promise<Uri | undefined> {
+    const uris: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: 'Select this folder to clone to'
+    });
 
-        return Promise.race([cancellationPromise, taskPromise]);
-      }
-    );
-    let cloneResult: void | vscode.Uri | null;
-    try {
-      cloneResult = await cloneResultPromise;
-    } catch (error) {
-      const errorMessage = `Aborting deployment to Heroku: failed to clone repository - ${(error as Error).message}`;
-      logExtensionEvent(errorMessage);
-      void vscode.window.showErrorMessage(errorMessage);
+    if (!uris) {
       return;
     }
-    if (!cloneResult) {
-      logExtensionEvent('Aborting deployment to Heroku: user cancelled');
-      return;
+    const gitProcess = HerokuCommand.exec(`git clone ${repoUrl}`, { cwd: uris[0].fsPath });
+    const result = await HerokuCommand.waitForCompletion(gitProcess);
+    if (result.exitCode !== 0) {
+      throw new Error(result.errorMessage);
     }
-    // Deploy the app to Heroku
-    const gitUrl = repoUrl;
-    const folderName = gitUrl!.split('/').pop()?.replace('.git', '');
-    const localRepositoryRootUri = vscode.Uri.joinPath(cloneResult, folderName!);
-    const result = await vscode.commands.executeCommand<{ name: string } | null | undefined>(
-      DeployToHeroku.COMMAND_ID,
-      undefined,
-      undefined,
-      { name, spaceId, teamId, env, internalRouting, rootUri: localRepositoryRootUri, skipSuccessMessage: true }
-    );
-    // A result is only given when the clone and deploy is successful
-    if (result) {
-      const response = await vscode.window.showInformationMessage(
-        `Successfully deployed ${repoName} as "${result.name}" to Heroku. Would you like to open the workspace?`,
-        'No',
-        'Yes'
-      );
-      if (response === 'Yes') {
-        void vscode.commands.executeCommand('vscode.openFolder', localRepositoryRootUri);
-      }
-    }
+    return uris[0];
+  }
+
+  /**
+   * Generates a request init object for making API requests to the Heroku API.
+   *
+   * @returns A promise that resolves to a request init object.
+   */
+  private async generateRequestInit(): Promise<RequestInit> {
+    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) as AuthenticationSession;
+    return { signal: this.signal, headers: { Authorization: `Bearer ${accessToken.trim()}` } };
   }
 }

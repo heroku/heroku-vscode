@@ -1,72 +1,40 @@
 import { customElement, FASTElement } from '@microsoft/fast-element';
 import {
   provideVSCodeDesignSystem,
+  vsCodeButton,
+  vsCodeDropdown,
+  vsCodeOption,
   vsCodeTextField,
   vsCodeProgressRing,
-  type TextField,
-  type ProgressRing
+  TextField,
+  Button
 } from '@vscode/webview-ui-toolkit';
-import type { GithubSearchResponse } from 'github-api';
-import type { App, Space, Team } from '@heroku-cli/schema';
-import type { EnvironmentVariables } from '@heroku/app-json-schema';
-import { HerokuDeployButton } from '@heroku/elements';
-import { commonCss, loadCss, loadHtmlTemplate, vscode } from '../utils/web-component-utils.js';
+import type { GithubSearchResponse, RepoSearchResultItem } from 'github-api';
+import { loadCss, loadHtmlTemplate, vscode } from '../utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
-import { HEROKU_REPO_CARD_TAG, HerokuRepoCard, type RepoCardData, DeployEvent } from '../components/repo-card/index.js';
-import { mapTeamsByEnterpriseAccount } from '../utils/map-teams-by-enterprise.js';
-import { mapSpacesByOrganization } from '../utils/map-spaces-by-org.js';
-import { GithubService } from './github-service.js';
-import elementsButtons from './elements-buttons.json' with { type: 'json' };
 
-type DataPayload = {
-  existingApps: App[];
-  teams?: Team[];
-  spaces?: Space[];
-  githubAccessToken?: string;
-};
+type RepositoriesPayload = { referenceAppRepos: GithubSearchResponse; herokuGettingStartedRepos: GithubSearchResponse };
 
 const template = await loadHtmlTemplate(import.meta.resolve('./index.html'));
-const styles = (await loadCss([import.meta.resolve('./index.css')])).concat(commonCss);
+const styles = await loadCss([
+  import.meta.resolve('./index.css'),
+  import.meta.resolve('../../../node_modules/@vscode/codicons/dist/codicon.css'),
+  import.meta.resolve('../../../resources/hk-malibu/style.css')
+]);
 @customElement({
   name: 'heroku-starter-apps',
   template,
   styles
 })
-
 /**
- * A custom web component for displaying and deploying Heroku starter applications.
  *
- * This class extends FASTElement and provides functionality to:
- * - Display reference apps and starter apps from GitHub repositories
- * - Allow searching/filtering of displayed apps
- * - Show app metadata like visibility, language, stars, and last updated date
- * - Enable team and space selection for deployment
- * - Handle the aggregation of data to send to the node process
- * when the user clicks on the "Deploy app" button.
- *
- * Key features:
- * - Integrates with VS Code's webview UI toolkit components
- * - Debounced search filtering
- * - Dynamic creation of repo cards with metadata
- * - Team and space selector dropdowns grouped by enterprise/organization
- * - Loading indicator while data is being fetched
- * - Configuration var input fields when the app.json has `env` entries
- * - Event handling for messages from VS Code extension
- *
- * The component expects an optional DataPayload from the node
- * process containing the following:
- * - teams: Optional array of Heroku teams
- * - spaces: Optional array of Heroku spaces
  */
 export class HerokuStarterApps extends FASTElement {
   @shadowChild('#reference-apps')
-  private referenceAppsUList!: HTMLUListElement;
+  private referenceAppsUlist!: HTMLUListElement;
 
   @shadowChild('#starter-apps')
-  private starterAppsUList!: HTMLUListElement;
-
-  @shadowChild('#heroku-elements-apps')
-  private herokuElementsAppsUList!: HTMLElement;
+  private starterAppsUlist!: HTMLUListElement;
 
   @shadowChild('#search')
   private searchField!: TextField;
@@ -74,38 +42,22 @@ export class HerokuStarterApps extends FASTElement {
   @shadowChild('#repo-template')
   private repoListItemTemplate!: HTMLTemplateElement;
 
-  @shadowChild('.loading-indicator')
-  private loadingIndicator!: ProgressRing;
-
   private debounceSearch: number | undefined;
 
-  private existingApps: App[] = [];
-  private teams: Map<string, Team[]> | undefined;
-  private spaces: Map<string, Space[]> | undefined;
-  private referenceAppRepos: GithubSearchResponse | undefined;
-  private herokuGettingStartedRepos: GithubSearchResponse | undefined;
-
-  private githubService = new GithubService();
-  private configVarsByContentsUrl = new Map<string, EnvironmentVariables>();
-  private reposRendered = new Set<string>();
+  private repos: RepositoriesPayload | undefined;
 
   /**
-   * Constructor for the HerokuStarterApps class.
+   *
    */
   public constructor() {
     super();
-    provideVSCodeDesignSystem().register(vsCodeProgressRing(), vsCodeTextField());
-  }
-
-  /**
-   * Handler for the deploy event from the repo card.
-   * This function is called when the user clicks
-   * the "Deploy app" button on a repo card.
-   *
-   * @param event The deploy event
-   */
-  private static onDeploy(event: DeployEvent): void {
-    vscode.postMessage({ type: 'deploy', payload: event.payload });
+    provideVSCodeDesignSystem().register(
+      vsCodeDropdown(),
+      vsCodeButton(),
+      vsCodeOption(),
+      vsCodeProgressRing(),
+      vsCodeTextField()
+    );
   }
 
   /**
@@ -130,178 +82,112 @@ export class HerokuStarterApps extends FASTElement {
    * hydrates it with the data about the repo.
    *
    * @param item The repository data to create a repo card for
-   * @param teams The list of teams the user belongs to
-   * @returns A document fragment containing the repo card
    */
-  private createRepoCard(item: RepoCardData): DocumentFragment {
+  private createRepoCard(item: RepoSearchResultItem): DocumentFragment {
     const listElement = this.repoListItemTemplate.content.cloneNode(true) as DocumentFragment;
-    (listElement.firstElementChild as HTMLLIElement).id = item.name ?? item.repo_name;
-    const card = listElement.querySelector(HEROKU_REPO_CARD_TAG) as HerokuRepoCard;
-    // This is required to ensure that the component is rendered,
-    // any decorators have fully initialized and the shadow DOM
-    // is available before we try to access it.
-    requestAnimationFrame(() => {
-      card.data = item;
-      card.existingApps = this.existingApps;
-      card.teams = this.teams;
-      card.spaces = this.spaces;
-      card.configVarsFetcher = this.configVarsFetcher();
-      card.addEventListener(DeployEvent.DEPLOY, HerokuStarterApps.onDeploy);
-    });
+    (listElement.firstElementChild as HTMLLIElement).dataset.name = item.name;
+    // name
+    const repoUrlElement = listElement.querySelector('.repo-url') as HTMLAnchorElement;
+    repoUrlElement.href = item.html_url;
+    repoUrlElement.textContent = item.name;
+
+    // public/private, etc
+    const visibilityElement = listElement.querySelector('.repo-visibility') as HTMLSpanElement;
+    visibilityElement.textContent = item.private ? 'Private' : 'Public';
+
+    // description
+    const descriptionElement = listElement.querySelector('.repo-description') as HTMLParagraphElement;
+    descriptionElement.textContent = item.description ?? 'No description available';
+
+    // meta language
+    const languageElement = listElement.querySelector('.meta-item.language') as HTMLSpanElement;
+    languageElement.dataset.language = item.language ?? 'other';
+    languageElement.textContent = item.language ?? 'Unknown';
+
+    // stars
+    const starCountElement = listElement.querySelector('.meta-item .star-count') as HTMLSpanElement;
+    starCountElement.textContent = item.stargazers_count.toString();
+
+    // forks
+    const forkCountElement = listElement.querySelector('.meta-item .fork-count') as HTMLSpanElement;
+    forkCountElement.textContent = item.forks_count.toString();
+
+    // last updated
+    const lastUpdatedElement = listElement.querySelector('.meta-item.last-updated') as HTMLSpanElement;
+    lastUpdatedElement.textContent = `Last Updated: ${new Date(item.updated_at).toLocaleDateString()}`;
+
+    const deployButton = listElement.querySelector('vscode-button') as Button;
+    deployButton.dataset.repoUrl = item.clone_url;
+    deployButton.dataset.repoName = item.name;
+    // intentionally bound to Button
+    deployButton.addEventListener('click', this.onDeployClick);
 
     return listElement;
   }
 
-  /**
-   * Handler for the search input which
-   * debounces filtering by 250ms. This
-   * timeout is reset each time the user
-   * types in the search input.
-   */
   private onSearchInput = (): void => {
+    const { value } = this.searchField;
     clearTimeout(this.debounceSearch);
     this.debounceSearch = setTimeout(this.applyFilter, 250) as unknown as number;
   };
 
-  /**
-   * Applies the filter to the list of repos
-   * from the user's search input. Elements
-   * within the list are hidden if no match is
-   * found.
-   */
   private applyFilter = (): void => {
     const term = this.searchField.value.toLowerCase();
-    // Search these fields
-    const fields: Array<keyof RepoCardData> = [
+    const fields: (keyof RepoSearchResultItem)[] = [
       'name',
-      'repo_name',
       'description',
-      'public_description',
       'language',
       'html_url',
-      'public_repository'
+      'private',
+      'stargazers_count',
+      'forks_count',
+      'updated_at'
     ];
-    const herokuGettingStartedRepos = this.herokuGettingStartedRepos?.items ?? [];
-    const referenceAppRepos = this.referenceAppRepos?.items ?? [];
 
-    const allRepos = [
-      ...(elementsButtons as HerokuDeployButton[]),
-      ...herokuGettingStartedRepos,
-      ...referenceAppRepos
-    ] as RepoCardData[];
+    const { herokuGettingStartedRepos = { items: [] }, referenceAppRepos = { items: [] } } = this.repos ?? {};
+    const allRepos = [...herokuGettingStartedRepos.items, ...referenceAppRepos.items];
     for (const repo of allRepos) {
       const matches = fields.some((field) => {
         const value = repo[field]?.toLocaleString().toLocaleLowerCase();
         return value?.includes(term);
       });
-      const element = this.shadowRoot!.getElementById(repo.name ?? repo.repo_name);
+      const element = this.shadowRoot!.querySelector(`li[data-name="${repo.name}"]`);
       element?.classList.toggle('hidden', !matches);
-      element?.setAttribute('aria-hidden', String(!matches));
     }
   };
 
   /**
-   * Message receiver for the node process.
-   * This function receives the data used to
-   * populate the view from the node process.
+   * Message receiver for the node process
    *
    * @param event The message event
    */
-  private onMessage = (event: MessageEvent<DataPayload>): void => {
-    const { existingApps, githubAccessToken, spaces, teams } = event.data;
+  private onMessage = (event: MessageEvent<RepositoriesPayload>): void => {
+    this.repos = event.data;
+    const { herokuGettingStartedRepos, referenceAppRepos } = event.data;
 
-    this.existingApps = existingApps;
-    this.teams = mapTeamsByEnterpriseAccount(teams);
-    this.spaces = mapSpacesByOrganization(spaces);
-    this.githubService.accessToken = githubAccessToken;
+    const referenceAppReposFragment = document.createDocumentFragment();
+    for (const item of referenceAppRepos.items) {
+      const listElement = this.createRepoCard(item);
+      referenceAppReposFragment.appendChild(listElement);
+    }
+    this.referenceAppsUlist.appendChild(referenceAppReposFragment);
 
-    void (async (): Promise<void> => {
-      this.herokuGettingStartedRepos = await this.githubService.searchRepositories({
-        q: 'heroku-getting-started user:heroku',
-        sort: 'stars'
-      });
+    const herokuGettingStartedReposFragment = document.createDocumentFragment();
+    for (const item of herokuGettingStartedRepos.items) {
+      const listElement = this.createRepoCard(item);
+      herokuGettingStartedReposFragment.appendChild(listElement);
+    }
 
-      this.referenceAppRepos = await this.githubService.searchRepositories({
-        q: 'user:heroku-reference-apps',
-        sort: 'stars'
-      });
-      this.renderReferenceAppsList();
-      this.renderStarterAppsList();
-    })();
-
-    this.renderHerokuButtonsList();
-
-    this.loadingIndicator.remove();
+    this.starterAppsUlist.appendChild(herokuGettingStartedReposFragment);
   };
 
   /**
-   * Renders the HerokuButtons list
+   * Click handler for the deploy button
+   *
+   * @param event
    */
-  private renderHerokuButtonsList(): void {
-    this.herokuElementsAppsUList.innerHTML = '';
-
-    const herokuElementsAppsReposFragment = document.createDocumentFragment();
-    ((elementsButtons as HerokuDeployButton[]) ?? []).forEach((item) => {
-      if (this.reposRendered.has(item.repo_name)) {
-        return;
-      }
-      const li = this.createRepoCard(item as RepoCardData);
-      herokuElementsAppsReposFragment.appendChild(li);
-      this.reposRendered.add(item.repo_name);
-    });
-
-    this.herokuElementsAppsUList.appendChild(herokuElementsAppsReposFragment);
+  private onDeployClick(this: Button): void {
+    const { repoUrl } = this.dataset;
+    vscode.postMessage({ type: 'deploy', payload: repoUrl });
   }
-
-  /**
-   * Renders the reference apps list.
-   */
-  private renderReferenceAppsList(): void {
-    this.referenceAppsUList.innerHTML = '';
-
-    const referenceAppReposFragment = document.createDocumentFragment();
-    (this.referenceAppRepos?.items ?? []).forEach((item) => {
-      if (this.reposRendered.has(item.name)) {
-        return;
-      }
-      const li = this.createRepoCard(item as RepoCardData);
-      referenceAppReposFragment.appendChild(li);
-      this.reposRendered.add(item.name);
-    });
-
-    this.referenceAppsUList.appendChild(referenceAppReposFragment);
-  }
-
-  /**
-   * Renders the starter apps list.
-   */
-  private renderStarterAppsList(): void {
-    this.starterAppsUList.innerHTML = '';
-
-    const herokuGettingStartedReposFragment = document.createDocumentFragment();
-
-    (this.herokuGettingStartedRepos?.items ?? []).forEach((item) => {
-      if (this.reposRendered.has(item.name)) {
-        return;
-      }
-      const li = this.createRepoCard(item as RepoCardData);
-      herokuGettingStartedReposFragment.appendChild(li);
-    });
-
-    this.starterAppsUList.appendChild(herokuGettingStartedReposFragment);
-  }
-
-  private configVarsFetcher =
-    () =>
-    async (contentsUrl: string): Promise<EnvironmentVariables> => {
-      if (this.configVarsByContentsUrl.has(contentsUrl)) {
-        return this.configVarsByContentsUrl.get(contentsUrl)!;
-      }
-      const configVars = await this.githubService.getAppConfigVars(contentsUrl);
-      if (!configVars) {
-        return {};
-      }
-      this.configVarsByContentsUrl.set(contentsUrl, configVars);
-      return configVars;
-    };
 }

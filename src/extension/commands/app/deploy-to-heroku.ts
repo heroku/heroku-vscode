@@ -10,13 +10,12 @@ import { herokuCommand } from '../../meta/command';
 import { HerokuCommand } from '../heroku-command';
 import type { AppJson } from '../../meta/app-json-schema';
 import * as schema from '../../meta/app-json.schema.json';
-import { getHerokuAppNames, getRootRepository } from '../../utils/git-utils';
 import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { packSources } from '../../utils/tarball';
 
 /**
  * The DeploymentError class is used when
- * an error occurs during the deplomen of
+ * an error occurs during the deployment of
  * an app.
  */
 class DeploymentError extends Error {
@@ -69,8 +68,7 @@ export class DeployToHeroku extends HerokuCommand<void> {
 
   protected requestInit: RequestInit | undefined;
   protected workspaceFolder = vscode.workspace.workspaceFolders![0];
-  protected appJsonUri = vscode.Uri.joinPath(this.workspaceFolder.uri, 'app.json');
-  protected procFileUri = vscode.Uri.joinPath(this.workspaceFolder.uri, 'Procfile');
+  protected rootRepoUri: vscode.Uri = this.workspaceFolder.uri;
   /**
    * Deploys the current workspace to Heroku by means
    * of the AppSetup apis.
@@ -86,7 +84,7 @@ export class DeployToHeroku extends HerokuCommand<void> {
    *
    * Note that the AppSetupService requires a URL to download a tarball. If
    * the blobUri argument is provided (such as the git repo's archive link) and the
-   * localbranch has uncommitted changes, those changes will not be reflected
+   * local branch has uncommitted changes, those changes will not be reflected
    * in the deployment (obviously).
    *
    * Requirements:
@@ -94,12 +92,14 @@ export class DeployToHeroku extends HerokuCommand<void> {
    * - Profile must exist in the workspace root
    * - Valid Heroku authentication token
    *
-   * @param target (proided by VSCode) the Uri of the target file or the App object or null.
+   * @param target (provided by VSCode) the Uri of the target file or the App object or null.
    * When a Procfile is selected, the target and the selectedFileUris contains the Procfile Uri.
    * When the app.json is selected, the target and the selectedFileUris contains the app.json Uri.
    * When an App is selected, the target contains the App object and the selectedFileUris is null.
-   * @param _selections (proided by VSCode) an array of files selected. This is the same as the target unless multiple files are selected in the file explorer
-   * @param tarballUri if omitted, a tarball created from the local file system will be upload to an s3 bucket and deployd to Heroku.
+   * @param _selections (provided by VSCode) an array of files selected. This is the same as the target unless multiple files are selected in the file explorer
+   * @param rootUri The root url of the workspace.
+   * @param appNames An optional list of app names for the user choose to deploy to.
+   * @param tarballUri if omitted, a tarball created from the local file system will be upload to an s3 bucket and deployed to Heroku.
    *
    * @throws {Error} If authentication fails or required files are missing
    * @throws {Error} If the app.json validation fails
@@ -111,6 +111,8 @@ export class DeployToHeroku extends HerokuCommand<void> {
   public async run(
     target: vscode.Uri | App | null,
     _selections: vscode.Uri[] | null,
+    rootUri: vscode.Uri = this.workspaceFolder.uri,
+    appNames?: string[],
     tarballUri?: vscode.Uri
   ): Promise<void> {
     const { accessToken } = (await vscode.authentication.getSession(
@@ -120,6 +122,7 @@ export class DeployToHeroku extends HerokuCommand<void> {
     this.requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${accessToken}` } };
 
     logExtensionEvent(`Deploying to Heroku...`);
+    this.rootRepoUri = rootUri;
     const resultPromise = vscode.window.withProgress(
       {
         title: 'Deploying to Heroku...',
@@ -135,10 +138,15 @@ export class DeployToHeroku extends HerokuCommand<void> {
           }
           // Profile is always required when no url is given
           if (!tarballUri) {
-            await this.validateProcfile();
+            const hasProcfile = await this.validateProcfile();
+            if (!hasProcfile) {
+              logExtensionEvent(
+                'Warning: No Procfile found. Heroku will attempt to automatically detect the type of application being deployed.'
+              );
+            }
           }
           // We're good to deploy
-          const deployResult = await this.deployToHeroku(tarballUri, target);
+          const deployResult = await this.deployToHeroku(tarballUri, rootUri, appNames, target);
           progress.report({ increment: 100 });
           return deployResult;
         })();
@@ -192,6 +200,9 @@ export class DeployToHeroku extends HerokuCommand<void> {
    * @param tarballUri the URI of the tarball to deploy. If none
    * is provided, the AppSetup service will create a new tarball
    * and upload it to the source_blob url created by the SourceService
+   * @param rootDir the root directory of the workspace. This is used to
+   * determine the Procfile and app.json paths.
+   * @param appNames an array of app names to display in a dialog for the user to optionally deploy to
    * @param target the target of the deployment. This can be a Uri, App or null.
    * If a tarballUri is provided, this argument is ignored.
    *
@@ -200,6 +211,8 @@ export class DeployToHeroku extends HerokuCommand<void> {
    */
   protected async deployToHeroku(
     tarballUri?: vscode.Uri,
+    rootDir: vscode.Uri = this.workspaceFolder.uri,
+    appNames?: string[],
     target?: unknown
   ): Promise<(Build & { name: string }) | null> {
     let blobUrl = tarballUri?.toString();
@@ -208,7 +221,7 @@ export class DeployToHeroku extends HerokuCommand<void> {
     // then upload the newly created tarball
     // from the local sources if no tarballUri was provided.
     if (!blobUrl) {
-      const tarball = await packSources(vscode.workspace.workspaceFolders![0]);
+      const tarball = await packSources(rootDir);
       const { source_blob: sourceBlob } = await this.sourcesService.create(this.requestInit);
       blobUrl = sourceBlob.get_url;
       // trim off the s3 bucket key and signature
@@ -237,8 +250,7 @@ export class DeployToHeroku extends HerokuCommand<void> {
     let isExistingDeployment = this.isApp(target);
     let targetApp = target;
     if (!isExistingDeployment) {
-      const appNames = await getHerokuAppNames();
-      if (appNames.length) {
+      if (appNames?.length) {
         const message = 'Choose where to deploy';
         const maybeAppName = await vscode.window.showQuickPick(['(Create new app)', ...appNames], { title: message });
         // User cancelled
@@ -267,29 +279,31 @@ export class DeployToHeroku extends HerokuCommand<void> {
       // Add the new remote to the workspace
       logExtensionEvent(`Adding remote heroku-${result.name}...`);
       const app = await this.appService.info(result.name, this.requestInit);
-      const rootRepository = await getRootRepository();
-      if (!rootRepository) {
-        logExtensionEvent(
-          'Git repository not found. The app deployed successfully but the Git remotes were not updated'
-        );
+      const gitProcess = HerokuCommand.exec(`git remote add heroku-${result.name} ${app.git_url}`, {
+        cwd: rootDir.fsPath,
+        signal: this.signal
+      });
+      const gitProcessResponse = await HerokuCommand.waitForCompletion(gitProcess);
+      if (gitProcessResponse.exitCode !== 0) {
+        const addRemoteErrorMessage = `Error adding remote: ${gitProcessResponse.errorMessage}`;
+        logExtensionEvent(addRemoteErrorMessage);
       }
-      await rootRepository?.addRemote(`heroku-${result.name}`, app.git_url);
     }
     return result;
   }
 
   /**
-   * Checks for the existence of the Procfile. If unavailable,
-   * the user is notified and the action is aborted.
+   * Checks for the existence of the Procfile.
    *
-   * @returns true if the workspace is valid, throws otherwise
+   * @returns boolean indicating wether a Procfile was found
    * @throws {Error} If the Procfile is missing or invalid
    */
   protected async validateProcfile(): Promise<boolean> {
     try {
-      await vscode.workspace.fs.stat(this.procFileUri);
+      const procFileUri = vscode.Uri.joinPath(this.rootRepoUri, 'Procfile');
+      await vscode.workspace.fs.stat(procFileUri);
     } catch {
-      throw new Error('No Procfile found. Deployment cannot continue.');
+      return false;
     }
     return true;
   }
@@ -319,16 +333,18 @@ export class DeployToHeroku extends HerokuCommand<void> {
    * Retrieves the app.json. This file must be in the
    * root of the workspace and must be valid.
    *
-   * @returns The typed app.json as an object or a ValidatorResult object if validaton fails.
+   * @returns The typed app.json as an object or a ValidatorResult object if validation fails.
    * @throws {Error} If the app.json cannot be read
    */
   protected async readAppJson(): Promise<AppJson | ValidatorResult> {
+    const appJsonUri = vscode.Uri.joinPath(this.rootRepoUri, 'app.json');
+
     try {
-      await vscode.workspace.fs.stat(this.appJsonUri);
+      await vscode.workspace.fs.stat(appJsonUri);
     } catch (e) {
-      throw new Error(`Cannot find app.json file at ${this.appJsonUri.path}`);
+      throw new Error(`Cannot find app.json file at ${appJsonUri.path}`);
     }
-    const appJsonFile = await vscode.workspace.fs.readFile(this.appJsonUri);
+    const appJsonFile = await vscode.workspace.fs.readFile(appJsonUri);
     let appJson: AppJson;
     try {
       appJson = JSON.parse(Buffer.from(appJsonFile).toString()) as AppJson;

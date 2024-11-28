@@ -63,7 +63,7 @@ export async function getGitExtensionApi(): Promise<API> {
 }
 
 /**
- * Gets the root repostiory
+ * Gets the root repository
  *
  * @returns the repository object or undefined if this is not a git repository
  */
@@ -74,4 +74,25 @@ export async function getRootRepository(): Promise<Repository | undefined> {
     return undefined;
   }
   return gitExtension?.repositories.find((repo) => repo.rootUri.path === ws.uri.path);
+}
+
+/**
+ * Creates a github session and returns it.
+ * This session grants read-only access to repositories
+ * and represents a minimal set of permissions to search
+ * for and read the contents of public repositories.
+ *
+ * @param createIfNone If true, a new session will be created if one does not exist
+ * @returns The authentication session or undefined if the user disallows it or fails to authenticate
+ */
+export async function getGithubSession(
+  createIfNone: boolean = true
+): Promise<vscode.AuthenticationSession | undefined> {
+  const session = await vscode.authentication.getSession(
+    'github', // authentication provider ID
+    ['repo', 'read:user'], // scopes needed for your extension
+    { createIfNone } // creates auth session if none exists
+  );
+
+  return session;
 }

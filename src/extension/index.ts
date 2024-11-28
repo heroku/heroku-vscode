@@ -4,9 +4,8 @@ import manifest from '../extension/meta/oclif.manifest.json';
 import { ShellScriptHoverProvider } from './providers/shell-script-hover-provider';
 import { AuthenticationProvider } from './providers/authentication-provider';
 import { HerokuResourceExplorerProvider } from './providers/resource-explorer/heroku-resource-explorer-provider';
-import { FildeDecoratorProvider } from './providers/file-decorator/file-decorator-provider';
+import { FileDecoratorProvider } from './providers/file-decorator/file-decorator-provider';
 
-import './commands/auth/welcome-view-sign-in';
 import { HerokuContextMenuCommandRunner } from './commands/heroku-cli/heroku-context-menu-command-runner';
 import { HerokuPsRunner } from './commands/heroku-cli/heroku-ps-runner';
 import { HerokuAddOnCommandRunner } from './commands/heroku-cli/heroku-addon-command-runner';
@@ -17,6 +16,10 @@ import { WelcomeViewSignIn } from './commands/auth/welcome-view-sign-in';
 import * as herokuShellCommandDecorator from './decorators/heroku-shell-command-decorator';
 import * as deployToHerokuDecorator from './decorators/deploy-to-heroku-decorator';
 
+import './commands/auth/welcome-view-sign-in';
+import './commands/github/show-starter-repositories-view';
+import { ShowStarterRepositories } from './commands/github/show-starter-repositories-view';
+
 const authProviderId = 'heroku:auth:login';
 /**
  * Called when the extension is activated by VSCode
@@ -25,24 +28,25 @@ const authProviderId = 'heroku:auth:login';
  */
 export function activate(context: vscode.ExtensionContext): void {
   void context.secrets.delete(AuthenticationProvider.SESSION_KEY);
-
+  const { authentication, languages, commands, window } = vscode;
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
   context.subscriptions.push(
     herokuShellCommandDecorator.activate(context),
     deployToHerokuDecorator.activate(context),
-    vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
+    languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
 
-    vscode.authentication.registerAuthenticationProvider(authProviderId, 'Heroku', new AuthenticationProvider(context)),
-    vscode.authentication.onDidChangeSessions(onDidChangeSessions),
+    authentication.registerAuthenticationProvider(authProviderId, 'Heroku', new AuthenticationProvider(context)),
+    authentication.onDidChangeSessions(onDidChangeSessions),
 
-    vscode.window.registerTreeDataProvider(
-      'heroku:resource-explorer:treeview',
-      new HerokuResourceExplorerProvider(context)
-    ),
+    window.registerTreeDataProvider('heroku:resource-explorer:treeview', new HerokuResourceExplorerProvider(context)),
 
-    vscode.window.registerFileDecorationProvider(new FildeDecoratorProvider(context)),
+    window.registerFileDecorationProvider(new FileDecoratorProvider(context)),
 
-    ...registerCommandsfromManifest()
+    ...registerCommandsFromManifest(),
+
+    commands.registerCommand('heroku:github:browse', () => {
+      void commands.executeCommand(ShowStarterRepositories.COMMAND_ID, context.extensionUri);
+    })
   );
   void onDidChangeSessions({ provider: { id: authProviderId, label: 'Heroku' } });
 }
@@ -59,10 +63,10 @@ async function onDidChangeSessions(event: vscode.AuthenticationSessionsChangeEve
   const { token } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
 
   if (!session?.accessToken && token) {
-    logExtensionEvent('Heroku accout it not accesible to the extension');
+    logExtensionEvent('Heroku account it not accessible to the extension');
     const items = ['Cancel', 'Log in again'];
     const choice = await vscode.window.showWarningMessage(
-      'Your Heroku accout it not accesible to the extension.',
+      'Your Heroku account it not accessible to the extension.',
       ...items
     );
     if (choice === items[1]) {
@@ -79,7 +83,7 @@ async function onDidChangeSessions(event: vscode.AuthenticationSessionsChangeEve
  *
  * @returns Disposables
  */
-function registerCommandsfromManifest(): vscode.Disposable[] {
+function registerCommandsFromManifest(): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
   for (const command of Object.keys(manifest.commands)) {
     disposables.push(

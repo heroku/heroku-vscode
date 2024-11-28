@@ -1323,7 +1323,7 @@
       },
       {
         "id": "hk.green",
-        "description": "Heroku branding digital pallete green",
+        "description": "Heroku branding digital palette green",
         "defaults": {
           "dark": "#ABD7B4",
           "highContrast": "#ABD7B4",
@@ -1333,7 +1333,7 @@
       },
       {
         "id": "hk.orange",
-        "description": "Heroku branding digital pallete orange",
+        "description": "Heroku branding digital palette orange",
         "defaults": {
           "dark": "#FBC595",
           "highContrast": "#FBC595",
@@ -1343,7 +1343,7 @@
       },
       {
         "id": "hk.red",
-        "description": "Heroku branding digital pallete red",
+        "description": "Heroku branding digital palette red",
         "defaults": {
           "dark": "#E58F8F",
           "highContrast": "#E58F8F",

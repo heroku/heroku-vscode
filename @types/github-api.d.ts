@@ -166,28 +166,9 @@ export type Permissions = {
 };
 
 export type SearchRepositoriesQuery = {
-  q: string;
+  q: string[];
   sort?: string;
   order?: 'stars' | 'forks' | 'help-wanted-issues' | ' updates';
-  per_page?: string;
-  page?: string;
-};
-
-export type GithubContentsResponse = {
-  name: string;
-  path: string;
-  sha: string;
-  size: number;
-  url: string;
-  html_url: string;
-  git_url: string;
-  download_url: string;
-  type: 'file' | 'dir' | 'symlink' | 'submodule';
-  content: string;
-  encoding: 'base64' | string;
-  _links: {
-    self: string;
-    git: string;
-    html: string;
-  };
+  per_page?: number;
+  page?: number;
 };
