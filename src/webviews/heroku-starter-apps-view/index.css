@@ -29,19 +29,25 @@ section {
     padding: 1rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
-    > div {
-      display: flex;
-      align-items: center;
-    }
-
-    > h1 {
-      width: 100%;
-    }
-
-    > .icon-logo-block-16 {
+    .icon-logo-block-16 {
       color: var(--heroku-primary);
       font-size: 4rem;
       margin-right: 1rem;
+    }
+
+    .title {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      p,
+      h1 {
+        margin: 0.5rem 0;
+      }
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
     }
   }
   .loading-indicator {
@@ -86,13 +92,15 @@ section {
 
       .repo-main {
         flex: 1;
+        position: relative;
+
         .repo-header {
           display: flex;
           align-items: center;
           gap: 0.5rem;
           margin-bottom: 0.5rem;
 
-          .icon-marketing-github-48 {
+          .language-icon {
             color: var(--vscode-icon-foreground);
             font-size: 2rem;
           }
@@ -134,6 +142,8 @@ section {
         .repo-meta {
           display: flex;
           flex-wrap: wrap;
+          position: absolute;
+          bottom: 0;
           gap: 1rem;
           font-size: 0.9rem;
           color: var(--vscode-descriptionForeground);
@@ -342,7 +352,9 @@ section {
           }
         }
 
-        > .team-selector-container {
+        > .team-selector-container,
+        .space-selector-container {
+          margin-bottom: 0.5rem;
           box-sizing: border-box;
           display: flex;
           flex-flow: column nowrap;
@@ -377,6 +389,9 @@ section {
             > .group {
               margin: 0rem 0.25rem 0.5rem 0.25rem;
               color: var(--heroku-text);
+              &.disabled {
+                opacity: var(--disabled-opacity);
+              }
               > .icon {
                 font-size: inherit;
               }

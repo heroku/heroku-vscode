@@ -1,7 +1,7 @@
-import EventEmitter from 'node:events';
 import { promisify } from 'node:util';
 import vscode, { Uri, WebviewPanel } from 'vscode';
 import TeamService from '@heroku-cli/schema/services/team-service.js';
+import SpaceService from '@heroku-cli/schema/services/space-service.js';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import importMap from '../../importmap.json';
 import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
@@ -11,7 +11,15 @@ import { logExtensionEvent } from '../../utils/logger';
 import { DeployToHeroku } from '../app/deploy-to-heroku';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
 
-type StarterReposWebviewMessage = { type: 'deploy'; payload: { repoUrl: string; repoName: string } };
+type StarterReposWebviewMessage =
+  | {
+      type: 'deploy';
+      payload: { repoUrl: string; repoName: string; teamId: string; spaceId: string };
+    }
+  | {
+      type: 'connected';
+      payload: never;
+    };
 
 @herokuCommand()
 /**
@@ -20,25 +28,21 @@ type StarterReposWebviewMessage = { type: 'deploy'; payload: { repoUrl: string; 
  */
 export class ShowStarterRepositories extends AbortController implements RunnableCommand<Promise<void>> {
   public static COMMAND_ID = 'heroku:github:show-starter-repositories' as const;
-  private static addonsPanel: WebviewPanel | undefined;
+  private static webviewPanel: WebviewPanel | undefined;
   private githubService = new GithubService();
   private teamService = new TeamService(fetch, 'https://api.heroku.com');
-
-  private notifier: EventEmitter | undefined;
+  private spaceService = new SpaceService(fetch, 'https://api.heroku.com');
 
   /**
    * Creates and displays a webview for showing
    * the add-on marketplace
    *
    * @param extensionUri The Uri of the extension.
-   * @param notifier The notification emitter.
    * @returns Promise<void>
    */
-  public async run(extensionUri: vscode.Uri, notifier: EventEmitter): Promise<void> {
-    this.notifier = notifier;
-
-    ShowStarterRepositories.addonsPanel?.dispose();
-    ShowStarterRepositories.addonsPanel = undefined;
+  public async run(extensionUri: vscode.Uri): Promise<void> {
+    ShowStarterRepositories.webviewPanel?.dispose();
+    ShowStarterRepositories.webviewPanel = undefined;
 
     const options = {
       enableScripts: true,
@@ -82,20 +86,11 @@ export class ShowStarterRepositories extends AbortController implements Runnable
     <link href="${malibuIconsUri.toString()}" rel="stylesheet" />
     <link href="${codiconsUri.toString()}" rel="stylesheet" />
       <body style="min-height: 100%; display: flex; overflow:hidden;">
-        <heroku-starter-apps>Web Component not available</heroku-starter-apps>
+        <heroku-starter-apps>Loading...</heroku-starter-apps>
       </body>
     </html>`;
 
-    ShowStarterRepositories.addonsPanel = panel;
-    const herokuGettingStartedRepos = await this.githubService.searchRepositories({
-      q: ['heroku-getting-started', 'user:heroku', 'sort:stars']
-    });
-    const referenceAppRepos = await this.githubService.searchRepositories({
-      q: ['', 'user:heroku-reference-apps', 'sort:stars']
-    });
-    const teams = await this.teamService.list(await generateRequestInit(this.signal));
-    await webview.postMessage({ referenceAppRepos, herokuGettingStartedRepos, teams });
-
+    ShowStarterRepositories.webviewPanel = panel;
     await new Promise((resolve) => panel.onDidDispose(resolve));
   }
 
@@ -104,7 +99,6 @@ export class ShowStarterRepositories extends AbortController implements Runnable
    * any pending API requests.
    */
   public [Symbol.dispose](): void {
-    this.notifier?.removeAllListeners();
     this.abort();
   }
 
@@ -114,8 +108,35 @@ export class ShowStarterRepositories extends AbortController implements Runnable
    * @param message The message object received from the webview.
    */
   private onMessage = async (message: StarterReposWebviewMessage): Promise<void> => {
+    if (message.type === 'connected') {
+      logExtensionEvent('Attempting to find Heroku starter repos in GitHub');
+      try {
+        const herokuGettingStartedRepos = await this.githubService.searchRepositories({
+          q: 'heroku-getting-started user:heroku',
+          sort: 'stars'
+        });
+        const referenceAppRepos = await this.githubService.searchRepositories({
+          q: 'user:heroku-reference-apps',
+          sort: 'stars'
+        });
+        const requestInit = await generateRequestInit(this.signal);
+        logExtensionEvent('Attempting to find teams and spaces for user');
+        const teams = await this.teamService.list(requestInit);
+        const spaces = await this.spaceService.list(requestInit);
+        await ShowStarterRepositories.webviewPanel?.webview.postMessage({
+          referenceAppRepos,
+          herokuGettingStartedRepos,
+          teams,
+          spaces
+        });
+      } catch (error) {
+        logExtensionEvent(`Failed to retrieve data from GitHub - ${(error as Error).message}`);
+      }
+    }
+
     if (message.type === 'deploy') {
-      const { repoName, repoUrl } = message.payload;
+      const { repoName, repoUrl, spaceId, teamId } = message.payload;
+
       logExtensionEvent(`User initiated clone and deployment to Heroku for: ${repoName}`);
       const cloneResultPromise = vscode.window.withProgress(
         {
@@ -154,12 +175,16 @@ export class ShowStarterRepositories extends AbortController implements Runnable
       // Deploy the app to Heroku
       const gitUrl = repoUrl;
       const folderName = gitUrl.split('/').pop()?.replace('.git', '');
-      const repositoryRootUri = vscode.Uri.joinPath(cloneResult, folderName!);
+      const localRepositoryRootUri = vscode.Uri.joinPath(cloneResult, folderName!);
       const result = await vscode.commands.executeCommand<{ name: string } | null | undefined>(
         DeployToHeroku.COMMAND_ID,
         undefined,
         undefined,
-        repositoryRootUri
+        localRepositoryRootUri,
+        [],
+        undefined,
+        teamId,
+        spaceId
       );
       // A result is only given when the clone and deploy is successful
       if (result) {
@@ -169,7 +194,7 @@ export class ShowStarterRepositories extends AbortController implements Runnable
           'Yes'
         );
         if (response === 'Yes') {
-          void vscode.commands.executeCommand('vscode.openFolder', repositoryRootUri);
+          void vscode.commands.executeCommand('vscode.openFolder', localRepositoryRootUri);
         }
       }
     }

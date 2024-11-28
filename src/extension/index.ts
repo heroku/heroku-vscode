@@ -51,31 +51,45 @@ export function activate(context: vscode.ExtensionContext): void {
   void onDidChangeSessions({ provider: { id: authProviderId, label: 'Heroku' } });
 }
 
+let sessionCheckDebounce: NodeJS.Timeout;
 /**
+ * Session change handler for vscode.
  *
  * @param event The event dispatched by the auth provider
  */
-async function onDidChangeSessions(event: vscode.AuthenticationSessionsChangeEvent): Promise<void> {
+function onDidChangeSessions(event: vscode.AuthenticationSessionsChangeEvent): void {
   if (event.provider.id !== authProviderId) {
     return;
   }
-  const session = await vscode.authentication.getSession(authProviderId, []);
-  const { token } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
 
-  if (!session?.accessToken && token) {
-    logExtensionEvent('Heroku account it not accessible to the extension');
-    const items = ['Cancel', 'Log in again'];
-    const choice = await vscode.window.showWarningMessage(
-      'Your Heroku account it not accessible to the extension.',
-      ...items
-    );
-    if (choice === items[1]) {
-      void vscode.commands.executeCommand(WelcomeViewSignIn.COMMAND_ID);
-    } else {
-      void vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
+  clearTimeout(sessionCheckDebounce);
+
+  /**
+   * Checks the user's access to Heroku when
+   * the session changes. If no session is available
+   * but the CLI is showing an access token,
+   * the extension will prompt the user to log in again.
+   */
+  async function checkSession(): Promise<void> {
+    const session = await vscode.authentication.getSession(authProviderId, []);
+    const { token } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
+
+    if (!session?.accessToken && token) {
+      logExtensionEvent('Heroku account it not accessible to the extension');
+      const items = ['Cancel', 'Log in again'];
+      const choice = await vscode.window.showWarningMessage(
+        'Your Heroku account it not accessible to the extension.',
+        ...items
+      );
+      if (choice === items[1]) {
+        void vscode.commands.executeCommand(WelcomeViewSignIn.COMMAND_ID);
+      } else {
+        void vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
+      }
+      return;
     }
-    return;
   }
+  sessionCheckDebounce = setTimeout(() => void checkSession(), 1500);
 }
 
 /**

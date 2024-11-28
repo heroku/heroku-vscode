@@ -424,7 +424,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
   /**
    * Get the Formations for the specified app and subscribes
-   * to property changes on each object retured.
+   * to property changes on each object returned.
    *
    * @param app The app the get formations for.
    * @param parent The parent element the formations belongs to
@@ -448,10 +448,10 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
   /**
    * Get the Dynos for the specified app and subscribes
-   * to property changes on each object retured.
+   * to property changes on each object returned.
    *
    * @param app The app to get dynos for.
-   * @param parent The parent elemnent the dyno tree items will belong to.
+   * @param parent The parent element the dyno tree items will belong to.
    * @returns An array of Bindable<Dyno>.
    */
   private async getDynosForApp(app: App, parent: T): Promise<Dyno[]> {

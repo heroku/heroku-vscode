@@ -166,9 +166,9 @@ export type Permissions = {
 };
 
 export type SearchRepositoriesQuery = {
-  q: string[];
+  q: string;
   sort?: string;
   order?: 'stars' | 'forks' | 'help-wanted-issues' | ' updates';
-  per_page?: number;
-  page?: number;
+  per_page?: string;
+  page?: string;
 };
