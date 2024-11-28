@@ -1,5 +1,7 @@
 import EventEmitter from 'node:events';
-import vscode, { AuthenticationSession, Uri, WebviewPanel } from 'vscode';
+import { promisify } from 'node:util';
+import vscode, { Uri, WebviewPanel } from 'vscode';
+import TeamService from '@heroku-cli/schema/services/team-service.js';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import importMap from '../../importmap.json';
 import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
@@ -7,6 +9,9 @@ import { GithubService } from '../../services/github-service';
 import { HerokuCommand } from '../heroku-command';
 import { logExtensionEvent } from '../../utils/logger';
 import { DeployToHeroku } from '../app/deploy-to-heroku';
+import { generateRequestInit } from '../../utils/generate-service-request-init';
+
+type StarterReposWebviewMessage = { type: 'deploy'; payload: { repoUrl: string; repoName: string } };
 
 @herokuCommand()
 /**
@@ -17,6 +22,7 @@ export class ShowStarterRepositories extends AbortController implements Runnable
   public static COMMAND_ID = 'heroku:github:show-starter-repositories' as const;
   private static addonsPanel: WebviewPanel | undefined;
   private githubService = new GithubService();
+  private teamService = new TeamService(fetch, 'https://api.heroku.com');
 
   private notifier: EventEmitter | undefined;
 
@@ -75,7 +81,7 @@ export class ShowStarterRepositories extends AbortController implements Runnable
     </head>
     <link href="${malibuIconsUri.toString()}" rel="stylesheet" />
     <link href="${codiconsUri.toString()}" rel="stylesheet" />
-      <body style="min-height: 100%; display: flex;">
+      <body style="min-height: 100%; display: flex; overflow:hidden;">
         <heroku-starter-apps>Web Component not available</heroku-starter-apps>
       </body>
     </html>`;
@@ -87,7 +93,8 @@ export class ShowStarterRepositories extends AbortController implements Runnable
     const referenceAppRepos = await this.githubService.searchRepositories({
       q: ['', 'user:heroku-reference-apps', 'sort:stars']
     });
-    await webview.postMessage({ referenceAppRepos, herokuGettingStartedRepos });
+    const teams = await this.teamService.list(await generateRequestInit(this.signal));
+    await webview.postMessage({ referenceAppRepos, herokuGettingStartedRepos, teams });
 
     await new Promise((resolve) => panel.onDidDispose(resolve));
   }
@@ -105,32 +112,66 @@ export class ShowStarterRepositories extends AbortController implements Runnable
    * Handles messages received from the webview.
    *
    * @param message The message object received from the webview.
-   * @param message.type The message type received from the webview.
-   * @param message.payload The payload received from the webview.
    */
-  private onMessage = async (message: { type: string; payload: unknown }): Promise<void> => {
+  private onMessage = async (message: StarterReposWebviewMessage): Promise<void> => {
     if (message.type === 'deploy') {
-      const gitUrl = message.payload as string;
-      // Clone the selected repo at a location chosen by the user
-      let clonedLocation: Uri | undefined;
-      try {
-        clonedLocation = await this.cloneRepo(message.payload as string);
-        if (!clonedLocation) {
-          logExtensionEvent('Aborting deployment to Heroku: user cancelled repository clone step');
-          return;
+      const { repoName, repoUrl } = message.payload;
+      logExtensionEvent(`User initiated clone and deployment to Heroku for: ${repoName}`);
+      const cloneResultPromise = vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Cloning Repo...',
+          cancellable: true
+        },
+        async (progress, token) => {
+          const cancellationPromise: Promise<void> = promisify(token.onCancellationRequested)();
+          const taskPromise = (async (): Promise<Uri | undefined> => {
+            // Clone the selected repo at a location chosen by the user
+            const clonedLocation = await this.cloneRepo(repoUrl);
+            if (!clonedLocation) {
+              throw new Error('Aborting deployment to Heroku: user cancelled repository clone step');
+            }
+            progress.report({ increment: 100 });
+            return clonedLocation;
+          })();
+
+          return Promise.race([cancellationPromise, taskPromise]);
         }
+      );
+      let cloneResult: void | vscode.Uri | null;
+      try {
+        cloneResult = await cloneResultPromise;
       } catch (error) {
         const errorMessage = `Aborting deployment to Heroku: failed to clone repository - ${(error as Error).message}`;
         logExtensionEvent(errorMessage);
         void vscode.window.showErrorMessage(errorMessage);
         return;
       }
-
+      if (!cloneResult) {
+        logExtensionEvent('Aborting deployment to Heroku: user cancelled');
+        return;
+      }
       // Deploy the app to Heroku
+      const gitUrl = repoUrl;
       const folderName = gitUrl.split('/').pop()?.replace('.git', '');
-      const folderUri = vscode.Uri.joinPath(clonedLocation, folderName!);
-      const result = await vscode.commands.executeCommand(DeployToHeroku.COMMAND_ID, undefined, undefined, folderUri);
-      debugger;
+      const repositoryRootUri = vscode.Uri.joinPath(cloneResult, folderName!);
+      const result = await vscode.commands.executeCommand<{ name: string } | null | undefined>(
+        DeployToHeroku.COMMAND_ID,
+        undefined,
+        undefined,
+        repositoryRootUri
+      );
+      // A result is only given when the clone and deploy is successful
+      if (result) {
+        const response = await vscode.window.showInformationMessage(
+          `Successfully deployed ${repoName} as "${result.name}" to Heroku. Would you like to open the workspace?`,
+          'No',
+          'Yes'
+        );
+        if (response === 'Yes') {
+          void vscode.commands.executeCommand('vscode.openFolder', repositoryRootUri);
+        }
+      }
     }
   };
 
@@ -156,15 +197,5 @@ export class ShowStarterRepositories extends AbortController implements Runnable
       throw new Error(result.errorMessage);
     }
     return uris[0];
-  }
-
-  /**
-   * Generates a request init object for making API requests to the Heroku API.
-   *
-   * @returns A promise that resolves to a request init object.
-   */
-  private async generateRequestInit(): Promise<RequestInit> {
-    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) as AuthenticationSession;
-    return { signal: this.signal, headers: { Authorization: `Bearer ${accessToken.trim()}` } };
   }
 }

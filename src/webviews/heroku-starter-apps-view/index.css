@@ -2,13 +2,32 @@
   display: flex;
   width: 100%;
 }
+#main-heading {
+  font-family: var(--vscode-font-family);
+  font-size: 1.5rem;
+  font-weight: var(--vscode-font-weight);
+  margin-bottom: 1rem;
+}
 
 section {
+  padding: 1rem;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+
   width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 
   > header {
     display: flex;
     align-items: center;
+    position: sticky;
+    top: 0;
+    background: var(--vscode-editor-background);
+    z-index: 100;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
     > div {
       display: flex;
@@ -18,10 +37,29 @@ section {
     > h1 {
       width: 100%;
     }
+
+    > .icon-logo-block-16 {
+      color: var(--heroku-primary);
+      font-size: 4rem;
+      margin-right: 1rem;
+    }
+  }
+  .loading-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  > .content-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    padding-top: 0;
   }
 }
 
 .repo-list {
+  overflow: visible;
   display: flex;
   flex-direction: column;
   list-style: none;
@@ -48,12 +86,16 @@ section {
 
       .repo-main {
         flex: 1;
-
         .repo-header {
           display: flex;
           align-items: center;
           gap: 0.5rem;
           margin-bottom: 0.5rem;
+
+          .icon-marketing-github-48 {
+            color: var(--vscode-icon-foreground);
+            font-size: 2rem;
+          }
 
           .repo-name {
             color: var(--vscode-textLink-foreground);
@@ -63,6 +105,14 @@ section {
 
             .repo-url {
               color: inherit;
+            }
+            > a {
+              &:hover {
+                color: var(--vscode-textLink-activeForeground);
+                text-decoration: underline;
+              }
+              color: var(--vscode-textLink-foreground);
+              text-decoration: none;
             }
           }
 
@@ -282,11 +332,56 @@ section {
 
       .deploy {
         display: flex;
-        flex-direction: row;
-        align-items: flex-end;
+        flex-direction: column;
+        align-items: self-end;
+        justify-content: space-between;
+        min-width: 30%;
+        > vscode-button {
+          .icon {
+            font-size: 1rem;
+          }
+        }
 
-        .icon {
-          font-size: 1rem;
+        > .team-selector-container {
+          box-sizing: border-box;
+          display: flex;
+          flex-flow: column nowrap;
+          align-items: flex-start;
+          justify-content: flex-start;
+          width: 100%;
+
+          > label {
+            display: block;
+            color: var(--vscode-foreground);
+            cursor: pointer;
+            font-size: var(--vscode-font-size);
+            line-height: normal;
+            margin-bottom: 0.25rem;
+          }
+          > vscode-dropdown {
+            > vscode-option {
+              margin-left: 0.5rem;
+              & + .group {
+                margin-top: 0.5rem;
+              }
+              > .indicator {
+                border-left: 1px solid;
+                border-bottom: 1px solid;
+                width: 0.5rem;
+                height: 0.5rem;
+                display: inline-block;
+                margin-right: 0.25rem;
+              }
+            }
+            width: inherit;
+            > .group {
+              margin: 0rem 0.25rem 0.5rem 0.25rem;
+              color: var(--heroku-text);
+              > .icon {
+                font-size: inherit;
+              }
+            }
+          }
         }
       }
     }

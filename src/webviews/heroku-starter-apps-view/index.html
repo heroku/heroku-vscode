@@ -1,5 +1,6 @@
 <section aria-labelledby="main-heading">
   <header>
+    <span class="icon icon-logo-block-16" aria-hidden="true"></span>
     <h1 id="main-heading">Heroku starter apps</h1>
     <div>
       <vscode-text-field
@@ -13,8 +14,11 @@
       </vscode-text-field>
     </div>
   </header>
-  <ul id="reference-apps" class="repo-list" role="list" aria-label="Reference applications"></ul>
-  <ul id="starter-apps" class="repo-list" role="list" aria-label="Starter applications"></ul>
+  <vscode-progress-ring class="loading-indicator"></vscode-progress-ring>
+  <div class="content-area">
+    <ul id="reference-apps" class="repo-list" role="list" aria-label="Reference applications"></ul>
+    <ul id="starter-apps" class="repo-list" role="list" aria-label="Starter applications"></ul>
+  </div>
   <footer></footer>
 </section>
 
@@ -23,6 +27,7 @@
     <div class="repo-card">
       <div class="repo-main">
         <div class="repo-header">
+          <span slot="start" class="icon icon-marketing-github-48" aria-hidden="true"></span>
           <h3 class="repo-name"><a class="repo-url" aria-label="Repository name"></a></h3>
           <span class="repo-visibility" aria-label="Repository visibility"></span>
         </div>
@@ -44,6 +49,17 @@
       </div>
 
       <div class="deploy">
+        <div class="team-selector-container">
+          <label class="team-selector-label">Choose a team:</label>
+          <vscode-dropdown class="team-selector">
+            <vscode-option value="personal" style="margin-left: 0" ;>Personal</vscode-option>
+            <vscode-divider></vscode-divider>
+            <div class="group enterprise-template">
+              <span class="icon icon-marketing-enterprise-accounts-48" aria-hidden="true"></span>
+              <span class="enterprise-label">Enterprise Accounts & Teams</span>
+            </div>
+          </vscode-dropdown>
+        </div>
         <vscode-button class="deploy-button" aria-label="Deploy to Heroku">
           <span slot="start" class="icon icon-deploy-16" aria-hidden="true"></span>
           Deploy to Heroku

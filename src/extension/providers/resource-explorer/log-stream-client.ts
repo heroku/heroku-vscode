@@ -242,11 +242,6 @@ export class LogStreamClient extends EventEmitter {
    * @inheritdoc
    */
   public emit<K extends keyof LogStreamEventMap>(eventName: K, ...args: Parameters<LogStreamEventHandler<K>>): boolean {
-    if (eventName !== LogStreamEvents.STREAM_STARTED) {
-      const app = ('app' in args[0] ? args[0].app : args[0]) as App;
-      logExtensionEvent(`Detected log event: ${eventName} - ${app.name}`);
-    }
-
     return super.emit(eventName, ...args);
   }
 
