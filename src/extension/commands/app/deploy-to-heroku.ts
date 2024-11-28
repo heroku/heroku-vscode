@@ -13,6 +13,7 @@ import * as schema from '../../meta/app-json.schema.json';
 import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { packSources } from '../../utils/tarball';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { getHerokuAppNames } from '../../utils/git-utils';
 
 /**
  * Te only successful result is the Build & { name: string } type
@@ -69,6 +70,7 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
   public static COMMAND_ID = 'heroku:deploy-to-heroku';
   protected appService = new AppService(fetch, 'https://api.heroku.com');
   protected sourcesService = new SourceService(fetch, 'https://api.heroku.com');
+
   protected appSetupService = new AppSetupService(fetch, 'https://api.heroku.com');
   protected buildService = new BuildService(fetch, 'https://api.heroku.com');
 
@@ -78,6 +80,8 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
   protected rootRepoUri!: vscode.Uri;
   protected appNames: string[] | undefined;
   protected tarballUri: vscode.Uri | undefined;
+  protected teamId: string | undefined;
+  protected spaceId: string | undefined;
 
   /**
    * Deploys the current workspace to Heroku by means
@@ -110,6 +114,8 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
    * @param rootUri The root url of the workspace.
    * @param appNames An optional list of app names for the user choose to deploy to.
    * @param tarballUri if omitted, a tarball created from the local file system will be upload to an s3 bucket and deployed to Heroku.
+   * @param teamId The id of the team to deploy the app to (optional, new apps only)
+   * @param spaceId The id of the space to deploy the app to (optional, new apps only)
    *
    * @throws {Error} If authentication fails or required files are missing
    * @throws {Error} If the app.json validation fails
@@ -123,14 +129,18 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
   public async run(
     target: vscode.Uri | App | null,
     _selections: vscode.Uri[] | null,
-    rootUri: vscode.Uri,
+    rootUri?: vscode.Uri | null,
     appNames?: string[],
-    tarballUri?: vscode.Uri
+    tarballUri?: vscode.Uri,
+    teamId?: string,
+    spaceId?: string
   ): Promise<DeploymentResult> {
-    this.rootRepoUri = rootUri ?? vscode.workspace?.workspaceFolders?.[0];
+    this.rootRepoUri = rootUri ?? vscode.workspace.workspaceFolders![0].uri;
     this.target = target;
-    this.appNames = appNames;
+    this.appNames = appNames ?? (await getHerokuAppNames());
     this.tarballUri = tarballUri;
+    this.teamId = teamId;
+    this.spaceId = spaceId;
     this.requestInit = await generateRequestInit(this.signal);
 
     logExtensionEvent(`Deploying to Heroku...`);
@@ -149,8 +159,9 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
       } else {
         const message = `Deployment completed for ${result.name}`;
         logExtensionEvent(message);
-        // if we have the rootRepoUrl matches the open workspace, give the option to view the app
-        const canViewApp = this.rootRepoUri.fsPath === vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+        // Show the option to view the app if the rootRepoUrl matches one open workspaces
+        const folders = vscode.workspace.workspaceFolders ?? [];
+        const canViewApp = folders.some((folder) => this.rootRepoUri.fsPath === folder.uri.fsPath);
         const items = ['OK'];
         if (canViewApp) {
           items.push('View app');
@@ -275,34 +286,34 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
     // the user where to deploy.
     let isExistingDeployment = this.isApp(this.target);
     let targetApp = this.target;
-    if (!isExistingDeployment) {
-      if (this.appNames?.length) {
-        const message = 'Choose where to deploy';
-        const maybeAppName = await vscode.window.showQuickPick(['(Create new app)', ...this.appNames], {
-          title: message
-        });
-        // User cancelled
-        if (!maybeAppName) {
-          return null;
-        }
-        // Deploy to an existing app based on the user selection
-        // provided the app still exists on Heroku and the user has
-        // access to it.
-        if (maybeAppName !== '(Create new app)') {
-          try {
-            targetApp = await this.appService.info(maybeAppName, this.requestInit);
-            isExistingDeployment = true;
-          } catch (error) {
-            const appServiceErrorMessage = `The app "${maybeAppName}" was not found on Heroku`;
-            logExtensionEvent(appServiceErrorMessage);
-            throw new DeploymentError(appServiceErrorMessage);
-          }
+    if (!isExistingDeployment && this.appNames?.length) {
+      const message = 'Choose where to deploy';
+      const maybeAppName = await vscode.window.showQuickPick(['(Create new app)', ...this.appNames], {
+        title: message
+      });
+      // User cancelled
+      if (!maybeAppName) {
+        return null;
+      }
+      // Deploy to an existing app based on the user selection
+      // provided the app still exists on Heroku and the user has
+      // access to it.
+      if (maybeAppName !== '(Create new app)') {
+        try {
+          targetApp = await this.appService.info(maybeAppName, this.requestInit);
+          isExistingDeployment = true;
+        } catch (error) {
+          const appServiceErrorMessage = `The app "${maybeAppName}" was not found on Heroku`;
+          logExtensionEvent(appServiceErrorMessage);
+          throw new DeploymentError(appServiceErrorMessage);
         }
       }
     }
+
     const result = isExistingDeployment
       ? await this.createNewBuildForExistingApp(blobUrl, targetApp as App)
       : await this.setupNewApp(blobUrl);
+
     if (!isExistingDeployment && result) {
       // Add the new remote to the workspace
       logExtensionEvent(`Adding remote heroku-${result.name}...`);
@@ -437,17 +448,36 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
       // eslint-disable-next-line camelcase
       source_blob: {
         url: blobUrl
-      }
+      },
+      app: {}
     };
+
+    if (this.spaceId) {
+      Reflect.set(payload.app!, 'space', this.spaceId);
+    }
+    if (this.teamId) {
+      Reflect.set(payload.app!, 'organization', this.teamId);
+    }
+
     try {
       const result = await this.appSetupService.create(payload, this.requestInit);
+      // This delay only seems to matter on Code Builder
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const info = await this.appSetupService.info(result.id, this.requestInit);
       if (info.failure_message) {
-        logExtensionEvent(`Post deployment failed: ${info.failure_message}`);
+        logExtensionEvent(`Error: deployment failed with "${info.failure_message}"`);
+        logExtensionEvent('-----------------------');
+        if (info.manifest_errors?.length) {
+          info.manifest_errors.forEach(logExtensionEvent);
+        }
+        logExtensionEvent('-----------------------');
         throw new DeploymentError(
           `The request was sent to Heroku successfully but there was a problem with deployment: ${info.failure_message}`,
           result.app.id
         );
+      }
+      if (info.postdeploy?.output) {
+        logExtensionEvent(`post deploy: ${info.postdeploy.output}`);
       }
       return { ...(info.build as Build), name: result.app.name };
     } catch (error) {

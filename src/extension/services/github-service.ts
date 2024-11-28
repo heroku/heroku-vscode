@@ -1,5 +1,4 @@
 import { GithubSearchResponse, SearchRepositoriesQuery } from 'github-api';
-import { getGithubSession } from '../utils/git-utils';
 import { logExtensionEvent } from '../utils/logger';
 
 /**
@@ -22,20 +21,11 @@ export class GithubService {
       }
     } as RequestInit;
 
-    const session = await getGithubSession();
-    if (session) {
-      Reflect.set(requestInit.headers!, 'Authorization', `Bearer ${session.accessToken}`);
-    } else {
-      logExtensionEvent('No GitHub session found. Query limits will be enforced by github.');
-    }
-
+    const params = new URLSearchParams(query);
     let response: Response;
     try {
-      let queryText = query.q.join('+');
-      queryText += query.sort ? `&sort=${query.sort}` : '';
-      queryText += query.order ? `&order=${query.order}` : '';
-
-      response = await fetch(`https://api.github.com/search/repositories?q=${queryText}`, requestInit);
+      logExtensionEvent(`Searching for repositories with query: ${params.toString()}`);
+      response = await fetch(`https://api.github.com/search/repositories?${params.toString()}`, requestInit);
       if (response.ok) {
         return (await response.json()) as GithubSearchResponse;
       }

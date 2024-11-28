@@ -21,7 +21,7 @@
     "jsonValidation": [
       {
         "fileMatch": "app.json",
-        "url": "./src/extension/meta/app-json.schema.json"
+        "url": "./out/extension/meta/app-json.schema.json"
       }
     ],
     "viewsWelcome": [

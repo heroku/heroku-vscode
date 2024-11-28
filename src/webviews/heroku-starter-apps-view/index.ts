@@ -1,5 +1,6 @@
 import { customElement, FASTElement } from '@microsoft/fast-element';
 import {
+  Dropdown,
   provideVSCodeDesignSystem,
   vsCodeButton,
   vsCodeDropdown,
@@ -8,12 +9,12 @@ import {
   vsCodeTextField,
   vsCodeProgressRing,
   TextField,
-  Button,
-  ProgressRing,
-  Option
+  type Button,
+  type ProgressRing,
+  type Option
 } from '@vscode/webview-ui-toolkit';
 import type { GithubSearchResponse, RepoSearchResultItem } from 'github-api';
-import type { Team } from '@heroku-cli/schema';
+import type { Space, Team } from '@heroku-cli/schema';
 import { loadCss, loadHtmlTemplate, vscode } from '../utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
 
@@ -21,7 +22,67 @@ type DataPayload = {
   referenceAppRepos: GithubSearchResponse;
   herokuGettingStartedRepos: GithubSearchResponse;
   teams?: Team[];
+  spaces?: Space[];
 };
+const languageToIcon = {
+  JavaScript: 'icon-marketing-language-node-48',
+  TypeScript: 'icon-marketing-language-node-48',
+  NodeJS: 'icon-marketing-language-node-48',
+  EJS: 'icon-marketing-language-node-48',
+  Python: 'icon-marketing-language-python-48',
+  Java: 'icon-marketing-language-java-48',
+  PHP: 'icon-marketing-language-php-48',
+  Twig: 'icon-marketing-language-php-48',
+  Ruby: 'icon-marketing-language-ruby-48',
+  Go: 'icon-marketing-language-go-48',
+  Gradle: 'icon-marketing-language-gradle-48',
+  Scala: 'icon-marketing-language-scala-48',
+  Clojure: 'icon-marketing-language-clojure-48'
+};
+/**
+ *
+ * @param teams
+ * @returns
+ */
+function mapTeamsByEnterpriseAccount(teams: Team[] = []): Map<string, Team[]> {
+  const teamsByEnterpriseAccountName = new Map<string, Team[]>();
+  for (const team of teams) {
+    const enterpriseName = team.enterprise_account!.name as string;
+    const teams = teamsByEnterpriseAccountName.get(enterpriseName) ?? [];
+    teams.push(team);
+    teamsByEnterpriseAccountName.set(enterpriseName, teams);
+  }
+  return teamsByEnterpriseAccountName;
+}
+
+/**
+ *
+ * @param spaces
+ * @returns
+ */
+function mapSpacesByOrganization(spaces: Space[] = []): Map<string, Space[]> {
+  spaces.sort((a, b) => {
+    if (a.shield && b.shield) {
+      return a.name.localeCompare(b.name);
+    }
+    if (a.shield) {
+      return -1;
+    }
+    if (b.shield) {
+      return 1;
+    }
+    return 0;
+  });
+
+  const spacesByOrganizationName = new Map<string, Space[]>();
+  for (const space of spaces) {
+    const organizationName = space.organization.name as string;
+    const spaces = spacesByOrganizationName.get(organizationName) ?? [];
+    spaces.push(space);
+    spacesByOrganizationName.set(organizationName, spaces);
+  }
+  return spacesByOrganizationName;
+}
 
 const template = await loadHtmlTemplate(import.meta.resolve('./index.html'));
 const styles = await loadCss([
@@ -34,8 +95,31 @@ const styles = await loadCss([
   template,
   styles
 })
+
 /**
+ * A custom web component for displaying and deploying Heroku starter applications.
  *
+ * This class extends FASTElement and provides functionality to:
+ * - Display reference apps and starter apps from GitHub repositories
+ * - Allow searching/filtering of displayed apps
+ * - Show app metadata like visibility, language, stars, and last updated date
+ * - Enable team and space selection for deployment
+ * - Handle the aggregation of data to send to the node process
+ * when the user clicks on the "Deploy to Heroku" button.
+ *
+ * Key features:
+ * - Integrates with VS Code's webview UI toolkit components
+ * - Debounced search filtering
+ * - Dynamic creation of repo cards with metadata provided by the node process
+ * - Team and space selector dropdowns grouped by enterprise/organization
+ * - Loading indicator while data is being fetched
+ * - Event handling for messages from VS Code extension
+ *
+ * The component expects a DataPayload containing:
+ * - referenceAppRepos: GitHub search results for reference applications
+ * - herokuGettingStartedRepos: GitHub search results for starter applications
+ * - teams: Optional array of Heroku teams
+ * - spaces: Optional array of Heroku spaces
  */
 export class HerokuStarterApps extends FASTElement {
   @shadowChild('#reference-apps')
@@ -50,6 +134,12 @@ export class HerokuStarterApps extends FASTElement {
   @shadowChild('#repo-template')
   private repoListItemTemplate!: HTMLTemplateElement;
 
+  @shadowChild('#selector-template')
+  private selectorTemplate!: HTMLTemplateElement;
+
+  @shadowChild('#selector-group-template')
+  private selectorGroupTemplate!: HTMLTemplateElement;
+
   @shadowChild('.loading-indicator')
   private loadingIndicator!: ProgressRing;
 
@@ -58,7 +148,7 @@ export class HerokuStarterApps extends FASTElement {
   private data: DataPayload | undefined;
 
   /**
-   *
+   * Constructor for the HerokuStarterApps class.
    */
   public constructor() {
     super();
@@ -99,10 +189,18 @@ export class HerokuStarterApps extends FASTElement {
    */
   private createRepoCard(
     item: RepoSearchResultItem,
-    teamsByEnterpriseAccountName?: Map<string, Team[]>
+    teamsByEnterpriseAccountName?: Map<string, Team[]>,
+    spacesByOrganizationName?: Map<string, Space[]>
   ): DocumentFragment {
     const listElement = this.repoListItemTemplate.content.cloneNode(true) as DocumentFragment;
-    (listElement.firstElementChild as HTMLLIElement).dataset.name = item.name;
+    (listElement.firstElementChild as HTMLLIElement).id = item.name;
+
+    // language icon
+    const languageIconElement = listElement.querySelector('.language-icon') as HTMLSpanElement;
+    languageIconElement.classList.add(
+      languageToIcon[item.language as keyof typeof languageToIcon] ?? 'icon-marketing-github-48'
+    );
+
     // name
     const repoUrlElement = listElement.querySelector('.repo-url') as HTMLAnchorElement;
     repoUrlElement.href = item.html_url;
@@ -134,62 +232,44 @@ export class HerokuStarterApps extends FASTElement {
     lastUpdatedElement.textContent = `Last Updated: ${new Date(item.updated_at).toLocaleDateString()}`;
 
     // Team selector
-    const teamSelectorContainer = listElement.querySelector('.team-selector-container') as HTMLDivElement;
-    if (teamsByEnterpriseAccountName?.size) {
-      const teamSelectorLabel = listElement.querySelector('.team-selector-label') as HTMLLabelElement;
-      const teamSelector = teamSelectorContainer.querySelector('.team-selector') as HTMLSelectElement;
-      const enterpriseTemplate = listElement.querySelector('.enterprise-template') as HTMLDivElement;
+    this.createTeamSelector(listElement, teamsByEnterpriseAccountName, item.name);
+    // Space selector
+    this.createSpaceSelector(listElement, spacesByOrganizationName, item.name);
 
-      for (const [enterpriseName, teams] of teamsByEnterpriseAccountName) {
-        const enterpriseTemplateClone = enterpriseTemplate.cloneNode(true) as HTMLDivElement;
-        // label
-        const enterpriseLabel = enterpriseTemplateClone.querySelector('.enterprise-label') as HTMLSpanElement;
-        enterpriseLabel.textContent = enterpriseName;
-        // icon
-        const enterpriseIcon = enterpriseTemplateClone.querySelector('.icon') as HTMLSpanElement;
-        enterpriseIcon.classList.replace('icon-marketing-enterprise-accounts-48', 'icon-marketing-enterprise-48');
-        teamSelector.append(enterpriseTemplateClone);
+    // Form for data collection and submission
+    const form = listElement.querySelector('form') as HTMLFormElement;
+    form.dataset.repoUrl = item.clone_url;
+    form.dataset.repoName = item.name;
+    form.addEventListener('submit', this.onSubmit);
 
-        for (const team of teams) {
-          const option = document.createElement('vscode-option') as Option;
-          option.value = team.id;
-          option.innerHTML = `<span class="indicator"></span> ${team.name} (${team.role ?? ''})`;
-          teamSelector.appendChild(option);
-        }
-      }
-
-      teamSelectorLabel.htmlFor = `team-selector-${item.name}`;
-      teamSelector.id = `team-selector-${item.name}`;
-    } else {
-      teamSelectorContainer.remove();
-    }
-
+    // Deploy button delegates to the form.requestSubmit() function
     const deployButton = listElement.querySelector('vscode-button') as Button;
-    deployButton.dataset.repoUrl = item.clone_url;
-    deployButton.dataset.repoName = item.name;
-    // intentionally bound to Button
-    deployButton.addEventListener('click', this.onDeployClick);
+    deployButton.addEventListener('click', () => form.requestSubmit());
 
     return listElement;
   }
 
+  /**
+   * Handler for the search input which
+   * debounces filtering by 250ms. This
+   * timeout is reset each time the user
+   * types in the search input.
+   */
   private onSearchInput = (): void => {
     clearTimeout(this.debounceSearch);
     this.debounceSearch = setTimeout(this.applyFilter, 250) as unknown as number;
   };
 
+  /**
+   * Applies the filter to the list of repos
+   * from the user's search input. Elements
+   * within the list are hidden if no match is
+   * found.
+   */
   private applyFilter = (): void => {
     const term = this.searchField.value.toLowerCase();
-    const fields: Array<keyof RepoSearchResultItem> = [
-      'name',
-      'description',
-      'language',
-      'html_url',
-      'private',
-      'stargazers_count',
-      'forks_count',
-      'updated_at'
-    ];
+    // Search these fields
+    const fields: Array<keyof RepoSearchResultItem> = ['name', 'description', 'language', 'html_url'];
 
     const { herokuGettingStartedRepos = { items: [] }, referenceAppRepos = { items: [] } } = this.data ?? {};
     const allRepos = [...herokuGettingStartedRepos.items, ...referenceAppRepos.items];
@@ -198,38 +278,34 @@ export class HerokuStarterApps extends FASTElement {
         const value = repo[field]?.toLocaleString().toLocaleLowerCase();
         return value?.includes(term);
       });
-      const element = this.shadowRoot!.querySelector(`li[data-name="${repo.name}"]`);
+      const element = this.shadowRoot!.getElementById(repo.name);
       element?.classList.toggle('hidden', !matches);
     }
   };
 
   /**
-   * Message receiver for the node process
+   * Message receiver for the node process.
+   * This function receives the data used to
+   * populate the view from the node process.
    *
    * @param event The message event
    */
   private onMessage = (event: MessageEvent<DataPayload>): void => {
     this.data = event.data;
-    const { herokuGettingStartedRepos, referenceAppRepos, teams } = event.data;
-    const teamsByEnterpriseAccountName = new Map<string, Team[]>();
-    if (teams?.length) {
-      for (const team of teams) {
-        const enterpriseName = team.enterprise_account!.name as string;
-        const teams = teamsByEnterpriseAccountName.get(enterpriseName) ?? [];
-        teams.push(team);
-        teamsByEnterpriseAccountName.set(enterpriseName, teams);
-      }
-    }
+    const { herokuGettingStartedRepos, referenceAppRepos, teams, spaces } = event.data;
+    const teamsByEnterpriseAccountName = mapTeamsByEnterpriseAccount(teams);
+    const spacesByOrganizationName = mapSpacesByOrganization(spaces);
+
     const referenceAppReposFragment = document.createDocumentFragment();
     for (const item of referenceAppRepos.items) {
-      const listElement = this.createRepoCard(item, teamsByEnterpriseAccountName);
+      const listElement = this.createRepoCard(item, teamsByEnterpriseAccountName, spacesByOrganizationName);
       referenceAppReposFragment.appendChild(listElement);
     }
     this.referenceAppsUlist.appendChild(referenceAppReposFragment);
 
     const herokuGettingStartedReposFragment = document.createDocumentFragment();
     for (const item of herokuGettingStartedRepos.items) {
-      const listElement = this.createRepoCard(item);
+      const listElement = this.createRepoCard(item, teamsByEnterpriseAccountName, spacesByOrganizationName);
       herokuGettingStartedReposFragment.appendChild(listElement);
     }
 
@@ -238,12 +314,162 @@ export class HerokuStarterApps extends FASTElement {
   };
 
   /**
-   * Click handler for the deploy button
+   * Submit handler for the form element containing the
+   * team and space selectors.
    *
    * @param event
    */
-  private onDeployClick(this: Button): void {
+  private onSubmit(this: HTMLFormElement, event: SubmitEvent): void {
+    event.preventDefault();
     const { repoUrl, repoName } = this.dataset;
-    vscode.postMessage({ type: 'deploy', payload: { repoUrl, repoName } });
+    const { [0]: teamSelector, [1]: spaceSelector } = (event.target as HTMLFormElement).querySelectorAll<Dropdown>(
+      'vscode-dropdown'
+    );
+    const teamId = teamSelector.value;
+    const spaceId = spaceSelector.value;
+
+    vscode.postMessage({ type: 'deploy', payload: { repoUrl, repoName, teamId, spaceId } });
   }
+
+  /**
+   * Creates and hydrates the teams selector.
+   *
+   * @param listElement
+   * @param teamsByEnterpriseAccountName
+   * @param repoName
+   */
+  private createTeamSelector(
+    listElement: DocumentFragment,
+    teamsByEnterpriseAccountName: Map<string, Team[]> | undefined,
+    repoName: string
+  ): void {
+    const teamSelectorContainer = listElement.querySelector('.team-selector-container') as HTMLDivElement;
+    if (!teamsByEnterpriseAccountName?.size) {
+      teamSelectorContainer.remove();
+      return;
+    }
+
+    const oldSelector = teamSelectorContainer.querySelector('vscode-dropdown');
+    oldSelector?.remove();
+
+    const teamSelectorFragment = this.selectorTemplate.content.cloneNode(true) as DocumentFragment;
+    const teamSelector = teamSelectorFragment.firstElementChild as Dropdown;
+    // Hydrate the default option
+    const defaultOption = teamSelector.querySelector('vscode-option') as Option;
+    defaultOption.value = '';
+    defaultOption.textContent = 'Personal';
+
+    // Create the root group - this is the "Enterprise Accounts & Teams" top-level group
+    teamSelector.append(this.createSelectorGroup('Enterprise Accounts & Teams', 'icon-marketing-enterprise-48'));
+
+    for (const [enterpriseName, teams] of teamsByEnterpriseAccountName) {
+      teamSelector.append(this.createSelectorGroup(enterpriseName, 'icon-marketing-enterprise-accounts-48'));
+
+      // options
+      for (const team of teams) {
+        const option = document.createElement('vscode-option') as Option;
+        option.value = team.name;
+        option.innerHTML = `<span class="indicator"></span> ${team.name} (${team.role ?? ''})`;
+        teamSelector.appendChild(option);
+      }
+    }
+    // proper semantics for the label and the selector
+    const teamSelectorLabel = listElement.querySelector('.selector-label') as HTMLLabelElement;
+    teamSelectorLabel.htmlFor = `team-selector-${repoName}`;
+    teamSelector.id = `team-selector-${repoName}`;
+
+    teamSelector.dataset.repoName = repoName;
+    teamSelector.addEventListener('change', this.onTeamSelectorChange);
+
+    teamSelectorContainer.append(teamSelectorFragment);
+  }
+
+  /**
+   * Creates and hydrates the spaces selector.
+   *
+   * @param listElement
+   * @param teamsByEnterpriseAccountName
+   * @param repoName
+   */
+  private createSpaceSelector(
+    listElement: DocumentFragment | HTMLLIElement,
+    spacesByEnterpriseAccountName: Map<string, Space[]> | undefined,
+    repoName: string,
+    selectedTeam?: string
+  ): void {
+    const spaceSelectorContainer = listElement.querySelector('.space-selector-container') as HTMLDivElement;
+    if (!spacesByEnterpriseAccountName?.size) {
+      spaceSelectorContainer?.remove();
+      return;
+    }
+    const oldSelector = spaceSelectorContainer.querySelector('vscode-dropdown');
+    oldSelector?.remove();
+
+    const spacesSelectorFragment = this.selectorTemplate.content.cloneNode(true) as DocumentFragment;
+    const spacesSelector = spacesSelectorFragment.firstElementChild as Dropdown;
+    // Hydrate the default option
+    const defaultOption = spacesSelector.querySelector('vscode-option') as Option;
+    defaultOption.value = '';
+    defaultOption.textContent = 'Do not deploy to a space';
+
+    // Create the root group - this is the "Organizations & Spaces" top-level group
+    spacesSelector.append(this.createSelectorGroup('Organizations & Spaces', 'icon-marketing-spaces-48'));
+
+    for (const [orgName, spaces] of spacesByEnterpriseAccountName) {
+      spacesSelector.append(
+        this.createSelectorGroup(orgName, 'icon-marketing-enterprise-48', orgName !== selectedTeam)
+      );
+
+      // options for spaces
+      for (const space of spaces) {
+        const option = document.createElement('vscode-option') as Option;
+        option.value = space.id;
+        option.innerHTML = `<span class="indicator"></span> ${space.shield ? '<span class="icon icon-space-shielded-16"></span>' : ''} ${space.name}`;
+        option.disabled = orgName !== selectedTeam;
+        spacesSelector.appendChild(option);
+      }
+    }
+    const spaceSelectorLabel = listElement.querySelector('.selector-label') as HTMLLabelElement;
+    spaceSelectorLabel.htmlFor = `space-selector-${repoName}`;
+    spacesSelector.id = `space-selector-${repoName}`;
+
+    spaceSelectorContainer.append(spacesSelectorFragment);
+  }
+
+  /**
+   * Creates a group indicator for use in the vscode Dropdown.
+   * This is a visual indicator only and does not contain
+   * selectable options.
+   *
+   * @param labelText The text to use as the group label
+   * @param iconCss The CSS class to apply to the icon
+   * @returns
+   */
+  private createSelectorGroup(labelText: string, iconCss: string, disabled = false): DocumentFragment {
+    const groupClone = this.selectorGroupTemplate.content.cloneNode(true) as DocumentFragment;
+    groupClone.firstElementChild?.classList.toggle('disabled', disabled);
+    // label
+    const enterpriseLabel = groupClone.querySelector('.label') as HTMLSpanElement;
+    enterpriseLabel.textContent = labelText;
+    // icon
+    const enterpriseIcon = groupClone.querySelector('.icon') as HTMLSpanElement;
+    enterpriseIcon.classList.add(iconCss);
+    return groupClone;
+  }
+
+  /**
+   *
+   * @param event
+   */
+  private onTeamSelectorChange = (event: Event): void => {
+    const selector = event.target as Dropdown;
+    const selectedTeam = selector.value;
+    const repoName = selector.dataset.repoName as string;
+    const listElement = this.shadowRoot?.getElementById(repoName) as HTMLLIElement | undefined;
+    if (!listElement) {
+      return;
+    }
+    const spacesByOrganizationName = mapSpacesByOrganization(this.data!.spaces);
+    this.createSpaceSelector(listElement, spacesByOrganizationName, repoName, selectedTeam);
+  };
 }
