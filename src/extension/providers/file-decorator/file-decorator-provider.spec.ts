@@ -1,17 +1,17 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import * as vscode from 'vscode';
-import { FildeDecoratorProvider } from './file-decorator-provider';
+import { FileDecoratorProvider } from './file-decorator-provider';
 
-suite('FildeDecoratorProvider', () => {
-  let provider: FildeDecoratorProvider;
+suite('FileDecoratorProvider', () => {
+  let provider: FileDecoratorProvider;
   let mockContext: vscode.ExtensionContext;
   let sandbox: sinon.SinonSandbox;
 
   setup(() => {
     sandbox = sinon.createSandbox();
     mockContext = {} as vscode.ExtensionContext;
-    provider = new FildeDecoratorProvider(mockContext);
+    provider = new FileDecoratorProvider(mockContext);
   });
 
   teardown(() => {

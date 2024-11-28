@@ -1,6 +1,147 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Heroku app.json Schema",
+  "description": "Schema for Heroku app.json configuration files",
   "type": "object",
+  "definitions": {
+    "envVar": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "generator": {
+          "type": "string",
+          "enum": ["secret"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "addon": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "plan": {
+              "type": "string"
+            },
+            "as": {
+              "type": "string"
+            },
+            "options": {
+              "type": "object"
+            }
+          },
+          "required": ["plan"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "buildpack": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": ["url"],
+      "additionalProperties": false
+    },
+    "dynoSize": {
+      "type": "string",
+      "enum": [
+        "free",
+        "eco",
+        "hobby",
+        "basic",
+        "standard-1x",
+        "standard-2x",
+        "1x-classic",
+        "2x-classic",
+        "private-s",
+        "private-m",
+        "private-l",
+        "private-l-ram",
+        "private-xl",
+        "private-2xl",
+        "performance",
+        "performance-m",
+        "performance-l",
+        "performance-l-ram",
+        "performance-xl",
+        "performance-2xl",
+        "shield-s",
+        "shield-m",
+        "shield-l",
+        "shield-xl",
+        "shield-2xl"
+      ]
+    },
+    "formation": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_-]+$": {
+          "type": "object",
+          "properties": {
+            "quantity": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "size": {
+              "$ref": "#/definitions/dynoSize"
+            }
+          },
+          "required": ["quantity"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "environmentConfig": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z][A-Z0-9_]*$": {
+              "oneOf": [
+                {
+                  "$ref": "#/definitions/envVar"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        "formation": {
+          "$ref": "#/definitions/formation"
+        },
+        "addons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/addon"
+          }
+        },
+        "buildpacks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/buildpack"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "properties": {
     "name": {
       "type": "string",
@@ -47,180 +188,60 @@
       "type": "object",
       "patternProperties": {
         "^[A-Z][A-Z0-9_]*$": {
-          "type": "object",
-          "properties": {
-            "description": {
-              "type": "string"
-            },
-            "value": {
-              "type": "string"
-            },
-            "required": {
-              "type": "boolean"
-            },
-            "generator": {
-              "type": "string",
-              "enum": ["secret"]
-            }
-          },
-          "additionalProperties": false
+          "$ref": "#/definitions/envVar"
         }
       }
     },
     "formation": {
-      "type": "object",
-      "patternProperties": {
-        "^[a-zA-Z0-9_-]+$": {
-          "type": "object",
-          "properties": {
-            "quantity": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "size": {
-              "type": "string",
-              "enum": [
-                "free",
-                "eco",
-                "hobby",
-                "basic",
-                "standard-1x",
-                "standard-2x",
-                "1x-classic",
-                "2x-classic",
-                "private-s",
-                "private-m",
-                "private-l",
-                "private-l-ram",
-                "private-xl",
-                "private-2xl",
-                "performance",
-                "performance-m",
-                "performance-l",
-                "performance-l-ram",
-                "performance-xl",
-                "performance-2xl",
-                "shield-s",
-                "shield-m",
-                "shield-l",
-                "shield-xl",
-                "shield-2xl"
-              ]
-            }
-          },
-          "required": ["quantity"],
-          "additionalProperties": false
-        }
-      }
+      "$ref": "#/definitions/formation"
     },
     "addons": {
       "type": "array",
       "items": {
-        "oneOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "plan": {
-                "type": "string"
-              },
-              "as": {
-                "type": "string"
-              },
-              "options": {
-                "type": "object"
-              }
-            },
-            "required": ["plan"],
-            "additionalProperties": false
-          }
-        ]
+        "$ref": "#/definitions/addon"
       }
     },
     "buildpacks": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string"
-          }
-        },
-        "required": ["url"],
-        "additionalProperties": false
+        "$ref": "#/definitions/buildpack"
       }
     },
     "environments": {
       "type": "object",
       "properties": {
         "test": {
-          "type": "object",
-          "properties": {
-            "scripts": {
-              "type": "object",
-              "properties": {
-                "test": {
-                  "type": "string"
-                }
-              }
+          "allOf": [
+            {
+              "$ref": "#/definitions/environmentConfig"
             },
-            "env": {
-              "type": "object",
-              "patternProperties": {
-                "^[A-Z][A-Z0-9_]*$": {
+            {
+              "properties": {
+                "scripts": {
                   "type": "object",
                   "properties": {
-                    "description": {
+                    "test": {
                       "type": "string"
-                    },
-                    "value": {
-                      "type": "string"
-                    },
-                    "required": {
-                      "type": "boolean"
-                    },
-                    "generator": {
-                      "type": "string",
-                      "enum": ["secret"]
                     }
-                  }
+                  },
+                  "additionalProperties": false
                 }
               }
-            },
-            "addons": {
-              "type": "array",
-              "items": {
-                "oneOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "plan": {
-                        "type": "string"
-                      },
-                      "as": {
-                        "type": "string"
-                      },
-                      "options": {
-                        "type": "object"
-                      }
-                    },
-                    "required": ["plan"]
-                  }
-                ]
-              }
             }
-          }
+          ]
+        },
+        "review": {
+          "$ref": "#/definitions/environmentConfig"
+        },
+        "production": {
+          "$ref": "#/definitions/environmentConfig"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "stack": {
       "type": "string",
-      "enum": ["heroku-18", "heroku-20", "heroku-22"]
+      "enum": ["heroku-18", "heroku-20", "heroku-22", "heroku-24"]
     },
     "image": {
       "type": "string"

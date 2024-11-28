@@ -22,7 +22,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
   public async run(commandName: keyof typeof manifest.commands, targetDataModel: T): Promise<void> {
     this.commandName = commandName;
     this.targetDataModel = targetDataModel;
-    const command = await this.buidCommandShellScript(commandName, targetDataModel);
+    const command = await this.buildCommandShellScript(commandName, targetDataModel);
     if (!command) {
       return;
     }
@@ -37,7 +37,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
    *
    * Implementors can override this function to
    * build any shell script whatsoever when needed
-   * bearing in mind that any string retured by this
+   * bearing in mind that any string returned by this
    * function is executed in a terminal or child
    * process and must be from a trusted source.
    *
@@ -48,7 +48,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
    * @param targetDataModel The data model to run the command against
    * @returns The command to run or undefined if the user has cancelled
    */
-  protected async buidCommandShellScript(
+  protected async buildCommandShellScript(
     commandName: keyof typeof manifest.commands,
     targetDataModel: T
   ): Promise<string | undefined> {
@@ -213,15 +213,15 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
    *
    * @param flagsOrArgsManifest The manifest of flags or args for the command
    * @param userInputMap The object to store the user's input for each key
-   * @param omitOptinal Whether to omit optional flags from the input
+   * @param omitOptional Whether to omit optional flags from the input
    * @returns boolean indicating whether the user cancelled the command
    */
   protected async getInput(
     flagsOrArgsManifest: FlagsOrArgs,
     userInputMap: Map<string, string | undefined>,
-    omitOptinal: boolean
+    omitOptional: boolean
   ): Promise<boolean> {
-    const flagsOrArgs = this.collectInputsFromManifest(flagsOrArgsManifest, omitOptinal);
+    const flagsOrArgs = this.collectInputsFromManifest(flagsOrArgsManifest, omitOptional);
 
     for (const flagOrArg of flagsOrArgs) {
       // Skip anything that already exists
@@ -341,11 +341,11 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
    * Collects the names of the flags and args requested in the command manifest
    *
    * @param flagsOrArgsManifest The manifest of flags or args for the command
-   * @param omitOptinal Whether to omit optional flags from the input
+   * @param omitOptional Whether to omit optional flags from the input
    *
    * @returns An array of strings representing the inputs to get from the user
    */
-  protected collectInputsFromManifest(flagsOrArgsManifest: FlagsOrArgs, omitOptinal?: boolean): string[] {
+  protected collectInputsFromManifest(flagsOrArgsManifest: FlagsOrArgs, omitOptional?: boolean): string[] {
     const requiredInputs: string[] = [];
     const optionalInputs: string[] = [];
 
@@ -389,7 +389,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
       return 0;
     });
     // Include optional only when not explicitly omitted
-    return omitOptinal ? requiredInputs : [...requiredInputs, ...optionalInputs];
+    return omitOptional ? requiredInputs : [...requiredInputs, ...optionalInputs];
   }
 
   /**

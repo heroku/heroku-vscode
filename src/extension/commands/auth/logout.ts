@@ -14,7 +14,7 @@ export class LogoutCommand extends HerokuCommand<HerokuCommandCompletionInfo> {
    * Runs the `heroku auth:logout` command in a child
    * process and returns the result.
    *
-   * @returns The uninterpreted reult from the Heroku CLI child process.
+   * @returns The uninterpreted result from the Heroku CLI child process.
    */
   public async run(): Promise<HerokuCommandCompletionInfo> {
     using logoutProcess = HerokuCommand.exec('heroku auth:logout', { signal: this.signal });

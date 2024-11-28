@@ -11,6 +11,10 @@
     "inlineSources": true,
     "removeComments": false,
     "noImplicitAny": true,
-    "noUncheckedSideEffectImports": true
-  }
+    "noUncheckedSideEffectImports": true,
+    "paths": {
+      "github-api": ["./@types/github-api.d.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build", "out", "scripts"]
 }

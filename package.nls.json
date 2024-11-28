@@ -8,7 +8,7 @@
   },
 
   "heroku:getting-started:contents": {
-    "message": "It looks like this project is not a Heroku app.\n[Get started on Heroku](https://devcenter.heroku.com/start)"
+    "message": "It looks like this project is not a Heroku app.\n[Browse starter apps](command:heroku:github:browse)"
   },
 
   "view.heroku.name": {

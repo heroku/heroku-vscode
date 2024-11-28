@@ -1,0 +1,54 @@
+<section aria-labelledby="main-heading">
+  <header>
+    <h1 id="main-heading">Heroku starter apps</h1>
+    <div>
+      <vscode-text-field
+        id="search"
+        role="searchbox"
+        placeholder="Search apps"
+        aria-placeholder="Search apps"
+        aria-label="Search apps"
+      >
+        <span slot="start" class="icon" aria-hidden="true"><i class="codicon codicon-search"></i></span>
+      </vscode-text-field>
+    </div>
+  </header>
+  <ul id="reference-apps" class="repo-list" role="list" aria-label="Reference applications"></ul>
+  <ul id="starter-apps" class="repo-list" role="list" aria-label="Starter applications"></ul>
+  <footer></footer>
+</section>
+
+<template id="repo-template">
+  <li role="listitem">
+    <div class="repo-card">
+      <div class="repo-main">
+        <div class="repo-header">
+          <h3 class="repo-name"><a class="repo-url" aria-label="Repository name"></a></h3>
+          <span class="repo-visibility" aria-label="Repository visibility"></span>
+        </div>
+
+        <p class="repo-description"></p>
+
+        <div class="repo-meta" role="group" aria-label="Repository statistics">
+          <span class="meta-item language" aria-label="Programming language"></span>
+          <span class="meta-item">
+            <span class="icon" aria-hidden="true"><i class="codicon codicon-star-full"></i></span>
+            <span class="star-count" aria-label="Star count"></span>
+          </span>
+          <span class="meta-item">
+            <span class="icon" aria-hidden="true"><i class="codicon codicon-repo-forked"></i></span>
+            <span class="fork-count" aria-label="Fork count"></span>
+          </span>
+          <span class="meta-item last-updated" aria-label="Last updated"></span>
+        </div>
+      </div>
+
+      <div class="deploy">
+        <vscode-button class="deploy-button" aria-label="Deploy to Heroku">
+          <span slot="start" class="icon icon-deploy-16" aria-hidden="true"></span>
+          Deploy to Heroku
+        </vscode-button>
+      </div>
+    </div>
+  </li>
+</template>

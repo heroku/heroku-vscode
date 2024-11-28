@@ -27,7 +27,7 @@ export class HerokuShellCommandDecorator {
    * the heroku call expressions in the hover
    * text.
    *
-   * @param context The extenstion context
+   * @param context The extension context
    */
   public decorateHerokuCommands(context: vscode.ExtensionContext): void {
     const editor = vscode.window.activeTextEditor;
@@ -42,7 +42,7 @@ export class HerokuShellCommandDecorator {
     if (!herokuCommandNodes.length) {
       return;
     }
-    // Find all env var assignents that may be used
+    // Find all env var assignments that may be used
     // by a Heroku CLI command and include them in the
     // rawCommand. We do not make any attempt to filter
     // unused assignments.
@@ -56,7 +56,7 @@ export class HerokuShellCommandDecorator {
 
     const decorationOptions: vscode.DecorationOptions[] = [];
     // Iterate found command and generate hover text
-    // with a command execution link contining the args
+    // with a command execution link continuing the args
     // needed in the ExecuteCommandFromEditor class
     for (const command of herokuCommandNodes) {
       const [, commandNameLit] = this.lexer.findAllNodeKinds(isLiteral, command) as Lit[];
@@ -110,7 +110,7 @@ export class HerokuShellCommandDecorator {
 /**
  * Activate the decorator command and return a vscode.Disposable
  *
- * @param context The extenstion context
+ * @param context The extension context
  * @returns A disposable object that can be used to dispose of the decoration providers
  */
 export function activate(context: vscode.ExtensionContext): vscode.Disposable {

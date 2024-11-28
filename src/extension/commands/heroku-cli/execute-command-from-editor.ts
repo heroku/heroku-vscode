@@ -16,7 +16,10 @@ export class ExecuteCommandFromEditor extends HerokuCommandRunner<CommandOptions
   /**
    * @inheritdoc
    */
-  protected buidCommandShellScript(_commandName: string, targetDataModel: CommandOptions): Promise<string | undefined> {
+  protected buildCommandShellScript(
+    _commandName: string,
+    targetDataModel: CommandOptions
+  ): Promise<string | undefined> {
     const { hydratedCommand, assignments } = targetDataModel;
     return Promise.resolve(`${assignments}${hydratedCommand}`);
   }
