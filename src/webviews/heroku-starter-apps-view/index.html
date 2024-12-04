@@ -54,22 +54,46 @@
           <span class="meta-item last-updated" aria-label="Last updated"></span>
         </div>
       </div>
+    </div>
 
-      <form class="deploy" onsubmit="javascript:void(0);">
-        <div class="team-selector-container">
-          <label class="selector-label">Choose a team:</label>
-          <!-- #selector-template -->
-        </div>
-        <div class="space-selector-container">
-          <label class="selector-label">Choose a space:</label>
-          <!-- #selector-template -->
-        </div>
+    <form class="deploy-options" onsubmit="javascript:void(0);">
+      <div class="list-container">
+        <ul class="configure">
+          <li>
+            <h3>Configure then deploy <span class="repo-name"></span> to Heroku</h3>
+          </li>
+          <li class="team-selector-container">
+            <label class="selector-label">App owner</label>
+            <!-- #selector-template -->
+          </li>
+          <li class="space-selector-container">
+            <label class="selector-label">Space <span class="required-badge">Optional</span></label>
+            <!-- #selector-template -->
+          </li>
+          <li class="internal-routing-container">
+            <vscode-checkbox name="internal-routing" disabled>Make this app internal to this space</vscode-checkbox>
+            <sub>
+              Apps that are internal can only be accessed from within their private Space
+              <vscode-link href="https://devcenter.heroku.com/articles/internal-routing">Learn more</vscode-link>
+              <strong>You can't modify this setting after app creation.</strong>
+            </sub>
+          </li>
+          <li class="config-vars-divider">
+            <vscode-divider></vscode-divider>
+            <h3>Config vars</h3>
+          </li>
+          <!-- #config-var-template -->
+        </ul>
+      </div>
+      <div class="actions">
+        <vscode-button class="cancel-button" appearance="secondary">Cancel</vscode-button>
         <vscode-button class="deploy-button" aria-label="Deploy to Heroku">
+          <vscode-progress-ring slot="start" aria-hidden="true"></vscode-progress-ring>
           <span slot="start" class="icon icon-deploy-16" aria-hidden="true"></span>
           Deploy to Heroku
         </vscode-button>
-      </form>
-    </div>
+      </div>
+    </form>
   </li>
 </template>
 
@@ -86,4 +110,11 @@
     <span class="icon" aria-hidden="true"></span>
     <span class="label"></span>
   </div>
+</template>
+
+<template id="config-var-template">
+  <li>
+    <vscode-text-field class="config-override"></vscode-text-field>
+    <sub></sub>
+  </li>
 </template>

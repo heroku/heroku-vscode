@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { API, GitExtension, Repository } from '../git';
+import { API, GitExtension, Repository } from 'git-extension';
 import { logExtensionEvent } from './logger';
 
 /**

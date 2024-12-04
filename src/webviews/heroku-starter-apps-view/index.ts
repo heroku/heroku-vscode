@@ -8,22 +8,31 @@ import {
   vsCodeDivider,
   vsCodeTextField,
   vsCodeProgressRing,
-  TextField,
+  vsCodeCheckbox,
+  vsCodeLink,
+  type TextField,
   type Button,
   type ProgressRing,
-  type Option
+  type Option,
+  Checkbox
 } from '@vscode/webview-ui-toolkit';
 import type { GithubSearchResponse, RepoSearchResultItem } from 'github-api';
 import type { Space, Team } from '@heroku-cli/schema';
+import { EnvironmentVariables } from '@heroku/app-json-schema';
 import { loadCss, loadHtmlTemplate, vscode } from '../utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
+import { GithubService } from './github-service.js';
 
 type DataPayload = {
-  referenceAppRepos: GithubSearchResponse;
-  herokuGettingStartedRepos: GithubSearchResponse;
   teams?: Team[];
   spaces?: Space[];
 };
+
+/**
+ * Record used to map Heroku marketing icons
+ * with the various languages defined in the
+ * GitHub repo.
+ */
 const languageToIcon = {
   JavaScript: 'icon-marketing-language-node-48',
   TypeScript: 'icon-marketing-language-node-48',
@@ -39,7 +48,9 @@ const languageToIcon = {
   Scala: 'icon-marketing-language-scala-48',
   Clojure: 'icon-marketing-language-clojure-48'
 };
+
 /**
+ * Maps team by their respective enterprise account names
  *
  * @param teams
  * @returns
@@ -56,6 +67,7 @@ function mapTeamsByEnterpriseAccount(teams: Team[] = []): Map<string, Team[]> {
 }
 
 /**
+ * Maps spaces by their respective organization names
  *
  * @param spaces
  * @returns
@@ -105,19 +117,19 @@ const styles = await loadCss([
  * - Show app metadata like visibility, language, stars, and last updated date
  * - Enable team and space selection for deployment
  * - Handle the aggregation of data to send to the node process
- * when the user clicks on the "Deploy to Heroku" button.
+ * when the user clicks on the "Deploy app" button.
  *
  * Key features:
  * - Integrates with VS Code's webview UI toolkit components
  * - Debounced search filtering
- * - Dynamic creation of repo cards with metadata provided by the node process
+ * - Dynamic creation of repo cards with metadata
  * - Team and space selector dropdowns grouped by enterprise/organization
  * - Loading indicator while data is being fetched
+ * - Configuration var input fields when the app.json has `env` entries
  * - Event handling for messages from VS Code extension
  *
- * The component expects a DataPayload containing:
- * - referenceAppRepos: GitHub search results for reference applications
- * - herokuGettingStartedRepos: GitHub search results for starter applications
+ * The component expects an optional DataPayload from the node
+ * process containing the following:
  * - teams: Optional array of Heroku teams
  * - spaces: Optional array of Heroku spaces
  */
@@ -140,12 +152,21 @@ export class HerokuStarterApps extends FASTElement {
   @shadowChild('#selector-group-template')
   private selectorGroupTemplate!: HTMLTemplateElement;
 
+  @shadowChild('#config-var-template')
+  private configVarTemplate!: HTMLTemplateElement;
+
   @shadowChild('.loading-indicator')
   private loadingIndicator!: ProgressRing;
 
   private debounceSearch: number | undefined;
 
-  private data: DataPayload | undefined;
+  private teams: Map<string, Team[]> | undefined;
+  private spaces: Map<string, Space[]> | undefined;
+  private referenceAppRepos: GithubSearchResponse | undefined;
+  private herokuGettingStartedRepos: GithubSearchResponse | undefined;
+
+  private githubService = new GithubService();
+  private configVarsByContentsUrl = new Map<string, EnvironmentVariables>();
 
   /**
    * Constructor for the HerokuStarterApps class.
@@ -158,18 +179,32 @@ export class HerokuStarterApps extends FASTElement {
       vsCodeOption(),
       vsCodeProgressRing(),
       vsCodeTextField(),
-      vsCodeDivider()
+      vsCodeDivider(),
+      vsCodeCheckbox(),
+      vsCodeLink()
     );
   }
 
   /**
    * @inheritdoc
    */
-  public connectedCallback(): void {
+  public async connectedCallback(): Promise<void> {
     super.connectedCallback();
     window.addEventListener('message', this.onMessage);
     this.searchField.addEventListener('input', this.onSearchInput);
     vscode.postMessage({ type: 'connected' });
+
+    this.herokuGettingStartedRepos = await this.githubService.searchRepositories({
+      q: 'heroku-getting-started user:heroku',
+      sort: 'stars'
+    });
+
+    this.referenceAppRepos = await this.githubService.searchRepositories({
+      q: 'user:heroku-reference-apps',
+      sort: 'stars'
+    });
+    this.renderReferenceAppsList();
+    this.renderStarterAppsList();
   }
 
   /**
@@ -187,11 +222,7 @@ export class HerokuStarterApps extends FASTElement {
    * @param teams The list of teams the user belongs to
    * @returns A document fragment containing the repo card
    */
-  private createRepoCard(
-    item: RepoSearchResultItem,
-    teamsByEnterpriseAccountName?: Map<string, Team[]>,
-    spacesByOrganizationName?: Map<string, Space[]>
-  ): DocumentFragment {
+  private createRepoCard(item: RepoSearchResultItem): DocumentFragment {
     const listElement = this.repoListItemTemplate.content.cloneNode(true) as DocumentFragment;
     (listElement.firstElementChild as HTMLLIElement).id = item.name;
 
@@ -232,21 +263,199 @@ export class HerokuStarterApps extends FASTElement {
     lastUpdatedElement.textContent = `Last Updated: ${new Date(item.updated_at).toLocaleDateString()}`;
 
     // Team selector
-    this.createTeamSelector(listElement, teamsByEnterpriseAccountName, item.name);
+    this.createTeamSelector(listElement, item.name);
     // Space selector
-    this.createSpaceSelector(listElement, spacesByOrganizationName, item.name);
+    this.createSpaceSelector(listElement, item.name);
 
     // Form for data collection and submission
-    const form = listElement.querySelector('form') as HTMLFormElement;
+    const form = listElement.querySelector('form.deploy-options') as HTMLFormElement;
     form.dataset.repoUrl = item.clone_url;
     form.dataset.repoName = item.name;
     form.addEventListener('submit', this.onSubmit);
 
-    // Deploy button delegates to the form.requestSubmit() function
-    const deployButton = listElement.querySelector('vscode-button') as Button;
-    deployButton.addEventListener('click', () => form.requestSubmit());
+    // Repo name for configure section
+    const repoNameElement = listElement.querySelector('span.repo-name') as HTMLSpanElement;
+    repoNameElement.textContent = item.name;
+
+    // Cancel button - only visible when deploy options is expanded - just collapses
+    const cancelButton = listElement.querySelector('vscode-button.cancel-button') as Button;
+    cancelButton.addEventListener('click', this.onCancelClick);
+
+    // Deploy button - expands the deploy-options for prompts
+    const deployButton = listElement.querySelector('vscode-button.deploy-button') as Button;
+    deployButton.dataset.contentsUrl = item.contents_url;
+    deployButton.addEventListener('click', this.onDeployAppClick);
 
     return listElement;
+  }
+
+  /**
+   * Handles the click event on the cancel button
+   * and performs the following:
+   *
+   * 1. Collapses the deployment options form
+   * 2. Updates the button text to "Deploy to Heroku"
+   * 3. Resets the configuration variables list
+   *
+   * @param this The vscode-button element where this event originated
+   */
+  private onCancelClick(this: Button): void {
+    const deployOptionsForm = this.closest('form.deploy-options') as HTMLFormElement;
+    deployOptionsForm.classList.remove('expanded');
+
+    const deployButton = deployOptionsForm.querySelector('vscode-button.deploy-button') as Button;
+    deployButton.lastChild!.textContent = 'Deploy to Heroku';
+
+    const configureUlList = deployOptionsForm.querySelector('ul.configure') as HTMLUListElement;
+    const listContainer = deployOptionsForm.querySelector('div.list-container') as HTMLDivElement;
+    listContainer.style.overflow = '';
+    listContainer.style.height = '';
+
+    listContainer.animate(
+      [
+        { height: configureUlList.clientHeight + 'px', opacity: 1 },
+        { height: '0px', opacity: 0 }
+      ],
+      {
+        duration: 200,
+        easing: 'ease-in-out'
+      }
+    );
+  }
+
+  /**
+   * Handles the click event on the deploy button to show
+   * the config options available for this repo. This function:
+   *
+   * 1. Fetches application configuration variables from GitHub
+   * 2. Expands the deployment options form with an animation
+   * 3. Displays configuration variables if they exist
+   * 4. Updates the button text and loading state
+   *
+   * @param event - The MouseEvent triggered by clicking the deploy button
+   */
+  private onDeployAppClick = (event: MouseEvent): void => {
+    const deployButton = event.target as Button;
+
+    const deployOptionsForm = deployButton.closest('form.deploy-options') as HTMLFormElement;
+    const configureUlList = deployOptionsForm.querySelector('ul.configure') as HTMLUListElement;
+
+    // The form was expanded and options configured
+    // then the user clicked to deploy the app
+    if (deployOptionsForm.classList.contains('expanded')) {
+      deployOptionsForm.requestSubmit();
+      return;
+    }
+
+    const { contentsUrl } = deployButton.dataset;
+    deployButton.classList.add('loading');
+
+    void (async (): Promise<void> => {
+      const configVars =
+        this.configVarsByContentsUrl.get(contentsUrl as string) ??
+        (await this.githubService.getAppConfigVars(contentsUrl as string)) ??
+        {};
+
+      const hasConfigVars = Reflect.ownKeys(configVars).length > 0;
+      configureUlList.classList.toggle('has-config-vars', !!hasConfigVars);
+
+      // If we don't have an entry in this.configVarsByContentsUrl
+      // we need to build the HTML provided we have config vars
+      if (!this.configVarsByContentsUrl.has(contentsUrl as string) && hasConfigVars) {
+        this.buildConfigVars(configVars, configureUlList);
+      }
+      // add an entry so we do not try to fetch config vars
+      // or build the HTML a second time.
+      this.configVarsByContentsUrl.set(contentsUrl as string, configVars);
+      const listContainer = deployOptionsForm.querySelector('div.list-container') as HTMLDivElement;
+
+      const animation = listContainer.animate(
+        [
+          { height: '0px', opacity: 0 },
+          { height: configureUlList.clientHeight + 'px', opacity: 1 }
+        ],
+        {
+          duration: 200,
+          easing: 'ease-in-out'
+        }
+      );
+      await new Promise((resolve) => animation.addEventListener('finish', resolve));
+      listContainer.style.overflow = 'initial';
+      listContainer.style.height = 'initial';
+      deployOptionsForm.classList.add('expanded');
+
+      deployButton.classList.remove('loading');
+      deployButton.lastChild!.textContent = 'Deploy app';
+      listContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    })();
+  };
+
+  /**
+   * Handles the submission of the deployment form.
+   * This function prevents the default form submission
+   * and instead sends a message to the extension with
+   * the form data.
+   *
+   * @param event - The submit event triggered by the form
+   */
+  private onSubmit(this: HTMLFormElement, event: SubmitEvent): void {
+    event.preventDefault();
+    const { repoUrl, repoName } = this.dataset;
+    const teamSelector = this.querySelector('vscode-dropdown.team-selector') as Dropdown;
+    const spaceSelector = this.querySelector('vscode-dropdown.space-selector') as Dropdown;
+    const internalRoutingCheckbox = this.querySelector('[name="internal-routing"]') as Checkbox;
+
+    // config overrides
+    const configOverrides = this.querySelectorAll<TextField>('vscode-text-field.config-override');
+    const env: EnvironmentVariables = {};
+    configOverrides.forEach((configOverride) => {
+      const { name, value } = configOverride;
+      if (value) {
+        env[name] = { value };
+      }
+    });
+
+    const teamId = teamSelector?.value || undefined;
+    const spaceId = spaceSelector?.value ?? undefined;
+    vscode.postMessage({
+      type: 'deploy',
+      payload: {
+        repoUrl,
+        repoName,
+        teamId,
+        spaceId,
+        internalRouting: internalRoutingCheckbox.checked,
+        env
+      }
+    });
+  }
+
+  /**
+   * Builds the inputs for the supplied config vars
+   * based on the #config-var-template
+   *
+   * @param configVars The config vars to build form element for
+   */
+  private buildConfigVars(configVars: EnvironmentVariables, parentElement: HTMLUListElement): void {
+    const configKeys = Object.keys(configVars);
+    for (const key of configKeys) {
+      const configVarTemplate = this.configVarTemplate.content.cloneNode(true) as DocumentFragment;
+      const { description, required, value } = configVars[key];
+
+      // required is `true` by default
+      // https://devcenter.heroku.com/articles/app-json-schema#env
+      const isRequired = required !== false;
+
+      const input = configVarTemplate.querySelector('vscode-text-field') as TextField;
+      input.innerHTML = `${key} ${isRequired ? '<span class="required-badge">Required</span>' : ''}`;
+      input.name = key;
+      input.value = value ?? '';
+
+      const subElement = configVarTemplate.querySelector('sub') as HTMLElement;
+      subElement.textContent = description ?? '';
+
+      parentElement.appendChild(configVarTemplate);
+    }
   }
 
   /**
@@ -270,9 +479,9 @@ export class HerokuStarterApps extends FASTElement {
     const term = this.searchField.value.toLowerCase();
     // Search these fields
     const fields: Array<keyof RepoSearchResultItem> = ['name', 'description', 'language', 'html_url'];
-
-    const { herokuGettingStartedRepos = { items: [] }, referenceAppRepos = { items: [] } } = this.data ?? {};
-    const allRepos = [...herokuGettingStartedRepos.items, ...referenceAppRepos.items];
+    const herokuGettingStartedRepos = this.herokuGettingStartedRepos?.items ?? [];
+    const referenceAppRepos = this.referenceAppRepos?.items ?? [];
+    const allRepos = [...herokuGettingStartedRepos, ...referenceAppRepos];
     for (const repo of allRepos) {
       const matches = fields.some((field) => {
         const value = repo[field]?.toLocaleString().toLocaleLowerCase();
@@ -280,6 +489,7 @@ export class HerokuStarterApps extends FASTElement {
       });
       const element = this.shadowRoot!.getElementById(repo.name);
       element?.classList.toggle('hidden', !matches);
+      element?.setAttribute('aria-hidden', String(!matches));
     }
   };
 
@@ -291,44 +501,44 @@ export class HerokuStarterApps extends FASTElement {
    * @param event The message event
    */
   private onMessage = (event: MessageEvent<DataPayload>): void => {
-    this.data = event.data;
-    const { herokuGettingStartedRepos, referenceAppRepos, teams, spaces } = event.data;
-    const teamsByEnterpriseAccountName = mapTeamsByEnterpriseAccount(teams);
-    const spacesByOrganizationName = mapSpacesByOrganization(spaces);
+    this.teams = mapTeamsByEnterpriseAccount(event.data.teams);
+    this.spaces = mapSpacesByOrganization(event.data.spaces);
 
-    const referenceAppReposFragment = document.createDocumentFragment();
-    for (const item of referenceAppRepos.items) {
-      const listElement = this.createRepoCard(item, teamsByEnterpriseAccountName, spacesByOrganizationName);
-      referenceAppReposFragment.appendChild(listElement);
-    }
-    this.referenceAppsUlist.appendChild(referenceAppReposFragment);
+    this.renderReferenceAppsList();
+    this.renderStarterAppsList();
 
-    const herokuGettingStartedReposFragment = document.createDocumentFragment();
-    for (const item of herokuGettingStartedRepos.items) {
-      const listElement = this.createRepoCard(item, teamsByEnterpriseAccountName, spacesByOrganizationName);
-      herokuGettingStartedReposFragment.appendChild(listElement);
-    }
-
-    this.starterAppsUlist.appendChild(herokuGettingStartedReposFragment);
     this.loadingIndicator.remove();
   };
 
   /**
-   * Submit handler for the form element containing the
-   * team and space selectors.
-   *
-   * @param event
+   * Renders the reference apps list.
    */
-  private onSubmit(this: HTMLFormElement, event: SubmitEvent): void {
-    event.preventDefault();
-    const { repoUrl, repoName } = this.dataset;
-    const { [0]: teamSelector, [1]: spaceSelector } = (event.target as HTMLFormElement).querySelectorAll<Dropdown>(
-      'vscode-dropdown'
-    );
-    const teamId = teamSelector.value;
-    const spaceId = spaceSelector.value;
+  private renderReferenceAppsList(): void {
+    this.referenceAppsUlist.innerHTML = '';
 
-    vscode.postMessage({ type: 'deploy', payload: { repoUrl, repoName, teamId, spaceId } });
+    const referenceAppReposFragment = document.createDocumentFragment();
+    (this.referenceAppRepos?.items ?? []).forEach((item) => {
+      const li = this.createRepoCard(item);
+      referenceAppReposFragment.appendChild(li);
+    });
+
+    this.referenceAppsUlist.appendChild(referenceAppReposFragment);
+  }
+
+  /**
+   * Renders the starter apps list.
+   */
+  private renderStarterAppsList(): void {
+    this.starterAppsUlist.innerHTML = '';
+
+    const herokuGettingStartedReposFragment = document.createDocumentFragment();
+
+    (this.herokuGettingStartedRepos?.items ?? []).forEach((item) => {
+      const li = this.createRepoCard(item);
+      herokuGettingStartedReposFragment.appendChild(li);
+    });
+
+    this.starterAppsUlist.appendChild(herokuGettingStartedReposFragment);
   }
 
   /**
@@ -338,13 +548,9 @@ export class HerokuStarterApps extends FASTElement {
    * @param teamsByEnterpriseAccountName
    * @param repoName
    */
-  private createTeamSelector(
-    listElement: DocumentFragment,
-    teamsByEnterpriseAccountName: Map<string, Team[]> | undefined,
-    repoName: string
-  ): void {
+  private createTeamSelector(listElement: DocumentFragment, repoName: string): void {
     const teamSelectorContainer = listElement.querySelector('.team-selector-container') as HTMLDivElement;
-    if (!teamsByEnterpriseAccountName?.size) {
+    if (!this.teams?.size) {
       teamSelectorContainer.remove();
       return;
     }
@@ -362,7 +568,7 @@ export class HerokuStarterApps extends FASTElement {
     // Create the root group - this is the "Enterprise Accounts & Teams" top-level group
     teamSelector.append(this.createSelectorGroup('Enterprise Accounts & Teams', 'icon-marketing-enterprise-48'));
 
-    for (const [enterpriseName, teams] of teamsByEnterpriseAccountName) {
+    for (const [enterpriseName, teams] of this.teams) {
       teamSelector.append(this.createSelectorGroup(enterpriseName, 'icon-marketing-enterprise-accounts-48'));
 
       // options
@@ -379,6 +585,7 @@ export class HerokuStarterApps extends FASTElement {
     teamSelector.id = `team-selector-${repoName}`;
 
     teamSelector.dataset.repoName = repoName;
+    teamSelector.classList.add('team-selector');
     teamSelector.addEventListener('change', this.onTeamSelectorChange);
 
     teamSelectorContainer.append(teamSelectorFragment);
@@ -393,13 +600,14 @@ export class HerokuStarterApps extends FASTElement {
    */
   private createSpaceSelector(
     listElement: DocumentFragment | HTMLLIElement,
-    spacesByEnterpriseAccountName: Map<string, Space[]> | undefined,
     repoName: string,
     selectedTeam?: string
   ): void {
-    const spaceSelectorContainer = listElement.querySelector('.space-selector-container') as HTMLDivElement;
-    if (!spacesByEnterpriseAccountName?.size) {
+    const spaceSelectorContainer = listElement.querySelector('li.space-selector-container') as HTMLDivElement;
+    const internalRoutingLi = listElement.querySelector('li.internal-routing-container') as HTMLLIElement;
+    if (!this.spaces?.size) {
       spaceSelectorContainer?.remove();
+      internalRoutingLi?.remove();
       return;
     }
     const oldSelector = spaceSelectorContainer.querySelector('vscode-dropdown');
@@ -407,6 +615,7 @@ export class HerokuStarterApps extends FASTElement {
 
     const spacesSelectorFragment = this.selectorTemplate.content.cloneNode(true) as DocumentFragment;
     const spacesSelector = spacesSelectorFragment.firstElementChild as Dropdown;
+
     // Hydrate the default option
     const defaultOption = spacesSelector.querySelector('vscode-option') as Option;
     defaultOption.value = '';
@@ -415,7 +624,7 @@ export class HerokuStarterApps extends FASTElement {
     // Create the root group - this is the "Organizations & Spaces" top-level group
     spacesSelector.append(this.createSelectorGroup('Organizations & Spaces', 'icon-marketing-spaces-48'));
 
-    for (const [orgName, spaces] of spacesByEnterpriseAccountName) {
+    for (const [orgName, spaces] of this.spaces) {
       spacesSelector.append(
         this.createSelectorGroup(orgName, 'icon-marketing-enterprise-48', orgName !== selectedTeam)
       );
@@ -432,8 +641,10 @@ export class HerokuStarterApps extends FASTElement {
     const spaceSelectorLabel = listElement.querySelector('.selector-label') as HTMLLabelElement;
     spaceSelectorLabel.htmlFor = `space-selector-${repoName}`;
     spacesSelector.id = `space-selector-${repoName}`;
+    spacesSelector.classList.add('space-selector');
 
     spaceSelectorContainer.append(spacesSelectorFragment);
+    spacesSelector.addEventListener('change', this.onSpacesSelectorChange);
   }
 
   /**
@@ -458,6 +669,9 @@ export class HerokuStarterApps extends FASTElement {
   }
 
   /**
+   * Change handler for the team selector. This handler
+   * is responsible for creating the space selector
+   * based on the selected team.
    *
    * @param event
    */
@@ -469,7 +683,22 @@ export class HerokuStarterApps extends FASTElement {
     if (!listElement) {
       return;
     }
-    const spacesByOrganizationName = mapSpacesByOrganization(this.data!.spaces);
-    this.createSpaceSelector(listElement, spacesByOrganizationName, repoName, selectedTeam);
+    this.createSpaceSelector(listElement, repoName, selectedTeam);
   };
+
+  /**
+   * Handler for change events dispatched by the spaces selector
+   *
+   * @param this dropdown bound to this handler
+   */
+  private onSpacesSelectorChange(this: Dropdown): void {
+    const spaceId = this.value;
+    const configureUlList = this.closest('ul.configure') as HTMLUListElement;
+
+    const internalRoutingLi = configureUlList.querySelector('li.internal-routing-container') as HTMLLIElement;
+    // Always reset this value when a selection changes
+    const checkbox = internalRoutingLi.querySelector('vscode-checkbox') as Checkbox;
+    checkbox.disabled = !spaceId;
+    checkbox.checked = false;
+  }
 }

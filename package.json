@@ -14,7 +14,9 @@
   "activationEvents": [
     "onStartupFinished",
     "onLanguage:shellscript",
-    "onAuthenticationRequest:<Heroku>"
+    "onAuthenticationRequest:<Heroku>",
+    "workspaceContains:app.json",
+    "workspaceContains:Procfile"
   ],
   "main": "./out/extension/index.js",
   "contributes": {
