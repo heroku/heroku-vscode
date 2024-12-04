@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import * as gitUtils from '../../utils/git-utils';
 import { Readable, Writable } from 'node:stream';
 import type { HerokuResourceExplorerProvider } from './heroku-resource-explorer-provider';
-import { GitExtension, Repository } from '../../git';
+import { GitExtension, Repository } from '../../../../@types/git';
 
 suite('HerokuResourceExplorerProvider', () => {
   let provider: HerokuResourceExplorerProvider;

@@ -2,7 +2,7 @@ import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import assert from 'node:assert';
 import { DeployToHeroku } from './deploy-to-heroku';
-import { GitExtension, Repository } from '../../git';
+import { GitExtension, Repository } from '../../../../@types/git';
 import SourceService from '@heroku-cli/schema/services/source-service.js';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
 import AppService from '@heroku-cli/schema/services/app-service.js';
@@ -204,7 +204,7 @@ suite('DeployToHeroku Tests', () => {
     mockAppService.info.resolves({ ...mockApp, git_url: 'test-git-url' });
     mockBuildService.info.resolves(mockBuild);
 
-    await command.run(null, null, null, ['test-id']);
+    await command.run(null, null, { appNames: ['test-id'] });
 
     assert.ok(mockSourcesService.create.calledOnce);
     assert.ok(mockBuildService.create.calledOnce);

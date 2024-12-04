@@ -34,7 +34,7 @@ export class DeployToHerokuDecorator {
     }
     const documentWorkspace = workspaceFolders.find((folder) => document.uri.fsPath.startsWith(folder.uri.fsPath));
     const hoverMessage = new vscode.MarkdownString(
-      `[$(play) Deploy to Heroku](command:${DeployToHeroku.COMMAND_ID}?${JSON.stringify([null, null, documentWorkspace?.uri])})`,
+      `[$(play) Deploy to Heroku](command:${DeployToHeroku.COMMAND_ID}?${JSON.stringify([null, null, { rootUri: documentWorkspace?.uri }])})`,
       true
     );
     hoverMessage.isTrusted = true;

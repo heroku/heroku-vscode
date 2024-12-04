@@ -5,7 +5,6 @@ import SpaceService from '@heroku-cli/schema/services/space-service.js';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import importMap from '../../importmap.json';
 import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
-import { GithubService } from '../../services/github-service';
 import { HerokuCommand } from '../heroku-command';
 import { logExtensionEvent } from '../../utils/logger';
 import { DeployToHeroku } from '../app/deploy-to-heroku';
@@ -14,7 +13,14 @@ import { generateRequestInit } from '../../utils/generate-service-request-init';
 type StarterReposWebviewMessage =
   | {
       type: 'deploy';
-      payload: { repoUrl: string; repoName: string; teamId: string; spaceId: string };
+      payload: {
+        repoUrl: string;
+        repoName: string;
+        teamId: string;
+        spaceId: string;
+        internalRouting: boolean;
+        env: Record<string, string>;
+      };
     }
   | {
       type: 'connected';
@@ -29,7 +35,6 @@ type StarterReposWebviewMessage =
 export class ShowStarterRepositories extends AbortController implements RunnableCommand<Promise<void>> {
   public static COMMAND_ID = 'heroku:github:show-starter-repositories' as const;
   private static webviewPanel: WebviewPanel | undefined;
-  private githubService = new GithubService();
   private teamService = new TeamService(fetch, 'https://api.heroku.com');
   private spaceService = new SpaceService(fetch, 'https://api.heroku.com');
 
@@ -111,21 +116,13 @@ export class ShowStarterRepositories extends AbortController implements Runnable
     if (message.type === 'connected') {
       logExtensionEvent('Attempting to find Heroku starter repos in GitHub');
       try {
-        const herokuGettingStartedRepos = await this.githubService.searchRepositories({
-          q: 'heroku-getting-started user:heroku',
-          sort: 'stars'
-        });
-        const referenceAppRepos = await this.githubService.searchRepositories({
-          q: 'user:heroku-reference-apps',
-          sort: 'stars'
-        });
         const requestInit = await generateRequestInit(this.signal);
         logExtensionEvent('Attempting to find teams and spaces for user');
-        const teams = await this.teamService.list(requestInit);
-        const spaces = await this.spaceService.list(requestInit);
+        const [teams, spaces] = await Promise.all([
+          this.teamService.list(requestInit),
+          this.spaceService.list(requestInit)
+        ]);
         await ShowStarterRepositories.webviewPanel?.webview.postMessage({
-          referenceAppRepos,
-          herokuGettingStartedRepos,
           teams,
           spaces
         });
@@ -135,7 +132,7 @@ export class ShowStarterRepositories extends AbortController implements Runnable
     }
 
     if (message.type === 'deploy') {
-      const { repoName, repoUrl, spaceId, teamId } = message.payload;
+      const { repoName, repoUrl, spaceId, teamId, env, internalRouting } = message.payload;
 
       logExtensionEvent(`User initiated clone and deployment to Heroku for: ${repoName}`);
       const cloneResultPromise = vscode.window.withProgress(
@@ -180,11 +177,7 @@ export class ShowStarterRepositories extends AbortController implements Runnable
         DeployToHeroku.COMMAND_ID,
         undefined,
         undefined,
-        localRepositoryRootUri,
-        [],
-        undefined,
-        teamId,
-        spaceId
+        { spaceId, teamId, env, internalRouting, rootUri: localRepositoryRootUri, skipSuccessMessage: true }
       );
       // A result is only given when the clone and deploy is successful
       if (result) {
