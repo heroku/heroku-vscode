@@ -83,7 +83,9 @@ ul.repo-list {
     border-radius: 4px;
     background: var(--vscode-editor-background);
     transition: background-color 0.2s ease;
-
+    &.expanded:hover {
+      background: initial;
+    }
     &:hover {
       background: var(--vscode-list-hoverBackground);
     }
