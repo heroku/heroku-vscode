@@ -2,7 +2,7 @@ import { promisify } from 'node:util';
 import vscode, { type Uri } from 'vscode';
 import { Validator, ValidatorResult } from 'jsonschema';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
-import { App, AppSetupCreatePayload, Build, BuildCreatePayload } from '@heroku-cli/schema';
+import { App, AppSetup, AppSetupCreatePayload, Build, BuildCreatePayload } from '@heroku-cli/schema';
 import AppService from '@heroku-cli/schema/services/app-service.js';
 import SourceService from '@heroku-cli/schema/services/source-service.js';
 import BuildService from '@heroku-cli/schema/services/build-service.js';
@@ -14,6 +14,7 @@ import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { packSources } from '../../utils/tarball';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
 import { getHerokuAppNames } from '../../utils/git-utils';
+import { log } from 'node:console';
 
 /**
  * Te only successful result is the Build & { name: string } type
@@ -320,6 +321,8 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
       ? await this.createNewBuildForExistingApp(blobUrl, targetApp as App)
       : await this.setupNewApp(blobUrl);
 
+    // This is a new app setup and needs a git remote
+    // added to the workspace.
     if (!isExistingDeployment && result) {
       // Add the new remote to the workspace
       logExtensionEvent(`Adding remote heroku-${result.name}...`);
@@ -468,6 +471,12 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
 
     try {
       const result = await this.buildService.create(app.id, payload, this.requestInit);
+      if (result.output_stream_url) {
+        logExtensionEvent(`---------- begin build output for ${app.name} ----------`);
+        await this.streamBuildOutput(result.output_stream_url);
+        logExtensionEvent(`----------- end build output for ${app.name} -----------`);
+      }
+
       const info = await this.buildService.info(app.id, result.id, this.requestInit);
       if (info.status === 'failed') {
         throw new DeploymentError(
@@ -510,16 +519,42 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
 
     try {
       const result = await this.appSetupService.create(payload, this.requestInit);
-      // This delay only seems to matter on Code Builder
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const info = await this.appSetupService.info(result.id, this.requestInit);
+      let info: AppSetup | undefined;
+      let retriesOnError = 3;
+      while (retriesOnError > 0) {
+        try {
+          info = await this.appSetupService.info(result.id, this.requestInit);
+          if (info?.build?.output_stream_url ?? info?.status === 'failed') {
+            break;
+          }
+        } catch (error) {
+          logExtensionEvent(`${(error as Error).message} - retrying`);
+          retriesOnError--;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      if (!info) {
+        throw new DeploymentError(
+          `The request was sent to Heroku successfully but there was a problem with deployment`
+        );
+      }
+      if (info?.build?.output_stream_url) {
+        await this.streamBuildOutput(info.build.output_stream_url);
+      }
+      // get the info one last time to determine if the build was successful.
+      while (info.status === 'pending') {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        info = await this.appSetupService.info(result.id, this.requestInit);
+      }
       if (info.failure_message) {
         logExtensionEvent(`Error: deployment failed with "${info.failure_message}"`);
-        logExtensionEvent('-----------------------');
+
         if (info.manifest_errors?.length) {
-          info.manifest_errors.forEach(logExtensionEvent);
+          logExtensionEvent('-----------------------');
+          info.manifest_errors.forEach((error) => logExtensionEvent(error, 'build'));
+          logExtensionEvent('-----------------------');
         }
-        logExtensionEvent('-----------------------');
+
         throw new DeploymentError(
           `The request was sent to Heroku successfully but there was a problem with deployment: ${info.failure_message}`,
           result.app.id
@@ -528,9 +563,29 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
       if (info.postdeploy?.output) {
         logExtensionEvent(`post deploy: ${info.postdeploy.output}`);
       }
-      return { ...(info.build as Build), name: result.app.name };
+      return { ...info.build!, name: result.app.name };
     } catch (error) {
+      logExtensionEvent(`${(error as Error).stack}`);
       throw new DeploymentError((error as Error).message);
+    }
+  }
+
+  /**
+   * Streams the build output to the console.
+   *
+   * @param streamUrl the URL of the stream
+   */
+  private async streamBuildOutput(streamUrl: string): Promise<void> {
+    const stream = await fetch(streamUrl);
+    const reader = stream.body?.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+    while (!this.signal.aborted) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) {
+        logExtensionEvent('waiting....');
+        continue;
+      }
+      logExtensionEvent(Buffer.from(value).toString(), 'build');
     }
   }
 

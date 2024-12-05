@@ -88,11 +88,7 @@ export async function getRootRepository(): Promise<Repository | undefined> {
 export async function getGithubSession(
   createIfNone: boolean = true
 ): Promise<vscode.AuthenticationSession | undefined> {
-  const session = await vscode.authentication.getSession(
-    'github', // authentication provider ID
-    ['repo', 'read:user'], // scopes needed for your extension
-    { createIfNone } // creates auth session if none exists
-  );
+  const session = await vscode.authentication.getSession('github', ['repo', 'read:user'], { createIfNone });
 
   return session;
 }

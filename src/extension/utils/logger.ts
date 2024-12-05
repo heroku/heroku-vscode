@@ -9,8 +9,9 @@ const logger = getOutputChannel({
  * Logs arbitrary info to the output channel
  *
  * @param message The message to write to the output channel
+ * @param process The process that is logging the message. default is 'vscode'
  */
-export function logExtensionEvent(message: string): void {
+export function logExtensionEvent(message: string, process = 'vscode'): void {
   const timestamp = new Date().toLocaleTimeString('en-US', {
     year: 'numeric',
     month: '2-digit',
@@ -20,7 +21,7 @@ export function logExtensionEvent(message: string): void {
     second: '2-digit',
     hour12: false
   });
-  const messageWithTimestamp = `[${timestamp}] heroku[vscode] ${message}`;
+  const messageWithTimestamp = `[${timestamp}] heroku[${process}] ${message}`;
   logger.appendLine(messageWithTimestamp);
 }
 

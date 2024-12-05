@@ -19,14 +19,19 @@ import {
 import type { GithubSearchResponse, RepoSearchResultItem } from 'github-api';
 import type { Space, Team } from '@heroku-cli/schema';
 import { EnvironmentVariables } from '@heroku/app-json-schema';
+import { HerokuDeployButton } from '@heroku/elements';
 import { loadCss, loadHtmlTemplate, vscode } from '../utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
 import { GithubService } from './github-service.js';
+import elementsButtons from './elements-buttons.json' with { type: 'json' };
 
 type DataPayload = {
   teams?: Team[];
   spaces?: Space[];
+  githubAccessToken?: string;
 };
+
+type RepoTypeUnion = RepoSearchResultItem & HerokuDeployButton;
 
 /**
  * Record used to map Heroku marketing icons
@@ -34,6 +39,7 @@ type DataPayload = {
  * GitHub repo.
  */
 const languageToIcon = {
+  Dockerfile: 'icon-marketing-docker-48',
   JavaScript: 'icon-marketing-language-node-48',
   TypeScript: 'icon-marketing-language-node-48',
   NodeJS: 'icon-marketing-language-node-48',
@@ -135,10 +141,13 @@ const styles = await loadCss([
  */
 export class HerokuStarterApps extends FASTElement {
   @shadowChild('#reference-apps')
-  private referenceAppsUlist!: HTMLUListElement;
+  private referenceAppsUList!: HTMLUListElement;
 
   @shadowChild('#starter-apps')
-  private starterAppsUlist!: HTMLUListElement;
+  private starterAppsUList!: HTMLUListElement;
+
+  @shadowChild('#heroku-elements-apps')
+  private herokuElementsAppsUList!: HTMLElement;
 
   @shadowChild('#search')
   private searchField!: TextField;
@@ -167,6 +176,7 @@ export class HerokuStarterApps extends FASTElement {
 
   private githubService = new GithubService();
   private configVarsByContentsUrl = new Map<string, EnvironmentVariables>();
+  private reposRendered = new Set<string>();
 
   /**
    * Constructor for the HerokuStarterApps class.
@@ -188,23 +198,11 @@ export class HerokuStarterApps extends FASTElement {
   /**
    * @inheritdoc
    */
-  public async connectedCallback(): Promise<void> {
+  public connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener('message', this.onMessage);
     this.searchField.addEventListener('input', this.onSearchInput);
     vscode.postMessage({ type: 'connected' });
-
-    this.herokuGettingStartedRepos = await this.githubService.searchRepositories({
-      q: 'heroku-getting-started user:heroku',
-      sort: 'stars'
-    });
-
-    this.referenceAppRepos = await this.githubService.searchRepositories({
-      q: 'user:heroku-reference-apps',
-      sort: 'stars'
-    });
-    this.renderReferenceAppsList();
-    this.renderStarterAppsList();
   }
 
   /**
@@ -222,9 +220,9 @@ export class HerokuStarterApps extends FASTElement {
    * @param teams The list of teams the user belongs to
    * @returns A document fragment containing the repo card
    */
-  private createRepoCard(item: RepoSearchResultItem): DocumentFragment {
+  private createRepoCard(item: RepoTypeUnion): DocumentFragment {
     const listElement = this.repoListItemTemplate.content.cloneNode(true) as DocumentFragment;
-    (listElement.firstElementChild as HTMLLIElement).id = item.name;
+    (listElement.firstElementChild as HTMLLIElement).id = item.name ?? item.repo_name;
 
     // language icon
     const languageIconElement = listElement.querySelector('.language-icon') as HTMLSpanElement;
@@ -234,8 +232,8 @@ export class HerokuStarterApps extends FASTElement {
 
     // name
     const repoUrlElement = listElement.querySelector('.repo-url') as HTMLAnchorElement;
-    repoUrlElement.href = item.html_url;
-    repoUrlElement.textContent = item.name;
+    repoUrlElement.href = item.html_url ?? item.public_repository;
+    repoUrlElement.textContent = item.name ?? item.repo_name;
 
     // public/private, etc
     const visibilityElement = listElement.querySelector('.repo-visibility') as HTMLSpanElement;
@@ -243,7 +241,7 @@ export class HerokuStarterApps extends FASTElement {
 
     // description
     const descriptionElement = listElement.querySelector('.repo-description') as HTMLParagraphElement;
-    descriptionElement.textContent = item.description ?? 'No description available';
+    descriptionElement.textContent = item.description ?? item.public_description ?? 'No description available';
 
     // meta language
     const languageElement = listElement.querySelector('.meta-item.language') as HTMLSpanElement;
@@ -252,30 +250,30 @@ export class HerokuStarterApps extends FASTElement {
 
     // stars
     const starCountElement = listElement.querySelector('.meta-item .star-count') as HTMLSpanElement;
-    starCountElement.textContent = item.stargazers_count.toString();
+    starCountElement.textContent = (item.stargazers_count ?? item.stars ?? '').toString();
 
     // forks
     const forkCountElement = listElement.querySelector('.meta-item .fork-count') as HTMLSpanElement;
-    forkCountElement.textContent = item.forks_count.toString();
+    forkCountElement.textContent = (item.forks_count ?? item.forks).toString();
 
     // last updated
     const lastUpdatedElement = listElement.querySelector('.meta-item.last-updated') as HTMLSpanElement;
     lastUpdatedElement.textContent = `Last Updated: ${new Date(item.updated_at).toLocaleDateString()}`;
 
     // Team selector
-    this.createTeamSelector(listElement, item.name);
+    this.createTeamSelector(listElement, item.name ?? item.repo_name);
     // Space selector
-    this.createSpaceSelector(listElement, item.name);
+    this.createSpaceSelector(listElement, item.name ?? item.repo_name);
 
     // Form for data collection and submission
     const form = listElement.querySelector('form.deploy-options') as HTMLFormElement;
-    form.dataset.repoUrl = item.clone_url;
-    form.dataset.repoName = item.name;
+    form.dataset.repoUrl = item.clone_url ?? `${item.public_repository}.git`;
+    form.dataset.repoName = item.name ?? item.repo_name;
     form.addEventListener('submit', this.onSubmit);
 
     // Repo name for configure section
     const repoNameElement = listElement.querySelector('span.repo-name') as HTMLSpanElement;
-    repoNameElement.textContent = item.name;
+    repoNameElement.textContent = item.name ?? item.repo_name;
 
     // Cancel button - only visible when deploy options is expanded - just collapses
     const cancelButton = listElement.querySelector('vscode-button.cancel-button') as Button;
@@ -283,7 +281,8 @@ export class HerokuStarterApps extends FASTElement {
 
     // Deploy button - expands the deploy-options for prompts
     const deployButton = listElement.querySelector('vscode-button.deploy-button') as Button;
-    deployButton.dataset.contentsUrl = item.contents_url;
+    deployButton.dataset.contentsUrl =
+      item.contents_url ?? `https://api.github.com/repos/${item.public_username}/${item.repo_name}/contents/{+path}`;
     deployButton.addEventListener('click', this.onDeployAppClick);
 
     return listElement;
@@ -297,10 +296,11 @@ export class HerokuStarterApps extends FASTElement {
    * 2. Updates the button text to "Deploy to Heroku"
    * 3. Resets the configuration variables list
    *
-   * @param this The vscode-button element where this event originated
+   * @param event event dispatched by the click
    */
-  private onCancelClick(this: Button): void {
-    const deployOptionsForm = this.closest('form.deploy-options') as HTMLFormElement;
+  private onCancelClick = (event: MouseEvent): void => {
+    const button = event.target as Button;
+    const deployOptionsForm = button.closest('form.deploy-options') as HTMLFormElement;
     deployOptionsForm.classList.remove('expanded');
 
     const deployButton = deployOptionsForm.querySelector('vscode-button.deploy-button') as Button;
@@ -311,17 +311,26 @@ export class HerokuStarterApps extends FASTElement {
     listContainer.style.overflow = '';
     listContainer.style.height = '';
 
-    listContainer.animate(
-      [
-        { height: configureUlList.clientHeight + 'px', opacity: 1 },
-        { height: '0px', opacity: 0 }
-      ],
-      {
-        duration: 200,
-        easing: 'ease-in-out'
-      }
-    );
-  }
+    void (async (): Promise<void> => {
+      const animation = listContainer.animate(
+        [
+          { height: configureUlList.clientHeight + 'px', opacity: 1 },
+          { height: '0px', opacity: 0 }
+        ],
+        {
+          duration: 200,
+          easing: 'ease-in-out'
+        }
+      );
+      await animation.finished;
+      // restore the hover state on collapsed rows
+      const listElement = this.shadowRoot!.getElementById(
+        deployOptionsForm.dataset.repoName as string
+      ) as HTMLLIElement;
+      listElement.classList.remove('expanded');
+      listElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    })();
+  };
 
   /**
    * Handles the click event on the deploy button to show
@@ -350,6 +359,9 @@ export class HerokuStarterApps extends FASTElement {
     const { contentsUrl } = deployButton.dataset;
     deployButton.classList.add('loading');
 
+    // retrieves the config vars from the app.json
+    // in the repo, builds the inputs, animates
+    // the expansion of the form and scrolls it into view
     void (async (): Promise<void> => {
       const configVars =
         this.configVarsByContentsUrl.get(contentsUrl as string) ??
@@ -379,7 +391,8 @@ export class HerokuStarterApps extends FASTElement {
           easing: 'ease-in-out'
         }
       );
-      await new Promise((resolve) => animation.addEventListener('finish', resolve));
+
+      await animation.finished;
       listContainer.style.overflow = 'initial';
       listContainer.style.height = 'initial';
       deployOptionsForm.classList.add('expanded');
@@ -387,6 +400,12 @@ export class HerokuStarterApps extends FASTElement {
       deployButton.classList.remove('loading');
       deployButton.lastChild!.textContent = 'Deploy app';
       listContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Prevent the hover state on expanded rows
+      const listElement = this.shadowRoot!.getElementById(
+        deployOptionsForm.dataset.repoName as string
+      ) as HTMLLIElement;
+      listElement?.classList.add('expanded');
     })();
   };
 
@@ -416,7 +435,7 @@ export class HerokuStarterApps extends FASTElement {
     });
 
     const teamId = teamSelector?.value || undefined;
-    const spaceId = spaceSelector?.value ?? undefined;
+    const spaceId = spaceSelector?.value || undefined;
     vscode.postMessage({
       type: 'deploy',
       payload: {
@@ -478,16 +497,29 @@ export class HerokuStarterApps extends FASTElement {
   private applyFilter = (): void => {
     const term = this.searchField.value.toLowerCase();
     // Search these fields
-    const fields: Array<keyof RepoSearchResultItem> = ['name', 'description', 'language', 'html_url'];
+    const fields: Array<keyof RepoTypeUnion> = [
+      'name',
+      'repo_name',
+      'description',
+      'public_description',
+      'language',
+      'html_url',
+      'public_repository'
+    ];
     const herokuGettingStartedRepos = this.herokuGettingStartedRepos?.items ?? [];
     const referenceAppRepos = this.referenceAppRepos?.items ?? [];
-    const allRepos = [...herokuGettingStartedRepos, ...referenceAppRepos];
+
+    const allRepos = [
+      ...(elementsButtons as HerokuDeployButton[]),
+      ...herokuGettingStartedRepos,
+      ...referenceAppRepos
+    ] as RepoTypeUnion[];
     for (const repo of allRepos) {
       const matches = fields.some((field) => {
         const value = repo[field]?.toLocaleString().toLocaleLowerCase();
         return value?.includes(term);
       });
-      const element = this.shadowRoot!.getElementById(repo.name);
+      const element = this.shadowRoot!.getElementById(repo.name ?? repo.repo_name);
       element?.classList.toggle('hidden', !matches);
       element?.setAttribute('aria-hidden', String(!matches));
     }
@@ -503,42 +535,82 @@ export class HerokuStarterApps extends FASTElement {
   private onMessage = (event: MessageEvent<DataPayload>): void => {
     this.teams = mapTeamsByEnterpriseAccount(event.data.teams);
     this.spaces = mapSpacesByOrganization(event.data.spaces);
+    this.githubService.accessToken = event.data.githubAccessToken;
 
-    this.renderReferenceAppsList();
-    this.renderStarterAppsList();
+    void (async (): Promise<void> => {
+      this.herokuGettingStartedRepos = await this.githubService.searchRepositories({
+        q: 'heroku-getting-started user:heroku',
+        sort: 'stars'
+      });
+
+      this.referenceAppRepos = await this.githubService.searchRepositories({
+        q: 'user:heroku-reference-apps',
+        sort: 'stars'
+      });
+      this.renderReferenceAppsList();
+      this.renderStarterAppsList();
+    })();
+
+    this.renderHerokuButtonsList();
 
     this.loadingIndicator.remove();
   };
 
   /**
+   * Renders the HerokuButtons list
+   */
+  private renderHerokuButtonsList(): void {
+    this.herokuElementsAppsUList.innerHTML = '';
+
+    const herokuElementsAppsReposFragment = document.createDocumentFragment();
+    ((elementsButtons as HerokuDeployButton[]) ?? []).forEach((item) => {
+      if (this.reposRendered.has(item.repo_name)) {
+        return;
+      }
+      const li = this.createRepoCard(item as RepoTypeUnion);
+      herokuElementsAppsReposFragment.appendChild(li);
+      this.reposRendered.add(item.repo_name);
+    });
+
+    this.herokuElementsAppsUList.appendChild(herokuElementsAppsReposFragment);
+  }
+
+  /**
    * Renders the reference apps list.
    */
   private renderReferenceAppsList(): void {
-    this.referenceAppsUlist.innerHTML = '';
+    this.referenceAppsUList.innerHTML = '';
 
     const referenceAppReposFragment = document.createDocumentFragment();
     (this.referenceAppRepos?.items ?? []).forEach((item) => {
-      const li = this.createRepoCard(item);
+      if (this.reposRendered.has(item.name)) {
+        return;
+      }
+      const li = this.createRepoCard(item as RepoTypeUnion);
       referenceAppReposFragment.appendChild(li);
+      this.reposRendered.add(item.name);
     });
 
-    this.referenceAppsUlist.appendChild(referenceAppReposFragment);
+    this.referenceAppsUList.appendChild(referenceAppReposFragment);
   }
 
   /**
    * Renders the starter apps list.
    */
   private renderStarterAppsList(): void {
-    this.starterAppsUlist.innerHTML = '';
+    this.starterAppsUList.innerHTML = '';
 
     const herokuGettingStartedReposFragment = document.createDocumentFragment();
 
     (this.herokuGettingStartedRepos?.items ?? []).forEach((item) => {
-      const li = this.createRepoCard(item);
+      if (this.reposRendered.has(item.name)) {
+        return;
+      }
+      const li = this.createRepoCard(item as RepoTypeUnion);
       herokuGettingStartedReposFragment.appendChild(li);
     });
 
-    this.starterAppsUlist.appendChild(herokuGettingStartedReposFragment);
+    this.starterAppsUList.appendChild(herokuGettingStartedReposFragment);
   }
 
   /**
@@ -619,7 +691,7 @@ export class HerokuStarterApps extends FASTElement {
     // Hydrate the default option
     const defaultOption = spacesSelector.querySelector('vscode-option') as Option;
     defaultOption.value = '';
-    defaultOption.textContent = 'Do not deploy to a space';
+    defaultOption.textContent = '-- none --';
 
     // Create the root group - this is the "Organizations & Spaces" top-level group
     spacesSelector.append(this.createSelectorGroup('Organizations & Spaces', 'icon-marketing-spaces-48'));

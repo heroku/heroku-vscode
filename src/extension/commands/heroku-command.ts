@@ -41,7 +41,7 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
    */
   public static async waitForCompletion(
     childProcess: ChildProcess,
-    outputWriter?: vscode.OutputChannel | vscode.Terminal
+    outputWriter?: vscode.OutputChannel | { sendText?: (text: string) => void }
   ): Promise<HerokuCommandCompletionInfo> {
     let output = '';
     let errorMessage = '';

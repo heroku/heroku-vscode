@@ -5,14 +5,39 @@ import { AppJson, EnvironmentVariables } from '@heroku/app-json-schema';
  */
 export class GithubService {
   private readonly repositoriesEndpoint = 'https://api.github.com/search/repositories';
+  private readonly headers = new Headers({
+    Accept: 'application/vnd.github+json',
+    'Content-Type': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  });
   private readonly requestInit = {
     method: 'GET',
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28'
-    }
+    headers: this.headers
   } as RequestInit;
+
+  #accessToken: string | undefined;
+  /**
+   * gets the access token
+   */
+  public get accessToken(): string | undefined {
+    return this.#accessToken;
+  }
+
+  /**
+   * Sets the access token
+   */
+  public set accessToken(value: string | undefined) {
+    if (this.#accessToken === value) {
+      return;
+    }
+    this.#accessToken = value;
+
+    if (!value) {
+      this.headers.delete('Authorization');
+      return;
+    }
+    this.headers.append('Authorization', `Bearer ${value}`);
+  }
 
   /**
    * Searches for repositories matching the query.
@@ -36,11 +61,12 @@ export class GithubService {
   }
 
   /**
+   * Gets the config vars from the app.json file in the repository.
    *
-   * @param contentsUrl
+   * @param contentsUrl The api for retrieving github contents
    */
   public async getAppConfigVars(contentsUrl: string): Promise<EnvironmentVariables | undefined> {
-    // `https://api.github.com/repos/heroku-reference-apps/heroku-docker-flex-gateway/contents/app.json?ref=main`;
+    // e.g. https://api.github.com/repos/heroku-reference-apps/heroku-docker-flex-gateway/contents/app.json?ref=main;
 
     const repoContentsEndpoint = `${contentsUrl.replace('{+path}', 'app.json')}`;
     let result: Response;

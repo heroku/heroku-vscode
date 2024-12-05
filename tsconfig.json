@@ -15,7 +15,8 @@
     "paths": {
       "git-extension": ["./@types/git.d.ts"],
       "github-api": ["./@types/github-api.d.ts"],
-      "@heroku/app-json-schema": ["./@types/app-json-schema.d.ts"]
+      "@heroku/app-json-schema": ["./@types/app-json-schema.d.ts"],
+      "@heroku/elements": ["./@types/elements.d.ts"]
     }
   },
   "exclude": ["node_modules", "dist", "build", "out", "scripts"]
