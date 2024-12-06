@@ -21,6 +21,7 @@ export async function uploadWithDetailedProgress(
   const CHUNK_SIZE = 16_384; // 16KB chunks
   let now = Date.now();
 
+  logger?.(`Upload progress: 0% (${uploadedBytes}/${totalSize} bytes)`);
   const progressStream = new TransformStream({
     transform(chunk: Uint8Array, controller): void {
       uploadedBytes += chunk.length;

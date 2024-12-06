@@ -92,3 +92,60 @@ export async function getGithubSession(
 
   return session;
 }
+
+/**
+ * Gets the owner and repository name from the git repository
+ * based on the provided URI.
+ *
+ * @param uri The URI of the git repository
+ *
+ * @returns An object containing the owner and repo name, or undefined if not found
+ */
+export async function getGitRepositoryInfoByUri(uri: vscode.Uri): Promise<{ owner: string; repo: string } | undefined> {
+  try {
+    const api = await getGitExtensionApi();
+
+    // Get remote URLs from the repository state
+    const remotes = api.getRepository(uri)?.state.remotes;
+    if (!remotes?.length) {
+      return undefined;
+    }
+
+    // Try to find origin first, fall back to any remote if origin doesn't exist
+    const remote = remotes.find((r) => r.name === 'origin') ?? remotes[0];
+    const remoteUrl = remote.fetchUrl ?? remote.pushUrl;
+
+    if (!remoteUrl) {
+      return undefined;
+    }
+
+    // Handle different Git URL formats
+    let match: RegExpMatchArray | null;
+
+    // Handle SSH URL format (git@github.com:owner/repo.git)
+    if (remoteUrl.startsWith('git@')) {
+      match = remoteUrl.match(/git@github\.com:([^/]+)\/([^.]+)(?:\.git)?/);
+    }
+    // Handle HTTPS URL format (https://github.com/owner/repo.git)
+    else {
+      try {
+        const url = new URL(remoteUrl);
+        match = url.pathname.match(/\/([^/]+)\/([^.]+)(?:\.git)?/);
+      } catch {
+        return undefined;
+      }
+    }
+
+    if (!match || match.length < 3) {
+      return undefined;
+    }
+
+    return {
+      owner: match[1],
+      repo: match[2]
+    };
+  } catch (error) {
+    logExtensionEvent(`Error getting repository info: ${(error as Error).message}`);
+    return undefined;
+  }
+}

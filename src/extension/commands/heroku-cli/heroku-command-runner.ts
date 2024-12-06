@@ -16,12 +16,22 @@ export type CommandFlagAndArgUnion = Command.Arg &
 export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
   protected commandName: keyof typeof manifest.commands | undefined;
   protected targetDataModel: T | undefined;
+  protected userArgDefaults: Map<string, string | undefined> | undefined;
+  protected userFlagDefaults: Map<string, string | undefined> | undefined;
   /**
    * @inheritdoc
    */
-  public async run(commandName: keyof typeof manifest.commands, targetDataModel: T): Promise<void> {
+  public async run(
+    commandName: keyof typeof manifest.commands,
+    targetDataModel: T,
+    userArgDefaults?: Map<string, string | undefined>,
+    userFlagDefaults?: Map<string, string | undefined>
+  ): Promise<void> {
     this.commandName = commandName;
     this.targetDataModel = targetDataModel;
+    this.userArgDefaults = userArgDefaults;
+    this.userFlagDefaults = userFlagDefaults;
+
     const command = await this.buildCommandShellScript(commandName, targetDataModel);
     if (!command) {
       return;
@@ -56,7 +66,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     const { args, flags } = commandManifest;
 
     let command = `heroku ${commandName}`;
-    const userInputByArg: Map<string, string | undefined> = new Map();
+    const userInputByArg = this.userArgDefaults ?? new Map<string, string | undefined>();
     await this.hydrateArgs(userInputByArg, args, targetDataModel);
 
     let cancelled = await this.getInput(args, userInputByArg, !!targetDataModel);
@@ -67,7 +77,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
       command += ` ${value}`;
     }
 
-    const userInputByFlag: Map<string, string | undefined> = new Map();
+    const userInputByFlag = this.userFlagDefaults ?? new Map<string, string | undefined>();
     await this.hydrateFlags(userInputByFlag, flags, targetDataModel);
 
     cancelled = await this.getInput(flags, userInputByFlag, !!targetDataModel);

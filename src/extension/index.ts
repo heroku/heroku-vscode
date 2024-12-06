@@ -15,12 +15,15 @@ import { logExtensionEvent } from './utils/logger';
 import { WelcomeViewSignIn } from './commands/auth/welcome-view-sign-in';
 import * as herokuShellCommandDecorator from './decorators/heroku-shell-command-decorator';
 import * as deployToHerokuDecorator from './decorators/deploy-to-heroku-decorator';
+import { ShowStarterRepositories } from './commands/github/show-starter-repositories-view';
+import { LinkApp } from './commands/app/link-app';
 
 import './commands/auth/welcome-view-sign-in';
 import './commands/github/show-starter-repositories-view';
-import { ShowStarterRepositories } from './commands/github/show-starter-repositories-view';
+import { ShowDeployAppEditor } from './commands/app/show-deploy-app-editor';
 
 const authProviderId = 'heroku:auth:login';
+const workspacesWithHerokuFiles: vscode.Uri[] = [];
 /**
  * Called when the extension is activated by VSCode
  *
@@ -44,11 +47,55 @@ export function activate(context: vscode.ExtensionContext): void {
 
     ...registerCommandsFromManifest(),
 
-    commands.registerCommand('heroku:github:browse', () => {
+    commands.registerCommand('heroku:welcome:github:browse', () => {
       void commands.executeCommand(ShowStarterRepositories.COMMAND_ID, context.extensionUri);
+    }),
+
+    commands.registerCommand('heroku:welcome:link:apps', () => {
+      void commands.executeCommand(LinkApp.COMMAND_ID, context.extensionUri);
+    }),
+    commands.registerCommand('heroku:welcome:deploy-to-heroku', () => {
+      void commands.executeCommand(ShowDeployAppEditor.COMMAND_ID, context.extensionUri, workspacesWithHerokuFiles);
     })
   );
   void onDidChangeSessions({ provider: { id: authProviderId, label: 'Heroku' } });
+  void monitorWorkspaceForHerokuAppExistence();
+}
+
+/**
+ * Aggregates a list of workspace Uris where
+ * either a Procfile or app.json exists.
+ *
+ * @returns void
+ */
+async function monitorWorkspaceForHerokuAppExistence(): Promise<void> {
+  const { workspace } = vscode;
+  for (const folder of workspace.workspaceFolders ?? []) {
+    const { uri } = folder;
+    const herokuFiles = await getHerokuFiles(uri);
+    if (herokuFiles.length) {
+      workspacesWithHerokuFiles.push(uri);
+    }
+  }
+  await vscode.commands.executeCommand(
+    'setContext',
+    'heroku:workspace:has-heroku-files',
+    workspacesWithHerokuFiles.length > 0
+  );
+}
+
+/**
+ * Finds the Procfile and app.json based on the
+ * uri provided.
+ *
+ * @param uri The root uri to look for the files
+ * @returns an array of Uri or empty if none are found
+ */
+async function getHerokuFiles(uri: vscode.Uri): Promise<vscode.Uri[]> {
+  const include = new vscode.RelativePattern(uri, '{Procfile,app.json}');
+  const exclude = new vscode.RelativePattern(uri, '**/node_modules/**');
+
+  return vscode.workspace.findFiles(include, exclude);
 }
 
 let sessionCheckDebounce: NodeJS.Timeout;

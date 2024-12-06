@@ -33,7 +33,13 @@
       },
       {
         "view": "heroku:getting-started",
-        "contents": "%heroku:getting-started:contents%"
+        "contents": "%heroku:getting-started:contents%",
+        "when": "heroku:get:started && !heroku:workspace:has-heroku-files"
+      },
+      {
+        "view": "heroku:getting-started",
+        "contents": "%heroku:getting-started:contents:link-apps%",
+        "when": "heroku:get:started && heroku:workspace:has-heroku-files"
       },
       {
         "view": "heroku:resource-explorer:treeview",
@@ -2369,11 +2375,6 @@
           "command": "heroku:deploy-to-heroku",
           "when": "resourceFilename == 'app.json' || resourceFilename == 'Procfile'",
           "group": "0000000aaaaa"
-        },
-        {
-          "command": "heroku:deploy-to-heroku",
-          "when": "resourceFilename == 'app.json' || resourceFilename == 'Procfile'",
-          "group": "inline@1"
         }
       ],
       "view/item/context": [

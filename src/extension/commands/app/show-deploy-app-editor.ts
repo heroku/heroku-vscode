@@ -4,7 +4,6 @@ import SpaceService from '@heroku-cli/schema/services/space-service.js';
 import { ValidatorResult } from 'jsonschema';
 import type { AppJson } from '@heroku/app-json-schema';
 import type { DeployPayload } from '@heroku/repo-card';
-import AppService from '@heroku-cli/schema/services/app-service.js';
 import { HerokuCommand } from '../heroku-command';
 import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
 import { readAppJson } from '../../utils/read-app-json';
@@ -24,7 +23,6 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
 
   private teamService = new TeamService(fetch, 'https://api.heroku.com');
   private spaceService = new SpaceService(fetch, 'https://api.heroku.com');
-  private appService = new AppService(fetch, 'https://api.heroku.com');
 
   private workspaceUris: vscode.Uri[] | undefined;
   private workspaceUrlByRepoName = new Map<string, vscode.Uri>();
@@ -66,10 +64,9 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
         }
       });
 
-      const [teams, spaces, existingApps, githubSession, ...appJsonResults] = await Promise.allSettled([
+      const [teams, spaces, githubSession, ...appJsonResults] = await Promise.allSettled([
         this.teamService.list(requestInit),
         this.spaceService.list(requestInit),
-        this.appService.list(requestInit),
         getGithubSession(),
         ...(this.workspaceUris?.map(readAppJson) ?? [])
       ]);
@@ -89,7 +86,6 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
       await ShowDeployAppEditor.webviewPanel?.webview.postMessage({
         teams: teams.status === 'fulfilled' ? teams.value : undefined,
         spaces: spaces.status === 'fulfilled' ? spaces.value : undefined,
-        existingApps: existingApps.status === 'fulfilled' ? existingApps.value : undefined,
         githubAccessToken: githubSession.status === 'fulfilled' ? githubSession.value?.accessToken : undefined,
         // These required ordinal alignment - one appJson for each repoInfo
         appJsonList,
@@ -98,10 +94,9 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
     }
 
     if (message.type === 'deploy') {
-      const { appName: name, env, internalRouting, repoName, spaceId, teamId } = message.payload as DeployPayload;
+      const { env, internalRouting, repoName, spaceId, teamId } = message.payload as DeployPayload;
 
       const deploymentOptions: DeploymentOptions = {
-        name,
         env,
         internalRouting,
         spaceId,

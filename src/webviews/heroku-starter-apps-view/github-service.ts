@@ -1,4 +1,9 @@
-import { GithubContentsResponse, GithubSearchResponse, SearchRepositoriesQuery } from 'github-api';
+import {
+  GithubContentsResponse,
+  GithubSearchResponse,
+  RepoSearchResultItem,
+  SearchRepositoriesQuery
+} from 'github-api';
 import { AppJson, EnvironmentVariables } from '@heroku/app-json-schema';
 /**
  * GithubService
@@ -58,6 +63,19 @@ export class GithubService {
     }
 
     throw new Error(`Search failed: ${response.status} ${response.statusText}`);
+  }
+
+  /**
+   * Gets repo data by the specified owner and repo name.
+   *
+   * @returns a promise that resolves to a RepoSearchResultItem
+   */
+  public async getRepo(owner: string, repoName: string): Promise<RepoSearchResultItem> {
+    const repo = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, this.requestInit);
+    if (!repo.ok) {
+      throw new Error(`Search failed: ${repo.status} ${repo.statusText}`);
+    }
+    return (await repo.json()) as RepoSearchResultItem;
   }
 
   /**
