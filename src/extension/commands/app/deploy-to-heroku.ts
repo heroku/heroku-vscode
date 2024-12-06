@@ -1,6 +1,6 @@
 import { promisify } from 'node:util';
 import vscode, { type Uri } from 'vscode';
-import { Validator, ValidatorResult } from 'jsonschema';
+import { ValidatorResult } from 'jsonschema';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
 import { App, AppSetup, AppSetupCreatePayload, Build, BuildCreatePayload } from '@heroku-cli/schema';
 import AppService from '@heroku-cli/schema/services/app-service.js';
@@ -8,13 +8,13 @@ import SourceService from '@heroku-cli/schema/services/source-service.js';
 import BuildService from '@heroku-cli/schema/services/build-service.js';
 import { herokuCommand } from '../../meta/command';
 import { HerokuCommand } from '../heroku-command';
-import type { AppJson } from '../../../../@types/app-json-schema';
-import * as schema from '../../meta/app-json.schema.json';
+import type { AppJson, EnvironmentVariables } from '../../../../@types/app-json-schema';
 import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { packSources } from '../../utils/tarball';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
 import { getHerokuAppNames } from '../../utils/git-utils';
-import { log } from 'node:console';
+import { uploadWithDetailedProgress } from '../../utils/upload-with-progress';
+import { readAppJson } from '../../utils/read-app-json';
 
 /**
  * Te only successful result is the Build & { name: string } type
@@ -31,7 +31,7 @@ export type DeploymentOptions = {
   teamId?: string;
   spaceId?: string;
   internalRouting?: boolean;
-  env?: Record<string, string>;
+  env?: EnvironmentVariables;
   skipSuccessMessage?: boolean;
 };
 
@@ -142,6 +142,7 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
     this.deploymentOptions = deploymentOptions;
     this.requestInit = await generateRequestInit(this.signal);
 
+    showExtensionLogs();
     logExtensionEvent(`Deploying to Heroku...`);
 
     // Resolving to a falsy value indicates the user cancelled
@@ -272,11 +273,7 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
       // trim off the s3 bucket key and signature
       const blobUriBase = vscode.Uri.parse(sourceBlob.put_url).with({ query: '' }).toString();
       logExtensionEvent(`Attempting to upload tarball to ${blobUriBase}`);
-      const response = await fetch(sourceBlob.put_url, {
-        signal: this.signal,
-        method: 'PUT',
-        body: tarball
-      });
+      const response = await uploadWithDetailedProgress(sourceBlob.put_url, tarball, this.signal, logExtensionEvent);
 
       if (response.ok) {
         logExtensionEvent(`Successfully uploaded tarball to ${blobUriBase}`);
@@ -364,7 +361,9 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
    * @throws {Error} If the app.json is invalid or cannot be read
    */
   protected async validateAppJson(): Promise<AppJson | undefined> {
-    const readAppJsonResult: AppJson | ValidatorResult = await this.readAppJson();
+    const readAppJsonResult: AppJson | ValidatorResult = await readAppJson(
+      this.deploymentOptions.rootUri as vscode.Uri
+    );
     if (readAppJsonResult instanceof ValidatorResult) {
       logExtensionEvent(`The following errors were found in app.json:`);
       logExtensionEvent(`--------------------------------`);
@@ -415,36 +414,6 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
       Reflect.set(deploymentOptions, 'appNames', await getHerokuAppNames());
     }
     return true;
-  }
-
-  /**
-   * Retrieves the app.json. This file must be in the
-   * root of the workspace and must be valid.
-   *
-   * @returns The typed app.json as an object or a ValidatorResult object if validation fails.
-   * @throws {Error} If the app.json cannot be read
-   */
-  protected async readAppJson(): Promise<AppJson | ValidatorResult> {
-    const appJsonUri = vscode.Uri.joinPath(this.deploymentOptions.rootUri as vscode.Uri, 'app.json');
-
-    try {
-      await vscode.workspace.fs.stat(appJsonUri);
-    } catch (e) {
-      throw new Error(`Cannot find app.json file at ${appJsonUri.path}`);
-    }
-    const appJsonFile = await vscode.workspace.fs.readFile(appJsonUri);
-    let appJson: AppJson;
-    try {
-      appJson = JSON.parse(Buffer.from(appJsonFile).toString()) as AppJson;
-    } catch (e) {
-      throw new Error(`Cannot parse the app.json file: ${(e as Error).message}`);
-    }
-    const validator = new Validator();
-    const result = validator.validate(appJson, schema);
-    if (!result.valid) {
-      return result;
-    }
-    return appJson;
   }
 
   /**
@@ -581,11 +550,11 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
     while (!this.signal.aborted) {
       const { done, value } = await reader.read();
       if (done) break;
-      if (!value) {
-        logExtensionEvent('waiting....');
+      if (value.length > 1) {
+        logExtensionEvent(Buffer.from(value).toString(), 'build');
         continue;
       }
-      logExtensionEvent(Buffer.from(value).toString(), 'build');
+      logExtensionEvent('waiting....');
     }
   }
 

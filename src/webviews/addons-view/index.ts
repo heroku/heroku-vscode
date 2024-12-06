@@ -11,7 +11,7 @@ import {
   vsCodeProgressRing
 } from '@vscode/webview-ui-toolkit';
 import type { AddOn, Plan } from '@heroku-cli/schema';
-import { vscode, loadCss, loadHtmlTemplate } from '../utils.js';
+import { vscode, loadCss, loadHtmlTemplate } from '../utils/web-component-utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
 
 type AddonCategory = {

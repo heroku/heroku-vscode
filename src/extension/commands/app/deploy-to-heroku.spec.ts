@@ -59,7 +59,11 @@ suite('DeployToHeroku Tests', () => {
       .withArgs('https://test-put-url.com', {
         signal: sinon.match.any,
         method: 'PUT',
-        body: sinon.match.any
+        body: sinon.match.any,
+        duplex: 'half',
+        headers: {
+          'Content-Length': sinon.match.any
+        }
       })
       .resolves({ ok: true } as Response);
     fetchStub.withArgs('https://output_stream_url.com', sinon.match.any).resolves(new Response(readable));

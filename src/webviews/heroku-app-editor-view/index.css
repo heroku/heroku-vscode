@@ -49,11 +49,6 @@ section {
         margin: 0.5rem 0;
       }
     }
-
-    .search {
-      display: flex;
-      align-items: center;
-    }
   }
   .loading-indicator {
     position: fixed;

@@ -22,7 +22,7 @@ export function logExtensionEvent(message: string, process = 'vscode'): void {
     hour12: false
   });
   const messageWithTimestamp = `[${timestamp}] heroku[${process}] ${message}`;
-  logger.appendLine(messageWithTimestamp);
+  logger.appendLine(`${messageWithTimestamp}`);
 }
 
 /**
