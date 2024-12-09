@@ -4,10 +4,14 @@
   font-family: var(--vscode-font-family);
 }
 
-:host(.expanded) vscode-button.cancel-button {
-  display: initial;
+:host(.expanded) {
+  vscode-button.cancel-button {
+    display: initial;
+  }
 }
-
+.hidden {
+  display: none;
+}
 .repo-card {
   display: flex;
   padding: 1rem;
@@ -324,7 +328,7 @@
       border: none;
       &.internal-routing-container {
         > sub {
-          display: inline-block;
+          display: block;
         }
       }
 
@@ -335,7 +339,15 @@
       > vscode-text-field {
         width: 100%;
         display: block;
+
+        &[aria-invalid='true'] {
+          --dropdown-border: var(--heroku-accent-red);
+          & + sub {
+            color: var(--heroku-accent-red);
+          }
+        }
       }
+
       .required-badge {
         font-size: 0.8rem;
         padding: 0.1rem 0.5rem;

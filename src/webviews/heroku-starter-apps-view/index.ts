@@ -7,30 +7,22 @@ import {
   type ProgressRing
 } from '@vscode/webview-ui-toolkit';
 import type { GithubSearchResponse } from 'github-api';
-import type { Space, Team } from '@heroku-cli/schema';
-import type { AppJson, EnvironmentVariables } from '@heroku/app-json-schema';
+import type { App, Space, Team } from '@heroku-cli/schema';
+import type { EnvironmentVariables } from '@heroku/app-json-schema';
 import { HerokuDeployButton } from '@heroku/elements';
 import { commonCss, loadCss, loadHtmlTemplate, vscode } from '../utils/web-component-utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
-import {
-  HEROKU_REPO_CARD_TAG,
-  HerokuRepoCard,
-  type RepoCardData,
-  RepoCardEvent
-} from '../components/repo-card/index.js';
+import { HEROKU_REPO_CARD_TAG, HerokuRepoCard, type RepoCardData, DeployEvent } from '../components/repo-card/index.js';
 import { mapTeamsByEnterpriseAccount } from '../utils/map-teams-by-enterprise.js';
 import { mapSpacesByOrganization } from '../utils/map-spaces-by-org.js';
 import { GithubService } from './github-service.js';
 import elementsButtons from './elements-buttons.json' with { type: 'json' };
 
 type DataPayload = {
+  existingApps: App[];
   teams?: Team[];
   spaces?: Space[];
   githubAccessToken?: string;
-  asFocusedEditor?: {
-    repoUrl: string;
-    appJson: AppJson;
-  };
 };
 
 const template = await loadHtmlTemplate(import.meta.resolve('./index.html'));
@@ -87,6 +79,7 @@ export class HerokuStarterApps extends FASTElement {
 
   private debounceSearch: number | undefined;
 
+  private existingApps: App[] = [];
   private teams: Map<string, Team[]> | undefined;
   private spaces: Map<string, Space[]> | undefined;
   private referenceAppRepos: GithubSearchResponse | undefined;
@@ -111,8 +104,8 @@ export class HerokuStarterApps extends FASTElement {
    *
    * @param event The deploy event
    */
-  private static onDeploy(event: RepoCardEvent): void {
-    vscode.postMessage({ type: 'deploy', payload: event.detail });
+  private static onDeploy(event: DeployEvent): void {
+    vscode.postMessage({ type: 'deploy', payload: event.payload });
   }
 
   /**
@@ -144,12 +137,16 @@ export class HerokuStarterApps extends FASTElement {
     const listElement = this.repoListItemTemplate.content.cloneNode(true) as DocumentFragment;
     (listElement.firstElementChild as HTMLLIElement).id = item.name ?? item.repo_name;
     const card = listElement.querySelector(HEROKU_REPO_CARD_TAG) as HerokuRepoCard;
+    // This is required to ensure that the component is rendered,
+    // any decorators have fully initialized and the shadow DOM
+    // is available before we try to access it.
     requestAnimationFrame(() => {
       card.data = item;
+      card.existingApps = this.existingApps;
       card.teams = this.teams;
       card.spaces = this.spaces;
       card.configVarsFetcher = this.configVarsFetcher();
-      card.addEventListener(RepoCardEvent.DEPLOY, HerokuStarterApps.onDeploy);
+      card.addEventListener(DeployEvent.DEPLOY, HerokuStarterApps.onDeploy);
     });
 
     return listElement;
@@ -211,9 +208,12 @@ export class HerokuStarterApps extends FASTElement {
    * @param event The message event
    */
   private onMessage = (event: MessageEvent<DataPayload>): void => {
-    this.teams = mapTeamsByEnterpriseAccount(event.data.teams);
-    this.spaces = mapSpacesByOrganization(event.data.spaces);
-    this.githubService.accessToken = event.data.githubAccessToken;
+    const { existingApps, githubAccessToken, spaces, teams } = event.data;
+
+    this.existingApps = existingApps;
+    this.teams = mapTeamsByEnterpriseAccount(teams);
+    this.spaces = mapSpacesByOrganization(spaces);
+    this.githubService.accessToken = githubAccessToken;
 
     void (async (): Promise<void> => {
       this.herokuGettingStartedRepos = await this.githubService.searchRepositories({

@@ -1,11 +1,11 @@
 import { customElement, FASTElement } from '@microsoft/fast-element';
 import {
-  Button,
-  Checkbox,
-  Dropdown,
-  Option,
+  type Button,
+  type Checkbox,
+  type Dropdown,
+  type Option,
   provideVSCodeDesignSystem,
-  TextField,
+  type TextField,
   vsCodeButton,
   vsCodeCheckbox,
   vsCodeDivider,
@@ -17,7 +17,7 @@ import {
 } from '@vscode/webview-ui-toolkit';
 import { RepoSearchResultItem } from 'github-api';
 import { HerokuDeployButton } from '@heroku/elements';
-import type { Space, Team } from '@heroku-cli/schema';
+import type { App, Space, Team } from '@heroku-cli/schema';
 import type { EnvironmentVariables } from '@heroku/app-json-schema';
 import type { DeployPayload } from '@heroku/repo-card';
 import { commonCss, loadCss, loadHtmlTemplate } from '../../utils/web-component-utils.js';
@@ -27,7 +27,7 @@ import { observable } from '../../meta/observable.js';
 export type RepoCardData = RepoSearchResultItem & HerokuDeployButton;
 
 export type RepoCardEventMap = {
-  [RepoCardEvent.DEPLOY]: RepoCardEvent;
+  [DeployEvent.DEPLOY]: DeployEvent;
 } & HTMLElementEventMap;
 
 /**
@@ -62,7 +62,37 @@ const styles = (await loadCss([import.meta.resolve('./index.css')])).concat(comm
 })
 
 /**
+ * A web component that renders a GitHub repository card with Heroku deployment options.
+ * This component extends FASTElement and provides an interactive interface for viewing
+ * repository details and configuring Heroku deployments.
  *
+ * @class HerokuRepoCard
+ * @extends {FASTElement}
+ *
+ * @property {RepoCardData | undefined} data - Repository data containing GitHub and Heroku deployment information
+ * @property {Map<string, Team[]> | undefined} teams - Map of team configurations grouped by enterprise account
+ * @property {Map<string, Space[]> | undefined} spaces - Map of available Heroku spaces grouped by team
+ * @property {(contentsUrl: string) => Promise<EnvironmentVariables> | EnvironmentVariables} [configVarsFetcher] - Optional function to fetch environment variables
+ *
+ * @fires {RepoCardEvent} RepoCardEvent.DEPLOY - Fired when a deployment is initiated
+ *
+ * @example
+ * ```html
+ * <heroku-repo-card>
+ *   <!-- Card content will be rendered here -->
+ * </heroku-repo-card>
+ * ```
+ *
+ * Features:
+ * - Displays repository metadata (language, stars, forks, last updated)
+ * - Shows repository visibility status (public/private)
+ * - Provides deployment configuration options
+ * - Supports team and space selection
+ * - Handles environment variable configuration
+ * - Integrates with VS Code's webview UI toolkit
+ *
+ * The component automatically registers required VS Code webview UI toolkit components
+ * and handles all necessary event listeners for form submission and user interactions.
  */
 export class HerokuRepoCard extends FASTElement {
   @observable('dataChanged')
@@ -122,6 +152,9 @@ export class HerokuRepoCard extends FASTElement {
   @shadowChild('.configure')
   protected configureUlList!: HTMLUListElement;
 
+  @shadowChild('vscode-text-field.app-name')
+  protected appNameTextField!: TextField;
+
   @shadowChild('#selector-template')
   private selectorTemplate!: HTMLTemplateElement;
 
@@ -132,6 +165,7 @@ export class HerokuRepoCard extends FASTElement {
   private configVarTemplate!: HTMLTemplateElement;
 
   public configVarsFetcher?: (contentsUrl: string) => Promise<EnvironmentVariables> | EnvironmentVariables;
+  public existingApps: App[] | undefined;
 
   /**
    * @inheritdoc
@@ -173,6 +207,14 @@ export class HerokuRepoCard extends FASTElement {
       vsCodeCheckbox(),
       vsCodeLink()
     );
+  }
+
+  /**
+   * @inheritdoc
+   */
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this.appNameTextField.addEventListener('input', this.onAppNameInput);
   }
 
   /**
@@ -291,6 +333,7 @@ export class HerokuRepoCard extends FASTElement {
 
     const teamSelectorFragment = this.selectorTemplate.content.cloneNode(true) as DocumentFragment;
     const teamSelector = teamSelectorFragment.firstElementChild as Dropdown;
+    teamSelector.setAttribute('aria-label', 'Select a team');
     // Hydrate the default option
     const defaultOption = teamSelector.querySelector('vscode-option') as Option;
     defaultOption.value = '';
@@ -341,6 +384,7 @@ export class HerokuRepoCard extends FASTElement {
 
     const spacesSelectorFragment = this.selectorTemplate.content.cloneNode(true) as DocumentFragment;
     const spacesSelector = spacesSelectorFragment.firstElementChild as Dropdown;
+    spacesSelector.setAttribute('aria-label', 'Select a space');
 
     // Hydrate the default option
     const defaultOption = spacesSelector.querySelector('vscode-option') as Option;
@@ -412,6 +456,33 @@ export class HerokuRepoCard extends FASTElement {
   }
 
   /**
+   * Handler for the app name input. This sends
+   * an IPC message to the node process to validate
+   * the value.
+   *
+   * @param event Event dispatched by the text field
+   */
+  private onAppNameInput = (event: Event): void => {
+    const { value } = event.target as TextField;
+    const match = !!this.existingApps?.some((app) => app.name === value);
+
+    this.appNameTextField.setAttribute('aria-invalid', String(!!match));
+    const err = match ? 'The app name is not available' : '';
+    const flags = match ? { customError: true } : {};
+    this.appNameTextField.setValidity(flags, err);
+    this.deployButton.disabled = match;
+    this.deployOptionsForm.checkValidity();
+
+    // update the validation message
+    const validationMessageSpan = this.shadowRoot!.querySelector(
+      'li.app-name sub.validation-message'
+    ) as HTMLSpanElement;
+    validationMessageSpan.textContent = match
+      ? err
+      : "We'll pick one for you if this field is left blank. You can change it later.";
+  };
+
+  /**
    * Handler for change events dispatched by the spaces selector
    *
    * @param this dropdown bound to this handler
@@ -467,9 +538,11 @@ export class HerokuRepoCard extends FASTElement {
 
     const teamId = teamSelector?.value || undefined;
     const spaceId = spaceSelector?.value || undefined;
+    const appName = this.appNameTextField.value || undefined;
 
     this.dispatchEvent(
-      new RepoCardEvent({
+      new DeployEvent({
+        appName,
         repoUrl,
         repoName,
         teamId,
@@ -493,8 +566,11 @@ export class HerokuRepoCard extends FASTElement {
   private onCancelClick = (): void => {
     this.classList.remove('expanded');
 
-    const deployButton = this.deployOptionsForm.querySelector('vscode-button.deploy-button') as Button;
-    deployButton.lastChild!.textContent = 'Deploy to Heroku';
+    this.deployButton.lastChild!.textContent = 'Deploy to Heroku';
+    this.deployButton.disabled = false;
+    this.appNameTextField.value = '';
+    this.appNameTextField.removeAttribute('aria-invalid');
+    this.appNameTextField.setValidity({});
 
     const configureUlList = this.deployOptionsForm.querySelector('ul.configure') as HTMLUListElement;
     const listContainer = this.deployOptionsForm.querySelector('div.list-container') as HTMLDivElement;
@@ -564,20 +640,24 @@ export class HerokuRepoCard extends FASTElement {
 
       this.deployButton.classList.remove('loading');
       this.deployButton.lastChild!.textContent = 'Deploy app';
+      this.appNameTextField.focus();
       this.scrollIntoView({ behavior: 'smooth', block: 'center' });
     })();
   };
 }
 
 /**
- *
+ * Event dispatched when the user clicks the deploy button
  */
-export class RepoCardEvent extends CustomEvent<DeployPayload> {
+export class DeployEvent extends Event {
   public static DEPLOY = 'deploy' as const;
+
   /**
+   * Constructs a new DeployEvent instance with the provided payload.
    *
+   * @param payload The payload to deploy to Heroku
    */
-  public constructor(detail: DeployPayload) {
-    super(RepoCardEvent.DEPLOY, { detail });
+  public constructor(public readonly payload: DeployPayload) {
+    super(DeployEvent.DEPLOY);
   }
 }

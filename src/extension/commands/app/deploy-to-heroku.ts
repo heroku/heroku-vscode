@@ -28,6 +28,7 @@ export type DeploymentOptions = {
   rootUri?: vscode.Uri | null;
   appNames?: string[];
   tarballUri?: vscode.Uri;
+  name?: string;
   teamId?: string;
   spaceId?: string;
   internalRouting?: boolean;
@@ -340,7 +341,7 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
   /**
    * Checks for the existence of the Procfile.
    *
-   * @returns boolean indicating wether a Procfile was found
+   * @returns boolean indicating whether a Procfile was found
    * @throws {Error} If the Procfile is missing or invalid
    */
   protected async validateProcfile(): Promise<boolean> {
@@ -468,7 +469,7 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
    * @throws {DeploymentError} If the deployment fails
    */
   private async setupNewApp(blobUrl: string): Promise<Build & { name: string }> {
-    const { spaceId, teamId, env, internalRouting } = this.deploymentOptions;
+    const { name, spaceId, teamId, env, internalRouting } = this.deploymentOptions;
     const payload: AppSetupCreatePayload = {
       // eslint-disable-next-line camelcase
       source_blob: {
@@ -476,6 +477,7 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
       },
       overrides: { env },
       app: {
+        name: name ?? undefined,
         // undefined instead of '' for these 2
         organization: teamId ?? undefined,
         space: spaceId ?? undefined

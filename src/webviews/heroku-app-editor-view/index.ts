@@ -1,6 +1,6 @@
 import { customElement, FASTElement } from '@microsoft/fast-element';
 import type { AppJson, EnvironmentVariables } from '@heroku/app-json-schema';
-import type { Space, Team } from '@heroku-cli/schema';
+import type { App, Space, Team } from '@heroku-cli/schema';
 import {
   ProgressRing,
   provideVSCodeDesignSystem,
@@ -9,12 +9,7 @@ import {
 } from '@vscode/webview-ui-toolkit';
 import { commonCss, loadCss, loadHtmlTemplate, vscode } from '../utils/web-component-utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
-import {
-  HEROKU_REPO_CARD_TAG,
-  type HerokuRepoCard,
-  RepoCardData,
-  RepoCardEvent
-} from '../components/repo-card/index.js';
+import { HEROKU_REPO_CARD_TAG, type HerokuRepoCard, RepoCardData, DeployEvent } from '../components/repo-card/index.js';
 import { mapTeamsByEnterpriseAccount } from '../utils/map-teams-by-enterprise.js';
 import { mapSpacesByOrganization } from '../utils/map-spaces-by-org.js';
 import { GithubService } from '../heroku-starter-apps-view/github-service.js';
@@ -25,6 +20,7 @@ type DataPayload = {
   githubAccessToken?: string;
   teams?: Team[];
   spaces?: Space[];
+  existingApps: App[];
 };
 const template = await loadHtmlTemplate(import.meta.resolve('./index.html'));
 const styles = (await loadCss([import.meta.resolve('./index.css')])).concat(commonCss);
@@ -61,8 +57,8 @@ export class HerokuAppEditor extends FASTElement {
    *
    * @param event The event dispatched by the Repo Card
    */
-  private static onDeploy(event: RepoCardEvent): void {
-    vscode.postMessage({ type: 'deploy', payload: event.detail });
+  private static onDeploy(event: DeployEvent): void {
+    vscode.postMessage({ type: 'deploy', payload: event.payload });
   }
 
   /**
@@ -82,7 +78,7 @@ export class HerokuAppEditor extends FASTElement {
   }
 
   private onMessage = (event: MessageEvent<DataPayload>): void => {
-    const { appJsonList = [], spaces, teams, githubAccessToken, repoInfos } = event.data;
+    const { appJsonList = [], spaces, teams, existingApps, githubAccessToken, repoInfos } = event.data;
     this.githubService.accessToken = githubAccessToken;
     const mappedSpaces = mapSpacesByOrganization(spaces);
     const mapTeams = mapTeamsByEnterpriseAccount(teams);
@@ -97,12 +93,16 @@ export class HerokuAppEditor extends FASTElement {
         const li = this.herokuRepoCardTemplate.content.cloneNode(true) as DocumentFragment;
         const repoCard = li.querySelector(HEROKU_REPO_CARD_TAG) as HerokuRepoCard;
         this.repoList.appendChild(li);
+        // This is required to ensure that the component is rendered,
+        // any decorators have fully initialized and the shadow DOM
+        // is available before we try to access it.
         requestAnimationFrame(() => {
           repoCard.data = repo as RepoCardData;
           repoCard.spaces = mappedSpaces;
           repoCard.teams = mapTeams;
+          repoCard.existingApps = existingApps;
           repoCard.configVarsFetcher = (): EnvironmentVariables => appJson.env ?? {};
-          repoCard.addEventListener(RepoCardEvent.DEPLOY, HerokuAppEditor.onDeploy);
+          repoCard.addEventListener(DeployEvent.DEPLOY, HerokuAppEditor.onDeploy);
           this.repoList.appendChild(repoCard);
         });
       }
