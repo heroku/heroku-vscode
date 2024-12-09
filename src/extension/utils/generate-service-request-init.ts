@@ -1,4 +1,8 @@
 import vscode, { type AuthenticationSession } from 'vscode';
+
+const extension = vscode.extensions.getExtension('heroku.heroku') ?? { packageJSON: {} };
+const version = (Reflect.get(extension.packageJSON, 'version') as string) ?? '';
+
 /**
  * Generates a request init object for making API requests to the Heroku API.
  *
@@ -7,5 +11,12 @@ import vscode, { type AuthenticationSession } from 'vscode';
  */
 export async function generateRequestInit(signal?: AbortSignal): Promise<RequestInit> {
   const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) as AuthenticationSession;
-  return { signal, headers: { Authorization: `Bearer ${accessToken.trim()}` } };
+  return {
+    signal,
+    headers: {
+      Authorization: `Bearer ${accessToken.trim()}`,
+      Referer: `vscode-heroku-extension/${version}`,
+      'User-Agent': `VSCode-Heroku-Extension/${version} (${process.platform}; ${process.arch}) VSCode/${vscode.version}`
+    }
+  };
 }

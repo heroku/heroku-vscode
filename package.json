@@ -1,6 +1,7 @@
 {
   "name": "heroku",
   "displayName": "Heroku",
+  "publisher": "heroku",
   "description": "Heroku VSCode extension",
   "repository": "https://github.com/heroku/heroku-vscode",
   "version": "0.0.1",
