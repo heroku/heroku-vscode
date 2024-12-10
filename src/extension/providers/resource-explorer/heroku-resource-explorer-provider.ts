@@ -231,20 +231,26 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * Synchronizes the add-ons for the specified app.
    *
    * @param app The app to synchronize add-ons for
+   * @param knownAddon An optional addon to synchronize
    */
-  private async queueAddOnSynchronization(app: App): Promise<void> {
+  private async queueAddOnSynchronization(app: App, knownAddon?: AddOn): Promise<void> {
     if (this.syncAddonsPending) {
       return;
     }
     this.syncAddonsPending = true;
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // wait for log chatter to settle a bit
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // wait for log chatter to settle a bit
     const { addOns, categories } = this.appToResourceMap.get(app)!;
     const addonsSet = new Set(addOns.map((a) => a.id));
 
     addOns.length = 0;
     const addOnsCategory = categories.find((cat) => cat.label === 'ADD-ONS');
+    // Repopulates `addOns`
     const pristineAddons = await this.getAddonsForApp(app, addOnsCategory as T);
+    if (knownAddon && !pristineAddons.find((a) => a.id === knownAddon.id)) {
+      pristineAddons.push(knownAddon);
+    }
     const pristineAddonsSet = new Set(pristineAddons.map((a) => a.id));
+
     // Sync properties
     addonsSet.forEach((id) => {
       if (pristineAddonsSet.has(id)) {
@@ -272,7 +278,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    */
   private onAddonCreated = (addon: AddOn): void => {
     const app = this.apps.get(addon.app.name)!;
-    void this.queueAddOnSynchronization(app);
+    void this.queueAddOnSynchronization(app, addon);
   };
 
   /**

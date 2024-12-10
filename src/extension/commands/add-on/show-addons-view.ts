@@ -5,8 +5,7 @@ import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import { AddOn } from '@heroku-cli/schema';
 import { CategoriesResponse } from '@heroku/elements';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
-import importMap from '../../importmap.json';
-import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
+import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
 
 type MessagePayload =
   | {
@@ -59,34 +58,16 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
     ShowAddonsViewCommand.addonsPanel = undefined;
 
     this.appIdentifier = appIdentifier;
-    const panel = vscode.window.createWebviewPanel('Addons', 'Elements Marketplace', vscode.ViewColumn.One, {
-      enableScripts: true
+    const panel = prepareHerokuWebview(extensionUri, {
+      viewType: 'heroku.add-on.marketplace',
+      webviewTitle: 'Elements Marketplace',
+      iconUri: vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'element.svg'),
+      javascriptEntryUri: vscode.Uri.joinPath(extensionUri, 'out', 'webviews', 'addons-view', 'index.js'),
+      webComponentTag: 'heroku-add-ons'
     });
-    panel.iconPath = vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'element.svg');
+
     const { webview } = panel;
     webview.onDidReceiveMessage(this.onMessage);
-
-    const onDiskPath = vscode.Uri.joinPath(extensionUri, 'out/webviews/addons-view', 'index.js');
-    const indexPath = webview.asWebviewUri(onDiskPath);
-    const webViewImportMap = {
-      ...importMap,
-      imports: convertImportMapPathsToUris(webview, importMap.imports, extensionUri)
-    };
-
-    webview.html = `
-    <html style="height: 100%;" lang="en">
-    <head>
-      <script type="importmap">
-      ${JSON.stringify(webViewImportMap)}
-      </script>
-
-      <script type="module" src="${indexPath.toString()}"></script>
-      <title></title>
-    </head>
-      <body style="min-height: 100%; display: flex;">
-        <heroku-add-ons>Add-on not loaded</heroku-add-ons>
-      </body>
-    </html>`;
 
     ShowAddonsViewCommand.addonsPanel = panel;
     await new Promise((resolve) => panel.onDidDispose(resolve));
@@ -154,7 +135,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
    * Installs or updates an add-on for the application
    * and sends a message to the webview with the result.
    *
-   * @param type The type of operation to peform.
+   * @param type The type of operation to perform.
    * @param addOnId The id of the addon to install or update.
    * @param plan The plan to install or update.
    * @param installedAddonId The id of the installed addon to update. Required only when type is 'updateAddon'

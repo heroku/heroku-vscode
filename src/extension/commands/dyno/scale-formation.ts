@@ -1,7 +1,8 @@
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { Formation } from '@heroku-cli/schema';
-import vscode, { AuthenticationSession, EventEmitter } from 'vscode';
+import vscode, { EventEmitter } from 'vscode';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
+import { generateRequestInit } from '../../utils/generate-service-request-init';
 
 @herokuCommand()
 /**
@@ -49,8 +50,7 @@ export class ScaleFormationCommand extends AbortController implements RunnableCo
       }
     }
 
-    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) as AuthenticationSession;
-    const requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${accessToken}` } };
+    const requestInit = await generateRequestInit(this.signal);
 
     try {
       const updatedFormation = await this.formationService.update(

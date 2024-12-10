@@ -1,7 +1,7 @@
 import type { AddOn } from '@heroku-cli/schema';
 import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
-import * as vscode from 'vscode';
 import { herokuCommand, type RunnableCommand } from '../../meta/command';
+import { generateRequestInit } from '../../utils/generate-service-request-init';
 
 @herokuCommand()
 /**
@@ -9,7 +9,7 @@ import { herokuCommand, type RunnableCommand } from '../../meta/command';
  */
 export class ListAddOnsByApp extends AbortController implements RunnableCommand<AddOn[]> {
   public static COMMAND_ID = 'heroku:addons:list-by-app' as const;
-  private static debounceRequestsbyApp = new Map<string, Promise<AddOn[]>>();
+  private static debounceRequestsByApp = new Map<string, Promise<AddOn[]>>();
 
   protected addOnService = new AddOnService(fetch, 'https://api.heroku.com');
 
@@ -21,20 +21,16 @@ export class ListAddOnsByApp extends AbortController implements RunnableCommand<
    * @returns Promise<AddOn[]>
    */
   public async run(appIdentifier: string, debounce = true): Promise<AddOn[]> {
-    let request = ListAddOnsByApp.debounceRequestsbyApp.get(appIdentifier);
+    let request = ListAddOnsByApp.debounceRequestsByApp.get(appIdentifier);
     if (!request || !debounce) {
-      const { accessToken } = (await vscode.authentication.getSession(
-        'heroku:auth:login',
-        []
-      )) as vscode.AuthenticationSession;
-      const requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${accessToken}` } };
+      const requestInit = await generateRequestInit(this.signal);
       request = this.addOnService.listByApp(appIdentifier, requestInit);
     }
     if (debounce) {
-      ListAddOnsByApp.debounceRequestsbyApp.set(appIdentifier, request);
+      ListAddOnsByApp.debounceRequestsByApp.set(appIdentifier, request);
     }
     const addOns = await request;
-    ListAddOnsByApp.debounceRequestsbyApp.delete(appIdentifier);
+    ListAddOnsByApp.debounceRequestsByApp.delete(appIdentifier);
 
     return addOns;
   }
