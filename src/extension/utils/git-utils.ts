@@ -82,14 +82,22 @@ export async function getRootRepository(): Promise<Repository | undefined> {
  * and represents a minimal set of permissions to search
  * for and read the contents of public repositories.
  *
- * @param createIfNone If true, a new session will be created if one does not exist
  * @returns The authentication session or undefined if the user disallows it or fails to authenticate
  */
-export async function getGithubSession(
-  createIfNone: boolean = true
-): Promise<vscode.AuthenticationSession | undefined> {
-  const session = await vscode.authentication.getSession('github', ['repo', 'read:user'], { createIfNone });
-
+export async function getGithubSession(): Promise<vscode.AuthenticationSession | undefined> {
+  const session = await vscode.authentication.getSession('github', ['repo', 'read:user'], { createIfNone: true });
+  if (!session) {
+    logExtensionEvent('No GitHub session found');
+    const response = await vscode.window.showInformationMessage(
+      'You must sign in to GitHub for this operation',
+      'Sign in to GitHub'
+    );
+    if (response === 'Sign in to GitHub') {
+      return getGithubSession();
+    }
+    // User insists on not sining in to github - that's ok. We'll ask again later.
+    return undefined;
+  }
   return session;
 }
 
