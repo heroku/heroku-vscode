@@ -1,0 +1,39 @@
+<section aria-labelledby="main-heading">
+  <header>
+    <span class="icon icon-logo-block-16" aria-hidden="true"></span>
+    <div class="title">
+      <h1 id="main-heading">Heroku starter apps</h1>
+      <p>Reference & Starter Applications for Heroku</p>
+    </div>
+    <div class="search">
+      <vscode-text-field
+        id="search"
+        role="searchbox"
+        placeholder="Search apps"
+        aria-placeholder="Search apps"
+        aria-label="Search apps"
+      >
+        <span slot="start" class="icon" aria-hidden="true"><i class="codicon codicon-search"></i></span>
+      </vscode-text-field>
+    </div>
+  </header>
+  <vscode-progress-ring class="loading-indicator"></vscode-progress-ring>
+  <div class="content-area">
+    <ul id="heroku-elements-apps" class="repo-list" role="list" aria-label="Reference applications">
+      <!-- #repo-template -->
+    </ul>
+    <ul id="reference-apps" class="repo-list" role="list" aria-label="Reference applications">
+      <!-- #repo-template -->
+    </ul>
+    <ul id="starter-apps" class="repo-list" role="list" aria-label="Starter applications">
+      <!-- #repo-template -->
+    </ul>
+  </div>
+  <footer></footer>
+</section>
+
+<template id="repo-template">
+  <li role="listitem">
+    <heroku-repo-card></heroku-repo-card>
+  </li>
+</template>

@@ -24,6 +24,73 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+.vscode-high-contrast {
+  --heroku-primary: #9e7cc1;
+  --heroku-secondary: #a997bf;
+  --heroku-accent-blue: #8ebdf1;
+  --heroku-accent-green: #abd7b4;
+  --heroku-accent-orange: #fbc595;
+  --heroku-accent-red: #e58f8f;
+  --heroku-gray: #c3c5c8;
+  --heroku-salesforce: #00a1e0;
+
+  --heroku-surface: #1e1e1e;
+  --heroku-surface-alt: #2d2d2d;
+  --heroku-border: #454545;
+  --heroku-text: #ffffff;
+  --heroku-text-secondary: rgba(255, 255, 255, 0.7);
+}
+
+.vscode-high-contrast-light {
+  --heroku-primary: #430098;
+  --heroku-secondary: #79589f;
+  --heroku-accent-blue: #408fec;
+  --heroku-accent-green: #74c080;
+  --heroku-accent-orange: #fa9f47;
+  --heroku-accent-red: #d64141;
+  --heroku-gray: #333d47;
+  --heroku-salesforce: #032e61;
+
+  --heroku-surface: #ffffff;
+  --heroku-surface-alt: #f5f5f5;
+  --heroku-border: #e0e0e0;
+  --heroku-text: #000000;
+  --heroku-text-secondary: rgba(0, 0, 0, 0.7);
+}
+
+.vscode-dark {
+  --heroku-primary: #9e7cc1;
+  --heroku-secondary: #a997bf;
+  --heroku-accent-blue: #8ebdf1;
+  --heroku-accent-green: #abd7b4;
+  --heroku-accent-orange: #fbc595;
+  --heroku-accent-red: #e58f8f;
+  --heroku-gray: #c3c5c8;
+  --heroku-salesforce: #00a1e0;
+
+  --heroku-surface: #252526;
+  --heroku-surface-alt: #333333;
+  --heroku-border: #454545;
+  --heroku-text: #cccccc;
+  --heroku-text-secondary: rgba(204, 204, 204, 0.7);
+}
+
+.vscode-light {
+  --heroku-primary: #430098;
+  --heroku-secondary: #79589f;
+  --heroku-accent-blue: #408fec;
+  --heroku-accent-green: #74c080;
+  --heroku-accent-orange: #fa9f47;
+  --heroku-accent-red: #d64141;
+  --heroku-gray: #333d47;
+  --heroku-salesforce: #032e61;
+
+  --heroku-surface: #ffffff;
+  --heroku-surface-alt: #f3f3f3;
+  --heroku-border: #e7e7e7;
+  --heroku-text: #000000;
+  --heroku-text-secondary: rgba(0, 0, 0, 0.7);
+}
 
 .icon-add-16:before {
   content: '\e900';

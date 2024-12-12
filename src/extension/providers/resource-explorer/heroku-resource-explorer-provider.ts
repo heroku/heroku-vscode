@@ -74,7 +74,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected syncAddonsPending = false;
 
   /**
-   * Bi-directonal emitter used to maintain
+   * Bi-directional emitter used to maintain
    * sync between the webview and the explorer.
    */
   protected addonsViewEmitter = new EventEmitter();
@@ -266,7 +266,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
   /**
    * Handler triggered when an addon was created
-   * in the Elements Markeyplace webview.
+   * in the Elements Marketplace webview.
    *
    * @param addon The addon that was created
    */
@@ -278,7 +278,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   /**
    * Handler for the dyno process starting event.
    *
-   * @param data The data dispached when a dyno is starting
+   * @param data The data dispatched when a dyno is starting
    * @param retryCount The number of times to retry fetching a dyno from the API before giving up
    */
   private onDynoProcessStartingOrStateChanged = (
@@ -294,7 +294,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         try {
           dyno = await this.dynoService.info(app.id, dynoName, this.requestInit);
         } catch {
-          // Dynos that are newly proisioning are 404
+          // Dynos that are newly provisioning are 404
           // for a little while on some formations...not sure why.
           if (retryCount > 0) {
             setTimeout(() => void this.onDynoProcessStartingOrStateChanged(data, retryCount - 1), 1000);
@@ -414,7 +414,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     const response = await vscode.window.showWarningMessage(
       `${message} found in your git remote ${transitional} not appear to exist on Heroku.`,
       'View apps',
-      'Nevermind'
+      'OK'
     );
 
     if (response === 'View apps') {
@@ -424,7 +424,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
   /**
    * Get the Formations for the specified app and subscribes
-   * to property changes on each object retured.
+   * to property changes on each object returned.
    *
    * @param app The app the get formations for.
    * @param parent The parent element the formations belongs to
@@ -448,10 +448,10 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
   /**
    * Get the Dynos for the specified app and subscribes
-   * to property changes on each object retured.
+   * to property changes on each object returned.
    *
    * @param app The app to get dynos for.
-   * @param parent The parent elemnent the dyno tree items will belong to.
+   * @param parent The parent element the dyno tree items will belong to.
    * @returns An array of Bindable<Dyno>.
    */
   private async getDynosForApp(app: App, parent: T): Promise<Dyno[]> {

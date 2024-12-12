@@ -1,22 +1,44 @@
 import { promisify } from 'node:util';
-import vscode from 'vscode';
-import { Validator, ValidatorResult } from 'jsonschema';
+import vscode, { type Uri } from 'vscode';
+import { ValidatorResult } from 'jsonschema';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
-import { App, AppSetupCreatePayload, Build, BuildCreatePayload } from '@heroku-cli/schema';
+import { App, AppSetup, AppSetupCreatePayload, Build, BuildCreatePayload } from '@heroku-cli/schema';
 import AppService from '@heroku-cli/schema/services/app-service.js';
 import SourceService from '@heroku-cli/schema/services/source-service.js';
 import BuildService from '@heroku-cli/schema/services/build-service.js';
 import { herokuCommand } from '../../meta/command';
 import { HerokuCommand } from '../heroku-command';
-import type { AppJson } from '../../meta/app-json-schema';
-import * as schema from '../../meta/app-json.schema.json';
-import { getHerokuAppNames, getRootRepository } from '../../utils/git-utils';
+import type { AppJson, EnvironmentVariables } from '../../../../@types/app-json-schema';
 import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { packSources } from '../../utils/tarball';
+import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { getHerokuAppNames } from '../../utils/git-utils';
+import { uploadWithDetailedProgress } from '../../utils/upload-with-progress';
+import { readAppJson } from '../../utils/read-app-json';
+
+/**
+ * Te only successful result is the Build & { name: string } type
+ */
+export type DeploymentResult = void | (Build & { name: string }) | null;
+
+/**
+ * Type used for the deployment options.
+ */
+export type DeploymentOptions = {
+  rootUri?: vscode.Uri | null;
+  appNames?: string[];
+  tarballUri?: vscode.Uri;
+  name?: string;
+  teamId?: string;
+  spaceId?: string;
+  internalRouting?: boolean;
+  env?: EnvironmentVariables;
+  skipSuccessMessage?: boolean;
+};
 
 /**
  * The DeploymentError class is used when
- * an error occurs during the deplomen of
+ * an error occurs during the deployment of
  * an app.
  */
 class DeploymentError extends Error {
@@ -60,17 +82,19 @@ class DeploymentError extends Error {
  * @see {@link AppSetupService}
  * @see {@link AppService}
  */
-export class DeployToHeroku extends HerokuCommand<void> {
+export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
   public static COMMAND_ID = 'heroku:deploy-to-heroku';
   protected appService = new AppService(fetch, 'https://api.heroku.com');
   protected sourcesService = new SourceService(fetch, 'https://api.heroku.com');
+
   protected appSetupService = new AppSetupService(fetch, 'https://api.heroku.com');
   protected buildService = new BuildService(fetch, 'https://api.heroku.com');
 
   protected requestInit: RequestInit | undefined;
-  protected workspaceFolder = vscode.workspace.workspaceFolders![0];
-  protected appJsonUri = vscode.Uri.joinPath(this.workspaceFolder.uri, 'app.json');
-  protected procFileUri = vscode.Uri.joinPath(this.workspaceFolder.uri, 'Procfile');
+
+  protected target: vscode.Uri | App | null | undefined;
+  protected deploymentOptions!: DeploymentOptions;
+
   /**
    * Deploys the current workspace to Heroku by means
    * of the AppSetup apis.
@@ -86,7 +110,7 @@ export class DeployToHeroku extends HerokuCommand<void> {
    *
    * Note that the AppSetupService requires a URL to download a tarball. If
    * the blobUri argument is provided (such as the git repo's archive link) and the
-   * localbranch has uncommitted changes, those changes will not be reflected
+   * local branch has uncommitted changes, those changes will not be reflected
    * in the deployment (obviously).
    *
    * Requirements:
@@ -94,74 +118,63 @@ export class DeployToHeroku extends HerokuCommand<void> {
    * - Profile must exist in the workspace root
    * - Valid Heroku authentication token
    *
-   * @param target (proided by VSCode) the Uri of the target file or the App object or null.
+   * @param target (provided by VSCode) the Uri of the target file or the App object or null.
    * When a Procfile is selected, the target and the selectedFileUris contains the Procfile Uri.
    * When the app.json is selected, the target and the selectedFileUris contains the app.json Uri.
    * When an App is selected, the target contains the App object and the selectedFileUris is null.
-   * @param _selections (proided by VSCode) an array of files selected. This is the same as the target unless multiple files are selected in the file explorer
-   * @param tarballUri if omitted, a tarball created from the local file system will be upload to an s3 bucket and deployd to Heroku.
+   * @param selections (provided by VSCode) an array of files selected. This is the same as the target unless multiple files are selected in the file explorer
+   * @param deploymentOptions details used for the deployment
    *
    * @throws {Error} If authentication fails or required files are missing
    * @throws {Error} If the app.json validation fails
    * @throws {Error} If the deployment to Heroku fails
+   * @see runOperationWithProgress
+   * @see deployToHeroku
    *
    * @returns A promise that resolves when the deployment is complete
    *                         or rejects if an error occurs during deployment
    */
   public async run(
     target: vscode.Uri | App | null,
-    _selections: vscode.Uri[] | null,
-    tarballUri?: vscode.Uri
-  ): Promise<void> {
-    const { accessToken } = (await vscode.authentication.getSession(
-      'heroku:auth:login',
-      []
-    )) as vscode.AuthenticationSession;
-    this.requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${accessToken}` } };
+    selections: vscode.Uri[] | null,
+    deploymentOptions: DeploymentOptions = {}
+  ): Promise<DeploymentResult> {
+    this.target = target;
+    this.deploymentOptions = deploymentOptions;
+    this.requestInit = await generateRequestInit(this.signal);
 
+    showExtensionLogs();
     logExtensionEvent(`Deploying to Heroku...`);
-    const resultPromise = vscode.window.withProgress(
-      {
-        title: 'Deploying to Heroku...',
-        location: vscode.ProgressLocation.Notification,
-        cancellable: true
-      },
-      async (progress, token) => {
-        const cancellationPromise: Promise<void> = promisify(token.onCancellationRequested)();
-        const taskPromise = (async (): Promise<(Build & { name: string }) | null> => {
-          // app.json is required on an initial deployment
-          if (!tarballUri && !this.isApp(target)) {
-            await this.validateAppJson();
-          }
-          // Profile is always required when no url is given
-          if (!tarballUri) {
-            await this.validateProcfile();
-          }
-          // We're good to deploy
-          const deployResult = await this.deployToHeroku(tarballUri, target);
-          progress.report({ increment: 100 });
-          return deployResult;
-        })();
-
-        return Promise.race([cancellationPromise, taskPromise]);
-      }
-    );
 
     // Resolving to a falsy value indicates the user cancelled
     // rejecting means something went wrong.
+    let result: DeploymentResult = null;
     try {
-      const result = await resultPromise;
+      // Validate the deployment options
+      await this.validateDeploymentOptions(deploymentOptions, selections);
+      // Main entry for this command is the runOperationWithProgress
+      result = await this.runOperationWithProgress();
       if (!result) {
         this.abort();
         const abortMessage = 'Deployment cancelled';
         logExtensionEvent(abortMessage);
         await vscode.window.showErrorMessage(abortMessage);
       } else {
-        const message = `Deployment completed for newly created app: ${result.name}`;
+        const message = `Deployment completed for ${result.name}`;
         logExtensionEvent(message);
-        const response = await vscode.window.showInformationMessage(message, 'OK', 'View app');
-        if (response === 'View app') {
-          await vscode.commands.executeCommand('workbench.view.extension.heroku');
+        if (!deploymentOptions.skipSuccessMessage) {
+          // Show the option to view the app if the rootRepoUrl matches one open workspaces
+          const { rootUri } = deploymentOptions;
+          const folders = vscode.workspace.workspaceFolders ?? [];
+          const canViewApp = folders.some((folder) => rootUri?.fsPath === folder.uri.fsPath);
+          const items = ['OK'];
+          if (canViewApp) {
+            items.push('View app');
+          }
+          const response = await vscode.window.showInformationMessage(message, ...items);
+          if (response === 'View app') {
+            await vscode.commands.executeCommand('workbench.view.extension.heroku');
+          }
         }
       }
     } catch (error) {
@@ -172,7 +185,60 @@ export class DeployToHeroku extends HerokuCommand<void> {
         showExtensionLogs();
       }
     }
+    return result;
   }
+
+  /**
+   * Orchestrates the deployment tasks and handles cancellations.
+   * This function wraps the deployment process into a Promise
+   * and returns it. The Promise returned from this function
+   * is expected to be awaited on in a try...catch.
+   *
+   * It performs the following tasks:
+   * 1. Validates the app.json configuration file
+   * 2. Validates the Procfile
+   * 3. Creates and deploys a new Heroku application
+   * 4. Adds the new Heroku app to the git remote
+   * 5. Displays a notification with options to view the app in the explorer
+   *
+   * @returns The deployment process wrapped in a promise
+   */
+  protected runOperationWithProgress = (): Thenable<void | (Build & { name: string }) | null> => {
+    const operationPromise = vscode.window.withProgress(
+      {
+        title: 'Deploying to Heroku...',
+        location: vscode.ProgressLocation.Notification,
+        cancellable: true
+      },
+      async (progress, token) => {
+        const { tarballUri } = this.deploymentOptions;
+        const cancellationPromise: Promise<void> = promisify(token.onCancellationRequested)();
+        const taskPromise = (async (): Promise<(Build & { name: string }) | null> => {
+          // app.json is required on an initial deployment using this flow
+          if (!tarballUri && !this.isApp(this.target)) {
+            await this.validateAppJson();
+          }
+          // Procfile is not necessary but deployment might fail.
+          if (!tarballUri) {
+            const hasProcfile = await this.validateProcfile();
+            if (!hasProcfile) {
+              logExtensionEvent(
+                'Warning: No Procfile found. Heroku will attempt to automatically detect the type of application being deployed.'
+              );
+            }
+          }
+          // We're good to deploy
+          const deployResult = await this.deployToHeroku();
+          progress.report({ increment: 100 });
+          return deployResult;
+        })();
+
+        return Promise.race([cancellationPromise, taskPromise]);
+      }
+    );
+
+    return operationPromise;
+  };
 
   /**
    * Builds and sends the payload to Heroku for setting
@@ -189,37 +255,26 @@ export class DeployToHeroku extends HerokuCommand<void> {
    * - If the target argument is not an App object and no existing
    * apps are found in the workspace, a new app is created and deployed.
    *
-   * @param tarballUri the URI of the tarball to deploy. If none
-   * is provided, the AppSetup service will create a new tarball
-   * and upload it to the source_blob url created by the SourceService
-   * @param target the target of the deployment. This can be a Uri, App or null.
-   * If a tarballUri is provided, this argument is ignored.
-   *
    * @returns an AppSetup object with the details of the newly setup app
    * @throws {DeploymentError} If the deployment fails
    */
-  protected async deployToHeroku(
-    tarballUri?: vscode.Uri,
-    target?: unknown
-  ): Promise<(Build & { name: string }) | null> {
+  protected async deployToHeroku(): Promise<(Build & { name: string }) | null> {
+    const { tarballUri, rootUri, appNames } = this.deploymentOptions;
+
     let blobUrl = tarballUri?.toString();
 
     // Create and use an amazon s3 bucket and
     // then upload the newly created tarball
     // from the local sources if no tarballUri was provided.
     if (!blobUrl) {
-      const tarball = await packSources(vscode.workspace.workspaceFolders![0]);
+      const tarball = await packSources(rootUri!);
+      logExtensionEvent(`Tarball size: ${this.formatFileSize(tarball.byteLength)}`);
       const { source_blob: sourceBlob } = await this.sourcesService.create(this.requestInit);
       blobUrl = sourceBlob.get_url;
       // trim off the s3 bucket key and signature
       const blobUriBase = vscode.Uri.parse(sourceBlob.put_url).with({ query: '' }).toString();
       logExtensionEvent(`Attempting to upload tarball to ${blobUriBase}`);
-      logExtensionEvent(`Tarball size: ${tarball.byteLength} bytes`);
-      const response = await fetch(sourceBlob.put_url, {
-        signal: this.signal,
-        method: 'PUT',
-        body: tarball
-      });
+      const response = await uploadWithDetailedProgress(sourceBlob.put_url, tarball, this.signal, logExtensionEvent);
 
       if (response.ok) {
         logExtensionEvent(`Successfully uploaded tarball to ${blobUriBase}`);
@@ -234,62 +289,67 @@ export class DeployToHeroku extends HerokuCommand<void> {
     // the deploy to heroku decorator button
     // and we have apps in the remote. Ask
     // the user where to deploy.
-    let isExistingDeployment = this.isApp(target);
-    let targetApp = target;
-    if (!isExistingDeployment) {
-      const appNames = await getHerokuAppNames();
-      if (appNames.length) {
-        const message = 'Choose where to deploy';
-        const maybeAppName = await vscode.window.showQuickPick(['(Create new app)', ...appNames], { title: message });
-        // User cancelled
-        if (!maybeAppName) {
-          return null;
-        }
-        // Deploy to an existing app based on the user selection
-        // provided the app still exists on Heroku and the user has
-        // access to it.
-        if (maybeAppName !== '(Create new app)') {
-          try {
-            targetApp = await this.appService.info(maybeAppName, this.requestInit);
-            isExistingDeployment = true;
-          } catch (error) {
-            const appServiceErrorMessage = `The app "${maybeAppName}" was not found on Heroku`;
-            logExtensionEvent(appServiceErrorMessage);
-            throw new DeploymentError(appServiceErrorMessage);
-          }
+    let isExistingDeployment = this.isApp(this.target);
+    let targetApp = this.target;
+    if (!isExistingDeployment && appNames?.length) {
+      const message = 'Choose where to deploy';
+      const maybeAppName = await vscode.window.showQuickPick(['(Create new app)', ...appNames], {
+        title: message
+      });
+      // User cancelled
+      if (!maybeAppName) {
+        return null;
+      }
+      // Deploy to an existing app based on the user selection
+      // provided the app still exists on Heroku and the user has
+      // access to it.
+      if (maybeAppName !== '(Create new app)') {
+        try {
+          targetApp = await this.appService.info(maybeAppName, this.requestInit);
+          isExistingDeployment = true;
+        } catch (error) {
+          const appServiceErrorMessage = `The app "${maybeAppName}" was not found on Heroku`;
+          logExtensionEvent(appServiceErrorMessage);
+          throw new DeploymentError(appServiceErrorMessage);
         }
       }
     }
+
     const result = isExistingDeployment
       ? await this.createNewBuildForExistingApp(blobUrl, targetApp as App)
       : await this.setupNewApp(blobUrl);
+
+    // This is a new app setup and needs a git remote
+    // added to the workspace.
     if (!isExistingDeployment && result) {
       // Add the new remote to the workspace
       logExtensionEvent(`Adding remote heroku-${result.name}...`);
       const app = await this.appService.info(result.name, this.requestInit);
-      const rootRepository = await getRootRepository();
-      if (!rootRepository) {
-        logExtensionEvent(
-          'Git repository not found. The app deployed successfully but the Git remotes were not updated'
-        );
+      const gitProcess = HerokuCommand.exec(`git remote add heroku-${result.name} ${app.git_url}`, {
+        cwd: rootUri!.fsPath,
+        signal: this.signal
+      });
+      const gitProcessResponse = await HerokuCommand.waitForCompletion(gitProcess);
+      if (gitProcessResponse.exitCode !== 0) {
+        const addRemoteErrorMessage = `Error adding remote: ${gitProcessResponse.errorMessage}`;
+        logExtensionEvent(addRemoteErrorMessage);
       }
-      await rootRepository?.addRemote(`heroku-${result.name}`, app.git_url);
     }
     return result;
   }
 
   /**
-   * Checks for the existence of the Procfile. If unavailable,
-   * the user is notified and the action is aborted.
+   * Checks for the existence of the Procfile.
    *
-   * @returns true if the workspace is valid, throws otherwise
+   * @returns boolean indicating whether a Procfile was found
    * @throws {Error} If the Procfile is missing or invalid
    */
   protected async validateProcfile(): Promise<boolean> {
     try {
-      await vscode.workspace.fs.stat(this.procFileUri);
+      const procFileUri = vscode.Uri.joinPath(this.deploymentOptions.rootUri as vscode.Uri, 'Procfile');
+      await vscode.workspace.fs.stat(procFileUri);
     } catch {
-      throw new Error('No Procfile found. Deployment cannot continue.');
+      return false;
     }
     return true;
   }
@@ -302,7 +362,9 @@ export class DeployToHeroku extends HerokuCommand<void> {
    * @throws {Error} If the app.json is invalid or cannot be read
    */
   protected async validateAppJson(): Promise<AppJson | undefined> {
-    const readAppJsonResult: AppJson | ValidatorResult = await this.readAppJson();
+    const readAppJsonResult: AppJson | ValidatorResult = await readAppJson(
+      this.deploymentOptions.rootUri as vscode.Uri
+    );
     if (readAppJsonResult instanceof ValidatorResult) {
       logExtensionEvent(`The following errors were found in app.json:`);
       logExtensionEvent(`--------------------------------`);
@@ -316,31 +378,43 @@ export class DeployToHeroku extends HerokuCommand<void> {
   }
 
   /**
-   * Retrieves the app.json. This file must be in the
-   * root of the workspace and must be valid.
+   * Validates the deployment options by verifying the following:
+   * 1. A rootUri or tarballUri is provided. If none are provided,
+   * the rootUri is derived from the selections or workspace. Validation
+   * fails if a rootUri cannot be determined and a tarballUri is missing.
+   * 2. If appNames is falsy, it is populated from getHerokuAppNames()
    *
-   * @returns The typed app.json as an object or a ValidatorResult object if validaton fails.
-   * @throws {Error} If the app.json cannot be read
+   * @param deploymentOptions the deployment options to validate
+   * @param selections an array of Uris supplied by vscode when a context menu is used to trigger this command.
+   * @returns boolean indicating whether the deployment options are valid
+   *
+   * @throws {DeploymentError} If a rootUri cannot be determined and the tarballUri is also missing
+   *
+   * @see getHerokuAppNames()
    */
-  protected async readAppJson(): Promise<AppJson | ValidatorResult> {
-    try {
-      await vscode.workspace.fs.stat(this.appJsonUri);
-    } catch (e) {
-      throw new Error(`Cannot find app.json file at ${this.appJsonUri.path}`);
+  protected async validateDeploymentOptions(
+    deploymentOptions: DeploymentOptions,
+    selections: Uri[] | null
+  ): Promise<boolean> {
+    if (!deploymentOptions.rootUri && !deploymentOptions.tarballUri) {
+      let rootUri: Uri | undefined;
+      const [selectedFile] = selections ?? [];
+      if (selectedFile) {
+        rootUri = vscode.Uri.file(selectedFile.fsPath.split('/').slice(0, -1).join('/'));
+      } else {
+        rootUri = vscode.workspace.workspaceFolders?.[0].uri;
+      }
+      if (!rootUri) {
+        const message = 'A local workspace directory or a tarball location must be supplied but none was found';
+        logExtensionEvent(message);
+        throw new DeploymentError(message);
+      }
+      Reflect.set(deploymentOptions, 'rootUri', rootUri);
     }
-    const appJsonFile = await vscode.workspace.fs.readFile(this.appJsonUri);
-    let appJson: AppJson;
-    try {
-      appJson = JSON.parse(Buffer.from(appJsonFile).toString()) as AppJson;
-    } catch (e) {
-      throw new Error(`Cannot parse the app.json file: ${(e as Error).message}`);
+    if (!deploymentOptions.appNames) {
+      Reflect.set(deploymentOptions, 'appNames', await getHerokuAppNames());
     }
-    const validator = new Validator();
-    const result = validator.validate(appJson, schema);
-    if (!result.valid) {
-      return result;
-    }
-    return appJson;
+    return true;
   }
 
   /**
@@ -367,6 +441,12 @@ export class DeployToHeroku extends HerokuCommand<void> {
 
     try {
       const result = await this.buildService.create(app.id, payload, this.requestInit);
+      if (result.output_stream_url) {
+        logExtensionEvent(`---------- begin build output for ${app.name} ----------`);
+        await this.streamBuildOutput(result.output_stream_url);
+        logExtensionEvent(`----------- end build output for ${app.name} -----------`);
+      }
+
       const info = await this.buildService.info(app.id, result.id, this.requestInit);
       if (info.status === 'failed') {
         throw new DeploymentError(
@@ -389,25 +469,94 @@ export class DeployToHeroku extends HerokuCommand<void> {
    * @throws {DeploymentError} If the deployment fails
    */
   private async setupNewApp(blobUrl: string): Promise<Build & { name: string }> {
+    const { name, spaceId, teamId, env, internalRouting } = this.deploymentOptions;
     const payload: AppSetupCreatePayload = {
       // eslint-disable-next-line camelcase
       source_blob: {
         url: blobUrl
+      },
+      overrides: { env },
+      app: {
+        name: name ?? undefined,
+        // undefined instead of '' for these 2
+        organization: teamId ?? undefined,
+        space: spaceId ?? undefined
       }
     };
+    // internal_routing appears to be missing from the schema
+    // but this field is included when the dashboard makes the call
+    // and is successful.
+    Reflect.set(payload.app!, 'internal_routing', !!internalRouting);
+
     try {
       const result = await this.appSetupService.create(payload, this.requestInit);
-      const info = await this.appSetupService.info(result.id, this.requestInit);
+      let info: AppSetup | undefined;
+      let retriesOnError = 3;
+      while (retriesOnError > 0) {
+        try {
+          info = await this.appSetupService.info(result.id, this.requestInit);
+          if (info?.build?.output_stream_url ?? info?.status === 'failed') {
+            break;
+          }
+        } catch (error) {
+          logExtensionEvent(`${(error as Error).message} - retrying`);
+          retriesOnError--;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      if (!info) {
+        throw new DeploymentError(
+          `The request was sent to Heroku successfully but there was a problem with deployment`
+        );
+      }
+      if (info?.build?.output_stream_url) {
+        await this.streamBuildOutput(info.build.output_stream_url);
+      }
+      // get the info one last time to determine if the build was successful.
+      while (info.status === 'pending') {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        info = await this.appSetupService.info(result.id, this.requestInit);
+      }
       if (info.failure_message) {
-        logExtensionEvent(`Post deployment failed: ${info.failure_message}`);
+        logExtensionEvent(`Error: deployment failed with "${info.failure_message}"`);
+
+        if (info.manifest_errors?.length) {
+          logExtensionEvent('-----------------------');
+          info.manifest_errors.forEach((error) => logExtensionEvent(error, 'build'));
+          logExtensionEvent('-----------------------');
+        }
+
         throw new DeploymentError(
           `The request was sent to Heroku successfully but there was a problem with deployment: ${info.failure_message}`,
           result.app.id
         );
       }
-      return { ...(info.build as Build), name: result.app.name };
+      if (info.postdeploy?.output) {
+        logExtensionEvent(`post deploy: ${info.postdeploy.output}`);
+      }
+      return { ...info.build!, name: result.app.name };
     } catch (error) {
+      logExtensionEvent(`${(error as Error).stack}`);
       throw new DeploymentError((error as Error).message);
+    }
+  }
+
+  /**
+   * Streams the build output to the console.
+   *
+   * @param streamUrl the URL of the stream
+   */
+  private async streamBuildOutput(streamUrl: string): Promise<void> {
+    const stream = await fetch(streamUrl);
+    const reader = stream.body?.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+    while (!this.signal.aborted) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value.length > 1) {
+        logExtensionEvent(Buffer.from(value).toString(), 'build');
+        continue;
+      }
+      logExtensionEvent('waiting....');
     }
   }
 
@@ -419,5 +568,33 @@ export class DeployToHeroku extends HerokuCommand<void> {
    */
   private isApp(target: unknown): target is App {
     return !!target && typeof target === 'object' && 'id' in target && 'name' in target;
+  }
+
+  /**
+   * Formats the given file size in bytes into a human-readable string.
+   *
+   * @param bytes the number of bytes to format
+   * @returns a formatted string representing the file size
+   */
+  private formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+
+    const units = ['Bytes', 'KB', 'MB', 'GB'];
+    const thresholds = [
+      1, // Bytes:  0 - 1023 bytes
+      1024, // KB:     1024 bytes - 1,048,575 bytes
+      1_048_576, // MB:     1,048,576 bytes - 1,073,741,823 bytes
+      1_073_741_824 // GB:     1,073,741,824 bytes and up
+    ];
+
+    let unitIndex = 0;
+    while (unitIndex < thresholds.length - 1 && bytes >= thresholds[unitIndex + 1]) {
+      unitIndex++;
+    }
+    const value = bytes / thresholds[unitIndex];
+    // No fractional Bytes or KB - all other units are 2 decimals
+    const precision = unitIndex === 0 ? 0 : unitIndex === 1 ? 1 : 2;
+
+    return `${value.toFixed(precision)} ${units[unitIndex]}`;
   }
 }

@@ -18,15 +18,23 @@ export class DeployToHerokuDecorator {
     if (!editor) {
       return;
     }
-    const rootWorkspaceUri = vscode.workspace.workspaceFolders![0].uri;
+
     const document = editor.document;
-    const isRootAppJson = document.uri.fsPath === vscode.Uri.joinPath(rootWorkspaceUri, 'app.json').fsPath;
-    const isRootProcFile = document.uri.fsPath === vscode.Uri.joinPath(rootWorkspaceUri, 'Procfile').fsPath;
+    const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+
+    const isRootAppJson = workspaceFolders.some(
+      (folder) => document.uri.fsPath === vscode.Uri.joinPath(folder.uri, 'app.json').fsPath
+    );
+    const isRootProcFile = workspaceFolders.some(
+      (folder) => document.uri.fsPath === vscode.Uri.joinPath(folder.uri, 'Procfile').fsPath
+    );
+
     if (!isRootAppJson && !isRootProcFile) {
       return;
     }
+    const documentWorkspace = workspaceFolders.find((folder) => document.uri.fsPath.startsWith(folder.uri.fsPath));
     const hoverMessage = new vscode.MarkdownString(
-      `[$(play) Deploy to Heroku](command:${DeployToHeroku.COMMAND_ID})`,
+      `[$(play) Deploy to Heroku](command:${DeployToHeroku.COMMAND_ID}?${JSON.stringify([null, null, { rootUri: documentWorkspace?.uri }])})`,
       true
     );
     hoverMessage.isTrusted = true;

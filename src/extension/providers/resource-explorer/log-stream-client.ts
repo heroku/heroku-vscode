@@ -153,7 +153,7 @@ export class LogStreamClient extends EventEmitter {
     // "app[web.1]: State changed from starting to up" - captures 'app', 'web.1', 'starting' and 'up' values
     stateChanged: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]: )(?:State changed from )(\w+)(?: to )(\w+)/,
 
-    // "app[heroku-postgres]: Update DATABSE by user@heroku.com" - captures 'app', 'heroku-postgres' and 'DATABSE'
+    // "app[heroku-postgres]: Update DATABSE by user@heroku.com" - captures 'app', 'heroku-postgres' and 'DATABASE'
     attachmentsUpdate: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]: )(?:Update )([A-Z_\s]+)(?:by)/,
 
     // Detach LOGDNA (@ref:logdna-deep-31633) - captures 'LOGDNA' and 'logdna-deep-31633'
@@ -242,11 +242,6 @@ export class LogStreamClient extends EventEmitter {
    * @inheritdoc
    */
   public emit<K extends keyof LogStreamEventMap>(eventName: K, ...args: Parameters<LogStreamEventHandler<K>>): boolean {
-    if (eventName !== LogStreamEvents.STREAM_STARTED) {
-      const app = ('app' in args[0] ? args[0].app : args[0]) as App;
-      logExtensionEvent(`Detected log event: ${eventName} - ${app.name}`);
-    }
-
     return super.emit(eventName, ...args);
   }
 

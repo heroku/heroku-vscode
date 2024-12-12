@@ -2,6 +2,19 @@ import type { ElementViewTemplate, ComposableStyles } from '@microsoft/fast-elem
 import { css, html } from '@microsoft/fast-element';
 
 /**
+ * Common css used in most custom web components.
+ * Using to avoid duplication of css in each component.
+ * Also used to load the codicon css.
+ *
+ * Note that these paths are relative to the `out/` directory
+ * and not the `src/` directory.
+ */
+export const commonCss = await loadCss([
+  import.meta.resolve('../../../node_modules/@vscode/codicons/dist/codicon.css'),
+  import.meta.resolve('../../../resources/hk-malibu/style.css')
+]);
+
+/**
  * Loads the specified html from a file and
  * returns the ElementViewTemplate for
  * use in a FastElement decorator.

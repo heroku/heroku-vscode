@@ -1,2 +1,2 @@
 npm run format
-git add --all
+git add -u

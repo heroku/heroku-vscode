@@ -1,3 +1,4 @@
+import { promisify } from 'node:util';
 import vscode from 'vscode';
 import { HerokuCommand } from '../heroku-command';
 import { herokuCommand } from '../../meta/command';
@@ -27,9 +28,9 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
         location: vscode.ProgressLocation.Notification,
         cancellable: true
       },
-      async (progess, token) => {
+      async (progress, token) => {
         try {
-          const cancellationPromise = new Promise((_, reject) => token.onCancellationRequested(reject));
+          const cancellationPromise: Promise<void> = promisify(token.onCancellationRequested)();
           const sessionPromise = vscode.authentication.getSession(LoginCommand.COMMAND_ID, [], { createIfNone: true });
           const session = (await Promise.race([sessionPromise, cancellationPromise])) as vscode.AuthenticationSession;
 
@@ -39,16 +40,16 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
         } catch (error) {
           const affirmative = 'Retry';
           const action = await vscode.window.showErrorMessage(
-            'Authentication was unsucessful. Try again?',
+            'Authentication was unsuccessful. Try again?',
             affirmative,
             'Not now'
           );
           if (action === affirmative) {
-            progess.report({ increment: 100 });
+            progress.report({ increment: 100 });
             return this.run();
           }
         }
-        progess.report({ increment: 100 });
+        progress.report({ increment: 100 });
       }
     );
     logExtensionEvent('Authenticating with Heroku...');

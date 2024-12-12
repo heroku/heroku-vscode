@@ -1,0 +1,388 @@
+:host {
+  display: block;
+  width: inherit;
+  font-family: var(--vscode-font-family);
+}
+
+:host(.expanded) {
+  vscode-button.cancel-button {
+    display: initial;
+  }
+}
+.hidden {
+  display: none;
+}
+.repo-card {
+  display: flex;
+  padding: 1rem;
+  gap: 1rem;
+  align-items: end;
+
+  .repo-main {
+    flex: 1;
+    position: relative;
+
+    .repo-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+
+      .language-icon {
+        color: var(--vscode-icon-foreground);
+        font-size: 2rem;
+      }
+
+      .repo-name {
+        color: var(--vscode-textLink-foreground);
+        margin: 0;
+
+        .repo-url {
+          color: inherit;
+        }
+        > vscode-link {
+          font-size: inherit;
+        }
+      }
+
+      .repo-visibility {
+        font-size: 0.8rem;
+        padding: 0.1rem 0.5rem;
+        border: 1px solid var(--vscode-menu-border);
+        border-radius: 1rem;
+        color: var(--vscode-descriptionForeground);
+      }
+    }
+
+    .repo-description {
+      color: var(--vscode-foreground);
+      margin: 0 0 0.75rem;
+      font-size: var(--vscode-font-size);
+    }
+
+    .repo-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.9rem;
+      color: var(--vscode-descriptionForeground);
+
+      .meta-item {
+        &.language {
+          &::before {
+            content: '';
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+            margin-right: 0.25rem;
+          }
+
+          &[data-language='JavaScript']::before {
+            background-color: #f1e05a;
+          }
+
+          &[data-language='TypeScript']::before {
+            background-color: #3178c6;
+          }
+
+          &[data-language='Python']::before {
+            background-color: #3572a5;
+          }
+
+          &[data-language='Java']::before {
+            background-color: #b07219;
+          }
+
+          &[data-language='Ruby']::before {
+            background-color: #701516;
+          }
+
+          &[data-language='HTML']::before {
+            background-color: #e34c26;
+          }
+
+          &[data-language='CSS']::before {
+            background-color: #563d7c;
+          }
+
+          &[data-language='PHP']::before {
+            background-color: #4f5d95;
+          }
+
+          &[data-language='C++']::before {
+            background-color: #f34b7d;
+          }
+
+          &[data-language='C#']::before {
+            background-color: #178600;
+          }
+
+          &[data-language='Go']::before {
+            background-color: #00add8;
+          }
+
+          &[data-language='Rust']::before {
+            background-color: #dea584;
+          }
+
+          &[data-language='Shell']::before {
+            background-color: #89e051;
+          }
+
+          &[data-language='Vue']::before {
+            background-color: #41b883;
+          }
+
+          &[data-language='Swift']::before {
+            background-color: #f05138;
+          }
+
+          &[data-language='Kotlin']::before {
+            background-color: #a97bff;
+          }
+
+          &[data-language='Dart']::before {
+            background-color: #00b4ab;
+          }
+
+          &[data-language='Dockerfile']::before {
+            background-color: #384d54;
+          }
+
+          &[data-language='Twig']::before {
+            background-color: #c1d026;
+          }
+
+          &[data-language='EJS']::before {
+            background-color: #a91e50;
+          }
+
+          &[data-language='Objective-C']::before {
+            background-color: #438eff;
+          }
+
+          &[data-language='Clojure']::before {
+            background-color: #db5855;
+          }
+
+          &[data-language='Scala']::before {
+            background-color: #c22d40;
+          }
+
+          &[data-language='Haskell']::before {
+            background-color: #5e5086;
+          }
+
+          &[data-language='R']::before {
+            background-color: #198ce7;
+          }
+
+          &[data-language='Perl']::before {
+            background-color: #0298c3;
+          }
+
+          &[data-language='Lua']::before {
+            background-color: #000080;
+          }
+
+          &[data-language='Elixir']::before {
+            background-color: #6e4a7e;
+          }
+
+          &[data-language='Erlang']::before {
+            background-color: #b83998;
+          }
+
+          &[data-language='Julia']::before {
+            background-color: #a270ba;
+          }
+
+          &[data-language='CoffeeScript']::before {
+            background-color: #244776;
+          }
+
+          &[data-language='Assembly']::before {
+            background-color: #6e4c13;
+          }
+
+          &[data-language='MATLAB']::before {
+            background-color: #e16737;
+          }
+
+          &[data-language='Groovy']::before {
+            background-color: #4298b8;
+          }
+
+          &[data-language='F#']::before {
+            background-color: #b845fc;
+          }
+
+          &[data-language='PowerShell']::before {
+            background-color: #012456;
+          }
+
+          &[data-language='SASS']::before {
+            background-color: #a53b70;
+          }
+
+          &[data-language='SCSS']::before {
+            background-color: #c6538c;
+          }
+
+          &[data-language='Less']::before {
+            background-color: #1d365d;
+          }
+
+          &[data-language='WebAssembly']::before {
+            background-color: #654ff0;
+          }
+
+          &[data-language='Markdown']::before {
+            background-color: #083fa1;
+          }
+
+          &[data-language='JSON']::before {
+            background-color: #292929;
+          }
+
+          &[data-language='YAML']::before {
+            background-color: #cb171e;
+          }
+
+          /* Fallback for languages not listed here */
+          &[data-language='other']::before {
+            background-color: #ededed;
+          }
+        }
+      }
+    }
+  }
+}
+.deploy-options {
+  display: flex;
+  flex-direction: column;
+  align-items: self-end;
+  justify-content: space-between;
+  min-width: 30%;
+  padding: 1rem;
+
+  .team-selector-container,
+  .space-selector-container {
+    box-sizing: border-box;
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 100%;
+
+    > label {
+      display: block;
+      color: var(--vscode-foreground);
+      cursor: pointer;
+      font-size: var(--vscode-font-size);
+      line-height: normal;
+      margin-bottom: 0.25rem;
+    }
+    > vscode-dropdown {
+      width: inherit;
+      > vscode-option {
+        margin-left: 0.5rem;
+        & + .group {
+          margin-top: 0.5rem;
+        }
+        > .indicator {
+          border-left: 1px solid;
+          border-bottom: 1px solid;
+          width: 0.5rem;
+          height: 0.5rem;
+          display: inline-block;
+          margin-right: 0.25rem;
+        }
+      }
+    }
+  }
+  div.list-container {
+    overflow: hidden;
+    height: 0;
+    width: 100%;
+  }
+  ul.configure {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    list-style: none;
+    padding: 0;
+    gap: 0.5rem;
+
+    li.config-vars-divider {
+      display: none;
+    }
+
+    &.has-config-vars li.config-vars-divider {
+      display: initial;
+    }
+
+    > li {
+      background: inherit;
+      border: none;
+      &.internal-routing-container {
+        > sub {
+          display: block;
+        }
+      }
+
+      & + li {
+        margin-top: 0.5rem;
+      }
+
+      > vscode-text-field {
+        width: 100%;
+        display: block;
+
+        &[aria-invalid='true'] {
+          --dropdown-border: var(--heroku-accent-red);
+          & + sub {
+            color: var(--heroku-accent-red);
+          }
+        }
+      }
+
+      .required-badge {
+        font-size: 0.8rem;
+        padding: 0.1rem 0.5rem;
+        border: 1px solid var(--vscode-menu-border);
+        border-radius: 1rem;
+        color: var(--vscode-descriptionForeground);
+      }
+    }
+  }
+  .actions {
+    display: flex;
+    gap: 1rem;
+  }
+  vscode-button {
+    .icon {
+      font-size: 1rem;
+    }
+
+    margin-top: 0.5rem;
+    > vscode-progress-ring {
+      --progress-background: var(--heroku-text);
+      height: 1rem;
+      width: 1rem;
+      display: none;
+    }
+    &.loading {
+      > span {
+        display: none;
+      }
+      > vscode-progress-ring {
+        display: initial;
+      }
+    }
+    &.cancel-button {
+      display: none;
+    }
+  }
+}

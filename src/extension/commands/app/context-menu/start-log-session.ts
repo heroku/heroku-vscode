@@ -289,7 +289,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
       this.scheduleHeartbeatTimeout();
       const { done, value } = await this.reader!.read();
       // Log sessions appear to max out at 15 min
-      // even though a null byte hearbeat will still
+      // even though a null byte heartbeat will still
       // be present. If we exceed 15 min, break the loop
       // and let the heartbeat timeout restart things.
       if (done || this.signal.aborted || Date.now() - logSessionStart > this.logSessionDuration) {
@@ -313,7 +313,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
 
   /**
    * Starts the log session and if successful, the read stream
-   * is initialized and log data becomes availale.
+   * is initialized and log data becomes available.
    */
   private async startLogSession(): Promise<void> {
     const logSession = await this.fetchLogSession(this.#app!);
@@ -323,7 +323,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
         StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, this.#app!.name);
       }
       this.reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
-      // Since the stream is a log runnning process
+      // Since the stream is a log running process
       // we want this function to complete without
       // having to wait for the stream to end.
       void this.beginReading();

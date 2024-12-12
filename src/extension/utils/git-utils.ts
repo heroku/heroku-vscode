@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { API, GitExtension, Repository } from '../git';
+import { API, GitExtension, Repository } from 'git-extension';
 import { logExtensionEvent } from './logger';
 
 /**
@@ -63,7 +63,7 @@ export async function getGitExtensionApi(): Promise<API> {
 }
 
 /**
- * Gets the root repostiory
+ * Gets the root repository
  *
  * @returns the repository object or undefined if this is not a git repository
  */
@@ -74,4 +74,86 @@ export async function getRootRepository(): Promise<Repository | undefined> {
     return undefined;
   }
   return gitExtension?.repositories.find((repo) => repo.rootUri.path === ws.uri.path);
+}
+
+/**
+ * Creates a github session and returns it.
+ * This session grants read-only access to repositories
+ * and represents a minimal set of permissions to search
+ * for and read the contents of public repositories.
+ *
+ * @returns The authentication session or undefined if the user disallows it or fails to authenticate
+ */
+export async function getGithubSession(): Promise<vscode.AuthenticationSession | undefined> {
+  const session = await vscode.authentication.getSession('github', ['repo', 'read:user'], { createIfNone: true });
+  if (!session) {
+    logExtensionEvent('No GitHub session found');
+    const response = await vscode.window.showInformationMessage(
+      'You must sign in to GitHub for this operation',
+      'Sign in to GitHub'
+    );
+    if (response === 'Sign in to GitHub') {
+      return getGithubSession();
+    }
+    // User insists on not sining in to github - that's ok. We'll ask again later.
+    return undefined;
+  }
+  return session;
+}
+
+/**
+ * Gets the owner and repository name from the git repository
+ * based on the provided URI.
+ *
+ * @param uri The URI of the git repository
+ *
+ * @returns An object containing the owner and repo name, or undefined if not found
+ */
+export async function getGitRepositoryInfoByUri(uri: vscode.Uri): Promise<{ owner: string; repo: string } | undefined> {
+  try {
+    const api = await getGitExtensionApi();
+
+    // Get remote URLs from the repository state
+    const remotes = api.getRepository(uri)?.state.remotes;
+    if (!remotes?.length) {
+      return undefined;
+    }
+
+    // Try to find origin first, fall back to any remote if origin doesn't exist
+    const remote = remotes.find((r) => r.name === 'origin') ?? remotes[0];
+    const remoteUrl = remote.fetchUrl ?? remote.pushUrl;
+
+    if (!remoteUrl) {
+      return undefined;
+    }
+
+    // Handle different Git URL formats
+    let match: RegExpMatchArray | null;
+
+    // Handle SSH URL format (git@github.com:owner/repo.git)
+    if (remoteUrl.startsWith('git@')) {
+      match = remoteUrl.match(/git@github\.com:([^/]+)\/([^.]+)(?:\.git)?/);
+    }
+    // Handle HTTPS URL format (https://github.com/owner/repo.git)
+    else {
+      try {
+        const url = new URL(remoteUrl);
+        match = url.pathname.match(/\/([^/]+)\/([^.]+)(?:\.git)?/);
+      } catch {
+        return undefined;
+      }
+    }
+
+    if (!match || match.length < 3) {
+      return undefined;
+    }
+
+    return {
+      owner: match[1],
+      repo: match[2]
+    };
+  } catch (error) {
+    logExtensionEvent(`Error getting repository info: ${(error as Error).message}`);
+    return undefined;
+  }
 }

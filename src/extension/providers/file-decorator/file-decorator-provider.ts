@@ -2,13 +2,13 @@ import { Dyno } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
 
 /**
- * The FildeDecoratorProvider is responsible for providing file decorations
+ * The FileDecoratorProvider is responsible for providing file decorations
  * for Resources in the resource explorer.
  *
  * This includes status indicators for Dyno health.
  *
  */
-export class FildeDecoratorProvider
+export class FileDecoratorProvider
   extends vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>
   implements vscode.FileDecorationProvider
 {

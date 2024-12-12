@@ -11,7 +11,7 @@ import {
   vsCodeProgressRing
 } from '@vscode/webview-ui-toolkit';
 import type { AddOn, Plan } from '@heroku-cli/schema';
-import { vscode, loadCss, loadHtmlTemplate } from '../utils.js';
+import { vscode, loadCss, loadHtmlTemplate } from '../utils/web-component-utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
 
 type AddonCategory = {
@@ -168,7 +168,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
    * Updates the list of addons based on
    * the category selected from the dropdown.
    *
-   * If this method is called programatically,
+   * If this method is called programmatically,
    * all addons are displayed.
    *
    * @param event The event dispatched by the dropdown.
@@ -251,7 +251,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
 
   /**
    * Shows or hides the plans dropdown for
-   * the specifid addon.
+   * the specified addon.
    *
    * @param addonId the id of the addon being targeted.
    * @param show Boolean indicating whether to show the progress indicator.

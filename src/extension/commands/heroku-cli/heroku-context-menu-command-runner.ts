@@ -44,8 +44,8 @@ export class HerokuContextMenuCommandRunner extends HerokuCommandRunner<MaybeNam
   /**
    * @inheritdoc
    */
-  protected collectInputsFromManifest(flagsOrArgsManifest: FlagsOrArgs, omitOptinal?: boolean): string[] {
-    const collectedInputs = super.collectInputsFromManifest(flagsOrArgsManifest, omitOptinal);
+  protected collectInputsFromManifest(flagsOrArgsManifest: FlagsOrArgs, omitOptional?: boolean): string[] {
+    const collectedInputs = super.collectInputsFromManifest(flagsOrArgsManifest, omitOptional);
     // If we're asking for an app, let's not also
     // ask for a remote.
     if (collectedInputs.includes('app') && collectedInputs.includes('remote')) {

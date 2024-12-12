@@ -2,12 +2,13 @@ import * as sinon from 'sinon';
 import * as vscode from 'vscode';
 import assert from 'node:assert';
 import { DeployToHeroku } from './deploy-to-heroku';
-import { GitExtension, Repository } from '../../git';
+import { GitExtension, Repository } from '../../../../@types/git';
 import SourceService from '@heroku-cli/schema/services/source-service.js';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
 import AppService from '@heroku-cli/schema/services/app-service.js';
 import BuildService from '@heroku-cli/schema/services/build-service.js';
 import { App } from '@heroku-cli/schema';
+import { Readable, Writable } from 'node:stream';
 
 suite('DeployToHeroku Tests', () => {
   let command: DeployToHeroku;
@@ -28,6 +29,7 @@ suite('DeployToHeroku Tests', () => {
 
   let mockWorkspaceFolder: vscode.WorkspaceFolder;
   let fetchStub: typeof fetch & sinon.SinonStub;
+  let stream: Writable;
 
   setup(() => {
     // Setup mock services
@@ -45,14 +47,26 @@ suite('DeployToHeroku Tests', () => {
     mockAppService = {
       info: sinon.stub()
     };
+
+    const readable = Readable.from(
+      (async function* () {
+        yield 'test log output';
+      })()
+    );
+
     fetchStub = sinon.stub(globalThis, 'fetch');
     fetchStub
-      .withArgs('test-put-url', {
+      .withArgs('https://test-put-url.com', {
         signal: sinon.match.any,
         method: 'PUT',
-        body: sinon.match.any
+        body: sinon.match.any,
+        duplex: 'half',
+        headers: {
+          'Content-Length': sinon.match.any
+        }
       })
       .resolves({ ok: true } as Response);
+    fetchStub.withArgs('https://output_stream_url.com', sinon.match.any).resolves(new Response(readable));
 
     // Setup VSCode mocks
     mockWindow = sinon.stub(vscode.window);
@@ -91,6 +105,7 @@ suite('DeployToHeroku Tests', () => {
 
     sinon.replaceGetter(vscode.workspace, 'fs', () => mockWorkspaceFs as unknown as typeof vscode.workspace.fs);
     sinon.replaceGetter(vscode.workspace, 'workspaceFolders', () => [mockWorkspaceFolder]);
+
     command = new DeployToHeroku();
     Reflect.set(command, 'appSetupService', mockAppSetupService);
     Reflect.set(command, 'buildService', mockBuildService);
@@ -111,7 +126,8 @@ suite('DeployToHeroku Tests', () => {
         app: {
           id: 'test-id',
           name: 'test-app'
-        }
+        },
+        output_stream_url: 'https://output_stream_url.com'
       },
       app: {
         id: 'test-id',
@@ -125,20 +141,18 @@ suite('DeployToHeroku Tests', () => {
     mockWorkspaceFs.readFile.resolves(Buffer.from(JSON.stringify(mockAppJson)));
     mockSourcesService.create.resolves({
       source_blob: {
-        put_url: 'test-put-url',
+        put_url: 'https://test-put-url.com',
         get_url: 'test-get-url'
       }
     });
     mockAppSetupService.create.resolves(mockAppSetup);
     mockAppSetupService.info.resolves(mockAppSetup);
-    mockAppService.info.resolves({ git_url: 'test-git-url' });
 
     await command.run(null, null);
 
     assert.ok(mockSourcesService.create.calledOnce);
     assert.ok(mockAppSetupService.create.calledOnce);
     assert.ok(mockAppSetupService.info.calledOnce);
-    assert.ok(mockAppService.info.calledOnce);
   });
 
   test('run() - successful existing app deployment flow', async () => {
@@ -159,7 +173,7 @@ suite('DeployToHeroku Tests', () => {
     mockWorkspaceFs.readFile.resolves(new Uint8Array([0, 1]));
     mockSourcesService.create.resolves({
       source_blob: {
-        put_url: 'test-put-url',
+        put_url: 'https://test-put-url.com',
         get_url: 'test-get-url'
       }
     });
@@ -167,6 +181,44 @@ suite('DeployToHeroku Tests', () => {
     mockAppService.info.resolves({ git_url: 'test-git-url' });
 
     await command.run(mockApp as App, null);
+
+    assert.ok(mockSourcesService.create.calledOnce);
+    assert.ok(mockBuildService.create.calledOnce);
+    assert.ok(mockBuildService.info.calledOnce);
+  });
+
+  test('run() - successful quick picked app deployment flow', async () => {
+    mockWindow.withProgress.callThrough();
+    mockWindow.showQuickPick.resolves('test-app' as unknown as vscode.QuickPickItem);
+    const mockAccessToken = 'test-token';
+    const mockApp = {
+      id: 'test-id',
+      name: 'test-app'
+    };
+    const mockBuild = {
+      id: 'test-id',
+      status: 'successful',
+      app: mockApp
+    };
+    const validAppJson = {
+      name: 'test-app',
+      description: 'test description'
+    };
+    mockAuthentication.getSession.resolves({ accessToken: mockAccessToken } as vscode.AuthenticationSession);
+    mockWorkspaceFs.stat.resolves();
+    mockWorkspaceFs.readFile.onFirstCall().resolves(Buffer.from(JSON.stringify(validAppJson)));
+    mockWorkspaceFs.readFile.onSecondCall().resolves(new Uint8Array([0, 1]));
+    mockSourcesService.create.resolves({
+      source_blob: {
+        put_url: 'https://test-put-url.com',
+        get_url: 'test-get-url'
+      }
+    });
+    mockBuildService.create.resolves(mockBuild);
+    mockAppService.info.resolves({ ...mockApp, git_url: 'test-git-url' });
+    mockBuildService.info.resolves(mockBuild);
+
+    await command.run(null, null, { appNames: ['test-id'] });
 
     assert.ok(mockSourcesService.create.calledOnce);
     assert.ok(mockBuildService.create.calledOnce);
@@ -192,7 +244,7 @@ suite('DeployToHeroku Tests', () => {
     };
     mockWorkspaceFs.stat.resolves();
     mockWorkspaceFs.readFile.resolves(Buffer.from(JSON.stringify(validAppJson)));
-
+    Reflect.set(command, 'deploymentOptions', { rootUri: mockWorkspaceFolder.uri });
     const result = await command['validateAppJson']();
 
     assert.deepEqual(result, validAppJson);

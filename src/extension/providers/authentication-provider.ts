@@ -23,7 +23,7 @@ export class AuthenticationProvider
   /**
    * Constructs a new AuthenticationProvider
    *
-   * @param context The ExtensionContext provded by VSCode.
+   * @param context The ExtensionContext provided by VSCode.
    */
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();

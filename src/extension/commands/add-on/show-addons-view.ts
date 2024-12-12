@@ -3,6 +3,7 @@ import vscode, { AuthenticationSession, WebviewPanel } from 'vscode';
 import PlanService from '@heroku-cli/schema/services/plan-service.js';
 import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import { AddOn } from '@heroku-cli/schema';
+import { CategoriesResponse } from '@heroku/elements';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import importMap from '../../importmap.json';
 import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
@@ -115,7 +116,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
             await this.generateRequestInit()
           );
           if (addonsByCategoryResponse.ok) {
-            const addons = (await addonsByCategoryResponse.json()) as { categories: unknown };
+            const addons = (await addonsByCategoryResponse.json()) as CategoriesResponse;
             await webview.postMessage({ type: 'addons', payload: { categories: addons.categories, installedAddons } });
           }
         }

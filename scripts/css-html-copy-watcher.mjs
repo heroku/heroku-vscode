@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const [copyOnly] = process.argv.slice(2);
 const dir = path.resolve('./src/webviews');
-const target = /(html|css)$/;
+const target = /(html|css|svg|png|jpeg)$/;
 const files = await readdir(dir, { recursive: true });
 
 for (const file of files) {

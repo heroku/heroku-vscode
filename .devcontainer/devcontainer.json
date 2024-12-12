@@ -7,6 +7,11 @@
   "features": {
     "ghcr.io/devcontainers-community/npm-features/typescript:1": {},
     "ghcr.io/devcontainers-extra/features/heroku-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["GitHub.remotehub"]
+    }
   }
 
   // Features to add to the dev container. More info: https://containers.dev/features.
