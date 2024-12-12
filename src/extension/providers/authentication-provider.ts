@@ -43,8 +43,6 @@ export class AuthenticationProvider
 
       if (sessionJson) {
         const session = JSON.parse(sessionJson) as vscode.AuthenticationSession;
-        accessToken = session.accessToken;
-        whoami = session.account.label;
         return [session];
       }
 

@@ -399,7 +399,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
    * @returns boolean indicting whether it is a vscode.QuickPickItem
    */
   protected isValueItem(obj?: unknown): obj is { value: string } {
-    return !!obj && obj !== null && typeof obj === 'object' && 'value' in obj;
+    return !!obj && typeof obj === 'object' && 'value' in obj;
   }
 
   /**

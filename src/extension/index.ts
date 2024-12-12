@@ -5,7 +5,6 @@ import { ShellScriptHoverProvider } from './providers/shell-script-hover-provide
 import { AuthenticationProvider } from './providers/authentication-provider';
 import { HerokuResourceExplorerProvider } from './providers/resource-explorer/heroku-resource-explorer-provider';
 import { FildeDecoratorProvider } from './providers/file-decorator/file-decorator-provider';
-import * as shellCommandDecorator from './commands/heroku-shell-command-decorator';
 
 import './commands/auth/welcome-view-sign-in';
 import { HerokuContextMenuCommandRunner } from './commands/heroku-cli/heroku-context-menu-command-runner';
@@ -15,6 +14,8 @@ import { HerokuRedisCommandRunner } from './commands/heroku-cli/heroku-redis-com
 import { WhoAmI, WhoAmIResult } from './commands/auth/whoami';
 import { logExtensionEvent } from './utils/logger';
 import { WelcomeViewSignIn } from './commands/auth/welcome-view-sign-in';
+import * as herokuShellCommandDecorator from './decorators/heroku-shell-command-decorator';
+import * as deployToHerokuDecorator from './decorators/deploy-to-heroku-decorator';
 
 const authProviderId = 'heroku:auth:login';
 /**
@@ -27,6 +28,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };
   context.subscriptions.push(
+    herokuShellCommandDecorator.activate(context),
+    deployToHerokuDecorator.activate(context),
     vscode.languages.registerHoverProvider(selector, new ShellScriptHoverProvider()),
 
     vscode.authentication.registerAuthenticationProvider(authProviderId, 'Heroku', new AuthenticationProvider(context)),
@@ -38,7 +41,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
 
     vscode.window.registerFileDecorationProvider(new FildeDecoratorProvider(context)),
-    shellCommandDecorator.activate(context),
+
     ...registerCommandsfromManifest()
   );
   void onDidChangeSessions({ provider: { id: authProviderId, label: 'Heroku' } });

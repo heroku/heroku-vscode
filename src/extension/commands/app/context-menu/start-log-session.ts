@@ -2,7 +2,7 @@ import { type ReadableStreamDefaultReader } from 'node:stream/web';
 import LogSessionService from '@heroku-cli/schema/services/log-session-service.js';
 import * as vscode from 'vscode';
 import type { App, LogSession } from '@heroku-cli/schema';
-import { herokuCommand, type RunnableCommand } from '../../../meta/command';
+import { herokuCommand, HerokuOutputChannel, type RunnableCommand } from '../../../meta/command';
 import { logExtensionEvent } from '../../../utils/logger';
 
 /**
@@ -55,7 +55,7 @@ export type LogSessionStream = AbortController & {
   onDidUpdateMute: (cb: (muted: boolean) => void) => void;
 };
 
-@herokuCommand()
+@herokuCommand({ outputChannelId: HerokuOutputChannel.LogOutput, languageId: 'heroku-logs' })
 /**
  * Command used to start a log session for
  * the supplied App object and pipe the output

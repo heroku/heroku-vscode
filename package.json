@@ -18,6 +18,12 @@
   ],
   "main": "./out/extension/index.js",
   "contributes": {
+    "jsonValidation": [
+      {
+        "fileMatch": "app.json",
+        "url": "./src/extension/meta/app-json.schema.json"
+      }
+    ],
     "viewsWelcome": [
       {
         "view": "heroku:auth:login",
@@ -2356,6 +2362,18 @@
           "when": "viewItem =~ /^(heroku:addon:heroku-postgresql)/"
         }
       ],
+      "explorer/context": [
+        {
+          "command": "heroku:deploy-to-heroku",
+          "when": "resourceFilename == 'app.json' || resourceFilename == 'Procfile'",
+          "group": "0000000aaaaa"
+        },
+        {
+          "command": "heroku:deploy-to-heroku",
+          "when": "resourceFilename == 'app.json' || resourceFilename == 'Procfile'",
+          "group": "inline@1"
+        }
+      ],
       "view/item/context": [
         {
           "when": "viewItem =~ /(heroku:dyno):(up|down|crashed)/",
@@ -2366,6 +2384,16 @@
           "when": "viewItem =~ /^(heroku:formation):(scale-up|scale-down)/",
           "command": "heroku:scale-formation",
           "group": "inline"
+        },
+        {
+          "when": "viewItem =~ /(heroku):(app)/",
+          "command": "heroku:deploy-to-heroku",
+          "group": "App@0"
+        },
+        {
+          "when": "viewItem =~ /(heroku):(app)/",
+          "command": "heroku:deploy-to-heroku",
+          "group": "inline@0"
         },
         {
           "when": "viewItem =~ /(heroku):(app)/",
@@ -2385,7 +2413,7 @@
         {
           "when": "viewItem =~ /(heroku):(app)/",
           "command": "heroku:access-settings",
-          "group": "inline@0"
+          "group": "inline@2"
         },
         {
           "when": "viewItem === heroku:app",
@@ -2395,17 +2423,17 @@
         {
           "when": "viewItem === heroku:app",
           "command": "heroku:start-log-session",
-          "group": "inline@2"
+          "group": "inline@3"
         },
         {
           "when": "viewItem === heroku:app:log-session-started",
           "command": "heroku:end-log-session",
-          "group": "App@3"
+          "group": "App@4"
         },
         {
           "when": "viewItem === heroku:app:log-session-started",
           "command": "heroku:end-log-session",
-          "group": "inline@2"
+          "group": "inline@4"
         },
         {
           "command": "heroku:user:addons:attach",
@@ -2679,7 +2707,8 @@
       "view/title": [
         {
           "command": "heroku:sync-with-dashboard",
-          "group": "navigation"
+          "group": "navigation",
+          "when": "view =~ /^(heroku)/"
         }
       ]
     },
@@ -2707,6 +2736,11 @@
         "command": "heroku:open-app",
         "title": "Open app in browser",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "heroku:deploy-to-heroku",
+        "title": "Deploy to Heroku",
+        "icon": "$(hk-icon-deploy-16)"
       },
       {
         "command": "heroku:start-log-session",
@@ -4173,7 +4207,7 @@
     "proxyquire": "^2.1.3",
     "rewire": "^7.0.0",
     "sinon": "^19.0.2",
-    "typescript": "~5.6.2"
+    "typescript": "~5.6.3"
   },
   "dependencies": {
     "@heroku-cli/schema": "file:heroku-cli-schema-1.0.25.tgz",
@@ -4181,9 +4215,11 @@
     "@vscode/codicons": "^0.0.36",
     "@vscode/l10n": "0.0.x",
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "jsonschema": "^1.4.1",
     "marked": "^15.0.2",
     "mvdan-sh": "^0.10.1",
     "resolve.exports": "^2.0.2",
+    "tar-stream": "^3.1.7",
     "tslib": "2.8.1"
   }
 }
