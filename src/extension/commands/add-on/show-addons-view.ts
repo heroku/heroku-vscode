@@ -1,12 +1,12 @@
 import EventEmitter from 'node:events';
-import vscode, { AuthenticationSession, WebviewPanel } from 'vscode';
+import vscode, { WebviewPanel } from 'vscode';
 import PlanService from '@heroku-cli/schema/services/plan-service.js';
 import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import { AddOn } from '@heroku-cli/schema';
 import { CategoriesResponse } from '@heroku/elements';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
-import importMap from '../../importmap.json';
-import { convertImportMapPathsToUris } from '../../utils/import-paths-to-uri';
+import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
+import { generateRequestInit } from '../../utils/generate-service-request-init';
 
 type MessagePayload =
   | {
@@ -59,34 +59,16 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
     ShowAddonsViewCommand.addonsPanel = undefined;
 
     this.appIdentifier = appIdentifier;
-    const panel = vscode.window.createWebviewPanel('Addons', 'Elements Marketplace', vscode.ViewColumn.One, {
-      enableScripts: true
+    const panel = prepareHerokuWebview(extensionUri, {
+      viewType: 'heroku.add-on.marketplace',
+      webviewTitle: 'Elements Marketplace',
+      iconUri: vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'element.svg'),
+      javascriptEntryUri: vscode.Uri.joinPath(extensionUri, 'out', 'webviews', 'addons-view', 'index.js'),
+      webComponentTag: 'heroku-add-ons'
     });
-    panel.iconPath = vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'malibu', 'dark', 'element.svg');
+
     const { webview } = panel;
     webview.onDidReceiveMessage(this.onMessage);
-
-    const onDiskPath = vscode.Uri.joinPath(extensionUri, 'out/webviews/addons-view', 'index.js');
-    const indexPath = webview.asWebviewUri(onDiskPath);
-    const webViewImportMap = {
-      ...importMap,
-      imports: convertImportMapPathsToUris(webview, importMap.imports, extensionUri)
-    };
-
-    webview.html = `
-    <html style="height: 100%;" lang="en">
-    <head>
-      <script type="importmap">
-      ${JSON.stringify(webViewImportMap)}
-      </script>
-
-      <script type="module" src="${indexPath.toString()}"></script>
-      <title></title>
-    </head>
-      <body style="min-height: 100%; display: flex;">
-        <heroku-add-ons>Add-on not loaded</heroku-add-ons>
-      </body>
-    </html>`;
 
     ShowAddonsViewCommand.addonsPanel = panel;
     await new Promise((resolve) => panel.onDidDispose(resolve));
@@ -111,10 +93,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       case 'addons':
         {
           const addonsByCategoryResponse = await fetch('https://addons.heroku.com/api/v2/categories');
-          const installedAddons = await this.addonService.listByApp(
-            this.appIdentifier,
-            await this.generateRequestInit()
-          );
+          const installedAddons = await this.addonService.listByApp(this.appIdentifier, await generateRequestInit());
           if (addonsByCategoryResponse.ok) {
             const addons = (await addonsByCategoryResponse.json()) as CategoriesResponse;
             await webview.postMessage({ type: 'addons', payload: { categories: addons.categories, installedAddons } });
@@ -125,7 +104,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       case 'addonPlans':
         {
           try {
-            const addonPlans = await this.planService.listByAddOn(message.id, await this.generateRequestInit());
+            const addonPlans = await this.planService.listByAddOn(message.id, await generateRequestInit());
             await webview.postMessage({ type: 'addonPlans', payload: addonPlans, id: message.id });
           } catch {
             // no-op
@@ -154,7 +133,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
    * Installs or updates an add-on for the application
    * and sends a message to the webview with the result.
    *
-   * @param type The type of operation to peform.
+   * @param type The type of operation to perform.
    * @param addOnId The id of the addon to install or update.
    * @param plan The plan to install or update.
    * @param installedAddonId The id of the installed addon to update. Required only when type is 'updateAddon'
@@ -168,7 +147,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
   ): Promise<void> {
     const { webview } = ShowAddonsViewCommand.addonsPanel as WebviewPanel;
     try {
-      const requestInit = await this.generateRequestInit();
+      const requestInit = await generateRequestInit();
       let newlyCreatedOrUpdatedAddon: AddOn;
       if (type === 'installAddon') {
         newlyCreatedOrUpdatedAddon = await this.addonService.create(this.appIdentifier, { plan }, requestInit);
@@ -188,15 +167,5 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       await webview.postMessage({ type: 'addonCreationFailed', payload: errorMessage, id: addOnId });
       await vscode.window.showErrorMessage(errorMessage);
     }
-  }
-
-  /**
-   * Generates a request init object for making API requests to the Heroku API.
-   *
-   * @returns A promise that resolves to a request init object.
-   */
-  private async generateRequestInit(): Promise<RequestInit> {
-    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) as AuthenticationSession;
-    return { signal: this.signal, headers: { Authorization: `Bearer ${accessToken.trim()}` } };
   }
 }

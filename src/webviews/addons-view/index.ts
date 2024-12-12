@@ -1,17 +1,19 @@
 import { customElement, FASTElement } from '@microsoft/fast-element';
 import {
-  Button,
-  Dropdown,
-  Option,
-  ProgressRing,
+  type Button,
+  type Dropdown,
+  type Option,
+  type ProgressRing,
+  type TextField,
   provideVSCodeDesignSystem,
   vsCodeButton,
   vsCodeDropdown,
   vsCodeOption,
-  vsCodeProgressRing
+  vsCodeProgressRing,
+  vsCodeTextField
 } from '@vscode/webview-ui-toolkit';
 import type { AddOn, Plan } from '@heroku-cli/schema';
-import { vscode, loadCss, loadHtmlTemplate } from '../utils/web-component-utils.js';
+import { vscode, loadCss, loadHtmlTemplate, commonCss } from '../utils/web-component-utils.js';
 import { shadowChild } from '../meta/shadow-child.js';
 
 type AddonCategory = {
@@ -42,7 +44,7 @@ type ElementsCategory = AddonCategory & {
 type AddonPlansMessage = { id: string; payload: Plan[] };
 
 const template = await loadHtmlTemplate(import.meta.resolve('./index.html'));
-const styles = await loadCss(import.meta.resolve('./index.css'));
+const styles = (await loadCss(import.meta.resolve('./index.css'))).concat(commonCss);
 @customElement({
   name: 'heroku-add-ons',
   template,
@@ -56,6 +58,13 @@ export class HerokuAddOnsMarketplace extends FASTElement {
   private categoryDropdown!: Dropdown;
   @shadowChild('#addons')
   private addonsUlist!: HTMLUListElement;
+  @shadowChild('vscode-progress-ring')
+  private progressRing!: ProgressRing;
+  @shadowChild('#search')
+  private search!: TextField;
+
+  private debounceSearch: number | undefined;
+
   private categories: ElementsCategory[] | undefined;
   private installedAddonsByServiceId: Map<string, AddOn> = new Map();
   private listElementByAddonId = new Map<string, HTMLLIElement>();
@@ -67,7 +76,13 @@ export class HerokuAddOnsMarketplace extends FASTElement {
    */
   public constructor() {
     super();
-    provideVSCodeDesignSystem().register(vsCodeDropdown(), vsCodeButton(), vsCodeOption(), vsCodeProgressRing());
+    provideVSCodeDesignSystem().register(
+      vsCodeDropdown(),
+      vsCodeButton(),
+      vsCodeOption(),
+      vsCodeProgressRing(),
+      vsCodeTextField()
+    );
   }
 
   /**
@@ -76,6 +91,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
   public connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener('message', this.onMessage);
+    this.search.addEventListener('input', this.onSearchInput);
     vscode.postMessage({ type: 'addons' });
   }
 
@@ -177,22 +193,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
     if (event) {
       this.selectedValue = (event?.target as Option).value;
     }
-    const selectedCategory = parseInt(this.selectedValue ?? 'NaN', 10);
-
-    if (!this.selectedValue) {
-      return this.renderAddonCards(this.categories?.map((category) => category.addons).flat());
-    }
-
-    if (this.selectedValue === 'installed') {
-      const installedElementAddons = this.categories
-        ?.map((category) => category.addons)
-        .flat()
-        .filter((addon) => this.installedAddonsByServiceId.has(addon.id));
-      return this.renderAddonCards(installedElementAddons);
-    }
-
-    const category = this.categories?.find((category) => category.id === selectedCategory);
-    return this.renderAddonCards(category?.addons);
+    this.applyFilter();
   };
 
   /**
@@ -400,6 +401,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
     installedAddons.forEach((addon) => this.installedAddonsByServiceId.set(addon.addon_service.id, addon));
     this.prepareCategoryOptions();
     this.setSelectedValue();
+    this.progressRing.remove();
   };
 
   /**
@@ -438,5 +440,43 @@ export class HerokuAddOnsMarketplace extends FASTElement {
     button.appearance = 'secondary';
     button.addEventListener('click', this.onInstallClick);
     button.removeEventListener('click', this.onSubmitOrUpdate);
+  };
+
+  /**
+   * Handler for the search input which
+   * debounces filtering by 250ms. This
+   * timeout is reset each time the user
+   * types in the search input.
+   */
+  private onSearchInput = (): void => {
+    clearTimeout(this.debounceSearch);
+    this.debounceSearch = setTimeout(this.applyFilter, 250) as unknown as number;
+  };
+
+  /**
+   * Applies the filter to the list of addons
+   * from the user's search input. Elements
+   * within the list are hidden if no match is
+   * found.
+   */
+  private applyFilter = (): void => {
+    const fields = ['name', 'summary'] as Array<keyof Omit<ElementsAddon, 'category'>>;
+    const searchValue = this.search.value;
+    const selectedCategory = parseInt(this.selectedValue ?? 'NaN', 10);
+    const onlyInstalled = this.selectedValue === 'installed';
+
+    const filteredAddons = this.categories
+      ?.map((category) => category.addons)
+      .flat()
+      .filter((addon) => {
+        const matchesSearchTerm = fields.some((field) =>
+          addon[field].toLowerCase().includes(searchValue.toLowerCase())
+        );
+        const matchesCategory = isNaN(selectedCategory) || addon.category.id === selectedCategory;
+        const matchesInstalled = !onlyInstalled || this.installedAddonsByServiceId.has(addon.id);
+
+        return matchesSearchTerm && matchesCategory && matchesInstalled;
+      });
+    this.renderAddonCards(filteredAddons);
   };
 }

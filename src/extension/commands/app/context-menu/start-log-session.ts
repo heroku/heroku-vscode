@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import type { App, LogSession } from '@heroku-cli/schema';
 import { herokuCommand, HerokuOutputChannel, type RunnableCommand } from '../../../meta/command';
 import { logExtensionEvent } from '../../../utils/logger';
+import { generateRequestInit } from '../../../utils/generate-service-request-init';
 
 /**
  * Represents a callback to be executed when a chunk
@@ -264,11 +265,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
   private async fetchLogSession(app: App, lines = this.maxLines): Promise<LogSession> {
     let logSession: LogSession | undefined;
     try {
-      const { accessToken } = (await vscode.authentication.getSession(
-        'heroku:auth:login',
-        []
-      )) as vscode.AuthenticationSession;
-      const requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${accessToken}` } };
+      const requestInit = await generateRequestInit(this.signal);
       logSession = await this.logService.create(app.id, { tail: true, lines }, requestInit);
     } catch (e) {
       throw new Error(`Failed to create a log session: ${(e as Error).message}`);

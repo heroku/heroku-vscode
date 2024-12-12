@@ -1,13 +1,28 @@
 <section>
   <header>
-    <h1>Add-ons Marketplace</h1>
-    <div>
-      <label for="categories-dropdown">Filter by</label>
-      <vscode-dropdown id="categories-dropdown"></vscode-dropdown>
+    <span class="icon icon-logo-block-16" aria-hidden="true"></span>
+    <div class="title">
+      <h1 id="main-heading">Add-ons Marketplace</h1>
+      <p>Install add-ons for <span id="app-name"></span></p>
+    </div>
+    <div class="search">
+      <vscode-text-field
+        id="search"
+        role="searchbox"
+        placeholder="Search add-ons"
+        aria-placeholder="Search add-ons"
+        aria-label="Search add-ons"
+      >
+        <span slot="start" class="icon" aria-hidden="true"><i class="codicon codicon-search"></i></span>
+      </vscode-text-field>
+      <div>
+        <label for="categories-dropdown">Filter by</label>
+        <vscode-dropdown id="categories-dropdown"></vscode-dropdown>
+      </div>
     </div>
   </header>
+  <vscode-progress-ring class="loading-indicator"></vscode-progress-ring>
   <ul class="addons-list" id="addons"></ul>
-  <footer></footer>
 </section>
 
 <template id="addon-template">
