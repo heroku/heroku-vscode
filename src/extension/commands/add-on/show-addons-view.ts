@@ -1,11 +1,12 @@
 import EventEmitter from 'node:events';
-import vscode, { AuthenticationSession, WebviewPanel } from 'vscode';
+import vscode, { WebviewPanel } from 'vscode';
 import PlanService from '@heroku-cli/schema/services/plan-service.js';
 import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import { AddOn } from '@heroku-cli/schema';
 import { CategoriesResponse } from '@heroku/elements';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
+import { generateRequestInit } from '../../utils/generate-service-request-init';
 
 type MessagePayload =
   | {
@@ -92,10 +93,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       case 'addons':
         {
           const addonsByCategoryResponse = await fetch('https://addons.heroku.com/api/v2/categories');
-          const installedAddons = await this.addonService.listByApp(
-            this.appIdentifier,
-            await this.generateRequestInit()
-          );
+          const installedAddons = await this.addonService.listByApp(this.appIdentifier, await generateRequestInit());
           if (addonsByCategoryResponse.ok) {
             const addons = (await addonsByCategoryResponse.json()) as CategoriesResponse;
             await webview.postMessage({ type: 'addons', payload: { categories: addons.categories, installedAddons } });
@@ -106,7 +104,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       case 'addonPlans':
         {
           try {
-            const addonPlans = await this.planService.listByAddOn(message.id, await this.generateRequestInit());
+            const addonPlans = await this.planService.listByAddOn(message.id, await generateRequestInit());
             await webview.postMessage({ type: 'addonPlans', payload: addonPlans, id: message.id });
           } catch {
             // no-op
@@ -149,7 +147,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
   ): Promise<void> {
     const { webview } = ShowAddonsViewCommand.addonsPanel as WebviewPanel;
     try {
-      const requestInit = await this.generateRequestInit();
+      const requestInit = await generateRequestInit();
       let newlyCreatedOrUpdatedAddon: AddOn;
       if (type === 'installAddon') {
         newlyCreatedOrUpdatedAddon = await this.addonService.create(this.appIdentifier, { plan }, requestInit);
@@ -169,15 +167,5 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       await webview.postMessage({ type: 'addonCreationFailed', payload: errorMessage, id: addOnId });
       await vscode.window.showErrorMessage(errorMessage);
     }
-  }
-
-  /**
-   * Generates a request init object for making API requests to the Heroku API.
-   *
-   * @returns A promise that resolves to a request init object.
-   */
-  private async generateRequestInit(): Promise<RequestInit> {
-    const { accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) as AuthenticationSession;
-    return { signal: this.signal, headers: { Authorization: `Bearer ${accessToken.trim()}` } };
   }
 }

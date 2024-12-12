@@ -246,7 +246,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     const addOnsCategory = categories.find((cat) => cat.label === 'ADD-ONS');
     // Repopulates `addOns`
     const pristineAddons = await this.getAddonsForApp(app, addOnsCategory as T);
-    if (knownAddon && !pristineAddons.find((a) => a.id === knownAddon.id)) {
+    if (knownAddon && !pristineAddons.find((a) => a.name === knownAddon.name)) {
       pristineAddons.push(knownAddon);
     }
     const pristineAddonsSet = new Set(pristineAddons.map((a) => a.id));
