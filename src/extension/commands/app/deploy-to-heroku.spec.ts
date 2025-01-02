@@ -189,7 +189,22 @@ suite('DeployToHeroku Tests', () => {
 
   test('run() - successful quick picked app deployment flow', async () => {
     mockWindow.withProgress.callThrough();
-    mockWindow.showQuickPick.resolves('test-app' as unknown as vscode.QuickPickItem);
+    mockWindow.createQuickPick.returns({
+      title: 'test-app',
+      items: [],
+      value: 'test-app',
+      selectedItems: [{ label: 'test-app' }],
+      onDidChangeValue: (cb: CallableFunction) => {
+        process.nextTick(() => void cb('test-app'));
+        return { dispose: () => void 0 };
+      },
+      onDidAccept: async (cb: CallableFunction) => {
+        return cb('test-app');
+      },
+      onDidHide: () => ({ dispose: () => void 0 }),
+      show: () => void 0,
+      hide: () => void 0
+    } as unknown as vscode.QuickPick<vscode.QuickPickItem>);
     const mockAccessToken = 'test-token';
     const mockApp = {
       id: 'test-id',
