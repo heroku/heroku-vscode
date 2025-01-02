@@ -1,6 +1,5 @@
 import vscode from 'vscode';
-// import { visit } from 'jsonc-parser';
-import { DeployToHeroku } from '../commands/app/deploy-to-heroku';
+import { ShowDeployAppEditor } from '../commands/app/show-deploy-app-editor';
 /**
  *
  */
@@ -34,7 +33,7 @@ export class DeployToHerokuDecorator {
     }
     const documentWorkspace = workspaceFolders.find((folder) => document.uri.fsPath.startsWith(folder.uri.fsPath));
     const hoverMessage = new vscode.MarkdownString(
-      `[$(play) Deploy to Heroku](command:${DeployToHeroku.COMMAND_ID}?${JSON.stringify([null, null, { rootUri: documentWorkspace?.uri }])})`,
+      `[$(play) Deploy to Heroku](command:${ShowDeployAppEditor.COMMAND_ID}?${JSON.stringify([context.extensionUri, documentWorkspace?.uri])})`,
       true
     );
     hoverMessage.isTrusted = true;

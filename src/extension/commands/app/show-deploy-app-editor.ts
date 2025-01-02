@@ -37,9 +37,9 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
    * @param extensionUri The extension uri
    * @param workspaceUris The workspace uris where an app.json can be found
    */
-  public async run(extensionUri: vscode.Uri, workspaceUris: vscode.Uri[]): Promise<void> {
+  public async run(extensionUri: vscode.Uri, workspaceUris: vscode.Uri | vscode.Uri[]): Promise<void> {
     ShowDeployAppEditor.webviewPanel?.dispose();
-    this.workspaceUris = workspaceUris;
+    this.workspaceUris = Array.isArray(workspaceUris) ? workspaceUris : [workspaceUris];
 
     const panel = prepareHerokuWebview(extensionUri, {
       viewType: 'heroku.app-editor',
