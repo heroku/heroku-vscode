@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { activate, DeployToHerokuDecorator } from './deploy-to-heroku-decorator';
-import { DeployToHeroku } from '../commands/app/deploy-to-heroku';
+import { ShowDeployAppEditor } from '../commands/app/show-deploy-app-editor';
 
 suite('DeployToHerokuDecorator Tests', () => {
   let decorator: DeployToHerokuDecorator;
@@ -76,7 +76,7 @@ suite('DeployToHerokuDecorator Tests', () => {
 
     assert.strictEqual(decorationOptions.length, 1, 'Should have one decoration option');
     assert.strictEqual(
-      decorationOptions[0].hoverMessage.value.includes(DeployToHeroku.COMMAND_ID),
+      decorationOptions[0].hoverMessage.value.includes(ShowDeployAppEditor.COMMAND_ID),
       true,
       'Hover message should include deploy command'
     );

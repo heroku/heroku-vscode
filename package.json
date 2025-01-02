@@ -2747,6 +2747,11 @@
         "icon": "$(hk-icon-deploy-16)"
       },
       {
+        "command": "heroku:deploy:show-app-editor",
+        "title": "Deploy to Heroku",
+        "icon": "$(hk-icon-deploy-16)"
+      },
+      {
         "command": "heroku:start-log-session",
         "title": "Start log session",
         "icon": "$(list-selection)"

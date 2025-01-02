@@ -259,7 +259,7 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
    * @throws {DeploymentError} If the deployment fails
    */
   protected async deployToHeroku(): Promise<(Build & { name: string }) | null> {
-    const { tarballUri, rootUri, appNames } = this.deploymentOptions;
+    const { tarballUri, rootUri, appNames, name } = this.deploymentOptions;
 
     let blobUrl = tarballUri?.toString();
 
@@ -291,27 +291,41 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
     // the user where to deploy.
     let isExistingDeployment = this.isApp(this.target);
     let targetApp = this.target;
-    if (!isExistingDeployment && appNames?.length) {
-      const message = 'Choose where to deploy';
-      const maybeAppName = await vscode.window.showQuickPick(['(Create new app)', ...appNames], {
-        title: message
+    if (!isExistingDeployment && appNames?.length && !name) {
+      const quickPick = vscode.window.createQuickPick();
+      quickPick.items = appNames.map((choice) => ({ label: choice, iconPath: new vscode.ThemeIcon('hk-icon-app-16') }));
+      quickPick.title = 'Choose existing app or enter a new app name';
+      quickPick.placeholder = 'Select existing or type new app name';
+
+      quickPick.onDidChangeValue(() => {
+        const currentValue = quickPick.value;
+        const items: vscode.QuickPickItem[] = appNames.map((choice) => ({
+          label: choice,
+          iconPath: new vscode.ThemeIcon('hk-icon-app-16')
+        }));
+        if (currentValue && !appNames.includes(currentValue)) {
+          items.unshift({ label: currentValue, iconPath: new vscode.ThemeIcon('add'), description: '(New app)' });
+        }
+        quickPick.items = items;
       });
+      quickPick.show();
+      const cancel = promisify(quickPick.onDidHide)();
+      const selection = new Promise((resolve) =>
+        quickPick.onDidAccept(() => resolve(quickPick.selectedItems[0]?.label))
+      );
+      const maybeAppName = (await Promise.race([selection, cancel])) as string;
+      quickPick.hide();
       // User cancelled
       if (!maybeAppName) {
         return null;
       }
-      // Deploy to an existing app based on the user selection
-      // provided the app still exists on Heroku and the user has
-      // access to it.
-      if (maybeAppName !== '(Create new app)') {
-        try {
-          targetApp = await this.appService.info(maybeAppName, this.requestInit);
-          isExistingDeployment = true;
-        } catch (error) {
-          const appServiceErrorMessage = `The app "${maybeAppName}" was not found on Heroku`;
-          logExtensionEvent(appServiceErrorMessage);
-          throw new DeploymentError(appServiceErrorMessage);
-        }
+      // Check if the app exists om Heroku. If so,
+      // this is an existing app deployment
+      try {
+        targetApp = await this.appService.info(maybeAppName, this.requestInit);
+        isExistingDeployment = true;
+      } catch {
+        this.deploymentOptions.name = maybeAppName;
       }
     }
 
