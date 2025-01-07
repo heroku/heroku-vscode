@@ -148,10 +148,10 @@ suite('HerokuResourceExplorerProvider', () => {
     await new Promise((resolve) => provider.event(resolve));
     const [app] = await provider.getChildren(); // Populate appToResourceMap
     const children = (await provider.getChildren(app)) as vscode.TreeItem[];
-    assert.strictEqual(children.length, 4);
+    assert.strictEqual(children.length, 3);
     assert.deepStrictEqual(
       children.map((c) => c.label),
-      ['FORMATIONS', 'DYNOS', 'ADD-ONS', 'SETTINGS']
+      ['FORMATIONS', 'DYNOS', 'ADD-ONS']
     );
   });
 
