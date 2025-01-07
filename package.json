@@ -2440,6 +2440,11 @@
           "group": "inline@4"
         },
         {
+          "when": "viewItem === heroku:app",
+          "command": "heroku:remove-app-from-workspace",
+          "group": "App@5"
+        },
+        {
           "command": "heroku:user:addons:attach",
           "group": "addons",
           "when": "viewItem =~ /^(heroku:addon)/"
@@ -2717,6 +2722,10 @@
       ]
     },
     "commands": [
+      {
+        "command": "heroku:remove-app-from-workspace",
+        "title": "Remove app from workspace"
+      },
       {
         "command": "heroku:addons:show-addons-view",
         "title": "Find more add-ons"

@@ -277,12 +277,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     userInputMap: Map<string, string | undefined>
   ): Promise<boolean> => {
     const { description, default: defaultValue, name: flagOrArgName } = commandFlag;
-    // To prevent the user from being prompted
-    // for a boolean flag using an input box
-    // which requires typing a yes/no response,
-    // we use an information message with "yes", "no"
-    // or cancel button choices.
-    const choice = await vscode.window.showInformationMessage(`Should we ${description}`, ...['Yes', 'No', 'Cancel']);
+    const choice = await vscode.window.showQuickPick(['Yes', 'No', 'Cancel'], { title: description });
     // user cancelled
     if (choice === undefined || choice === 'Cancel') {
       return true;
@@ -314,35 +309,33 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
         canSelectFiles: true,
         canSelectFolders: false,
         canSelectMany: false,
-        title: `Select the ${description}`
+        title: description
       });
       input = uris?.[0].fsPath;
+    } else if (options) {
+      const choice = await vscode.window.showQuickPick(options, {
+        canPickMany: false,
+        title: description
+      });
+      input = this.isValueItem(choice) ? choice.value : choice;
     } else {
-      if (options) {
-        const choice = await vscode.window.showQuickPick(options, {
-          canPickMany: false,
-          title: `Select the ${description}`
-        });
-        input = this.isValueItem(choice) ? choice.value : choice;
-      } else {
-        input = await vscode.window.showInputBox({
-          prompt: `Enter the ${description} (${required ? 'required' : 'optional - press "Enter" to bypass'})`,
-          value: defaultValue,
-          validateInput: (value: string) => {
-            if (required && !value) {
-              return `${description} is required`;
-            }
-            return '';
+      input = await vscode.window.showInputBox({
+        prompt: `${description} (${required ? 'required' : 'optional - press "Enter" to bypass'})`,
+        value: defaultValue,
+        validateInput: (value: string) => {
+          if (required && !value) {
+            return `${description} is required`;
           }
-        });
-      }
-      // user cancelled
-      if (input === undefined) {
-        return true;
-      }
-      if (input !== '') {
-        userInputMap.set(flagOrArgName, input);
-      }
+          return '';
+        }
+      });
+    }
+    // user cancelled
+    if (input === undefined) {
+      return true;
+    }
+    if (input !== '') {
+      userInputMap.set(flagOrArgName, input);
     }
     return false;
   };

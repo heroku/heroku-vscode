@@ -32,6 +32,54 @@ export async function getHerokuAppNames(): Promise<string[]> {
 }
 
 /**
+ * Gets the remote name for a given app name
+ *
+ * @param appName the name of the app to get the remote for
+ * @returns the remote url or undefined if the app is not found
+ */
+export async function getRemoteNameByAppName(appName: string): Promise<string | undefined> {
+  const rootRepository = await getRootRepository();
+  const remotes = rootRepository?.state.remotes;
+
+  if (!remotes) {
+    return undefined;
+  }
+  const herokuRemote = remotes.find((remote) => {
+    const { pushUrl } = remote;
+    if (!URL.canParse(pushUrl!)) {
+      return false;
+    }
+    const { pathname } = new URL(pushUrl!);
+    return pathname.replaceAll(/(\/|.git)/g, '') === appName ? pathname : undefined;
+  });
+
+  return herokuRemote?.pushUrl;
+}
+
+/**
+ * Removes the remote for the given app name
+ * and returns true if the remote was removed, false otherwise.
+ *
+ * @param appName the name of the app to remove the remote for
+ * @returns true if the remote was removed, false otherwise
+ */
+export async function removeRemoteByAppName(appName: string): Promise<string | undefined> {
+  const herokuRemote = await getRemoteNameByAppName(appName);
+  const rootRepository = await getRootRepository();
+
+  if (herokuRemote) {
+    try {
+      await rootRepository?.removeRemote(herokuRemote);
+    } catch (error) {
+      const { message } = error as Error;
+      logExtensionEvent(`Error removing remote: ${message}`);
+    }
+    return herokuRemote;
+  }
+  return undefined;
+}
+
+/**
  * Gets the git extension api. If it is not installed,
  * it will be installed.
  *

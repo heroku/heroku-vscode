@@ -62,27 +62,28 @@ export function getAppCategories(appIdentifier: string): vscode.TreeItem[] {
     {
       id: appIdentifier + ':formations',
       label: 'FORMATIONS',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
       resourceUri: vscode.Uri.parse(`heroku:/category/formations`)
     },
     {
       id: appIdentifier + ':dynos',
       label: 'DYNOS',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
       resourceUri: vscode.Uri.parse(`heroku:/category/dynos`)
     },
     {
       id: appIdentifier + ':addons',
       label: 'ADD-ONS',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      resourceUri: vscode.Uri.parse(`heroku:/category/add-ons`)
-    },
-    {
-      id: appIdentifier + ':settings',
-      label: 'SETTINGS',
       collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-      resourceUri: vscode.Uri.parse(`heroku:/category/settings`)
+      resourceUri: vscode.Uri.parse(`heroku:/category/add-ons`)
     }
+    // Removed until feature work starts
+    // {
+    //   id: appIdentifier + ':settings',
+    //   label: 'SETTINGS',
+    //   collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    //   resourceUri: vscode.Uri.parse(`heroku:/category/settings`)
+    // }
   ];
 }
 
