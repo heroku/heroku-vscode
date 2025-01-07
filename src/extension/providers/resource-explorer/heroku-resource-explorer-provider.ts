@@ -33,6 +33,7 @@ import '../../commands/app/context-menu/start-log-session';
 import '../../commands/app/context-menu/open-app';
 import '../../commands/app/context-menu/open-settings';
 import '../../commands/app/context-menu/end-log-session';
+import '../../commands/app/context-menu/remove-from-workspace';
 import '../../commands/dyno/scale-formation';
 import '../../commands/dyno/restart-dyno';
 
