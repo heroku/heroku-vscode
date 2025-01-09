@@ -20,6 +20,7 @@ export class RemoveFromWorkspace extends HerokuCommand<void> implements Runnable
       showExtensionLogs();
       return;
     }
+    this.outputChannel?.show();
     this.outputChannel?.appendLine(`Removed ${app.name} (${remoteName}) from workspace.`);
   }
 
