@@ -42,11 +42,12 @@ export function getOutputChannel(config?: CommandDecoratorConfig | undefined): v
     return;
   }
   const { outputChannelId, languageId } = config;
-  let outputChannel = commandOutputChannels.get(`${outputChannelId}${languageId ?? ''}`);
+  const key = `${outputChannelId}${languageId ?? ''}`;
+  let outputChannel = commandOutputChannels.get(key);
   if (!outputChannel) {
     outputChannel = commandOutputChannels
-      .set(outputChannelId, vscode.window.createOutputChannel(outputChannelId, languageId))
-      .get(outputChannelId);
+      .set(key, vscode.window.createOutputChannel(outputChannelId, languageId))
+      .get(key);
   }
   return outputChannel as vscode.OutputChannel;
 }
