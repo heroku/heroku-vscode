@@ -53,7 +53,7 @@ export async function getRemoteNameByAppName(appName: string): Promise<string | 
     return pathname.replaceAll(/(\/|.git)/g, '') === appName ? pathname : undefined;
   });
 
-  return herokuRemote?.pushUrl;
+  return herokuRemote?.name;
 }
 
 /**
