@@ -20,6 +20,11 @@
     "workspaceContains:Procfile"
   ],
   "main": "./out/extension/index.js",
+  "icon": "resources/heroku.png",
+  "galleryBanner": {
+    "color": "#79589F",
+    "theme": "dark"
+  },
   "contributes": {
     "jsonValidation": [
       {
