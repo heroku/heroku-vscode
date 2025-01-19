@@ -1,4 +1,4 @@
-# 6.1 Log Stream Status Updates Testing
+# 4.1 Log Stream Status Updates Testing
 
 ## Prerequisites
 

@@ -1,4 +1,4 @@
-# 5.1 Log Session Testing
+# 4 Log Session Testing
 
 ## Prerequisites
 
