@@ -1,6 +1,6 @@
 # Heroku VSCode Extension Test Plan
 
-## 1. Installation and Authentication
+## 1. Installation and Authentication ✅
 
 ### 1.1 [Extension Installation](./installation.md)
 
