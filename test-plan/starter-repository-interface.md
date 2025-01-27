@@ -1,4 +1,4 @@
-# 3.1 Starter Repository Browser
+# 2.2 Starter Repository Browser
 
 ## Prerequisites
 
