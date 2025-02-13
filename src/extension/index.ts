@@ -20,6 +20,7 @@ import { LinkApp } from './commands/app/link-app';
 
 import './commands/auth/welcome-view-sign-in';
 import './commands/github/show-starter-repositories-view';
+import './commands/add-on/show-addons-view';
 import { ShowDeployAppEditor } from './commands/app/show-deploy-app-editor';
 
 const authProviderId = 'heroku:auth:login';
