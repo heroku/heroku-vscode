@@ -95,7 +95,8 @@
           },
           "additionalProperties": false
         }
-      }
+      },
+      "additionalProperties": false
     },
     "dynoSize": {
       "type": "string",
