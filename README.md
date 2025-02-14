@@ -73,4 +73,4 @@ To build and run locally:
 
 1. npm install
 2. Open vscode
-3. From within "Run and Debug", click "Run Extension"
+3. From within `Run and Debug`, click `Run Extension`
