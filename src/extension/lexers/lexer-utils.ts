@@ -88,7 +88,7 @@ export function isAssignmentOperation(node: sh.Node): node is sh.Assign {
 /**
  * Get the vscode position for the specified node
  *
- * @param pos The node positon to convert to a vscode position
+ * @param pos The node position to convert to a vscode position
  * @returns the vscode position for the specified node
  */
 export function nodePosToVScodePosition(pos: sh.Pos): vscode.Position {

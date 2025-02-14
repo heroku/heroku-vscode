@@ -54,6 +54,8 @@ const styles = (await loadCss(import.meta.resolve('./index.css'))).concat(common
  *
  */
 export class HerokuAddOnsMarketplace extends FASTElement {
+  @shadowChild('#no-results')
+  private noResultsElement!: HTMLElement;
   @shadowChild('#categories-dropdown')
   private categoryDropdown!: Dropdown;
   @shadowChild('#addons')
@@ -478,5 +480,6 @@ export class HerokuAddOnsMarketplace extends FASTElement {
         return matchesSearchTerm && matchesCategory && matchesInstalled;
       });
     this.renderAddonCards(filteredAddons);
+    this.noResultsElement.classList.toggle('hidden', !!filteredAddons?.length);
   };
 }

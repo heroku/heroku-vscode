@@ -3,6 +3,9 @@
   width: 100%;
   font-family: var(--vscode-font-family);
 }
+.hidden {
+  display: none;
+}
 section {
   background: var(--vscode-editor-background);
   color: var(--vscode-editor-foreground);

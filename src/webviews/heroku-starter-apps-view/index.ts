@@ -59,6 +59,9 @@ const styles = (await loadCss([import.meta.resolve('./index.css')])).concat(comm
  * - spaces: Optional array of Heroku spaces
  */
 export class HerokuStarterApps extends FASTElement {
+  @shadowChild('#no-results')
+  private noResultsElement!: HTMLElement;
+
   @shadowChild('#reference-apps')
   private referenceAppsUList!: HTMLUListElement;
 
@@ -87,7 +90,7 @@ export class HerokuStarterApps extends FASTElement {
 
   private githubService = new GithubService();
   private configVarsByContentsUrl = new Map<string, EnvironmentVariables>();
-  private reposRendered = new Set<string>();
+  private reposRendered = new Map<string, RepoCardData>();
 
   /**
    * Constructor for the HerokuStarterApps class.
@@ -181,23 +184,20 @@ export class HerokuStarterApps extends FASTElement {
       'html_url',
       'public_repository'
     ];
-    const herokuGettingStartedRepos = this.herokuGettingStartedRepos?.items ?? [];
-    const referenceAppRepos = this.referenceAppRepos?.items ?? [];
-
-    const allRepos = [
-      ...(elementsButtons as HerokuDeployButton[]),
-      ...herokuGettingStartedRepos,
-      ...referenceAppRepos
-    ] as RepoCardData[];
-    for (const repo of allRepos) {
+    let foundCt = 0;
+    for (const [id, repo] of this.reposRendered) {
       const matches = fields.some((field) => {
         const value = repo[field]?.toLocaleString().toLocaleLowerCase();
         return value?.includes(term);
       });
-      const element = this.shadowRoot!.getElementById(repo.name ?? repo.repo_name);
+      const element = this.shadowRoot!.getElementById(id);
       element?.classList.toggle('hidden', !matches);
       element?.setAttribute('aria-hidden', String(!matches));
+      if (matches) {
+        foundCt++;
+      }
     }
+    this.noResultsElement.classList.toggle('hidden', foundCt > 0);
   };
 
   /**
@@ -227,11 +227,9 @@ export class HerokuStarterApps extends FASTElement {
       });
       this.renderReferenceAppsList();
       this.renderStarterAppsList();
+      this.renderHerokuButtonsList();
+      this.loadingIndicator.remove();
     })();
-
-    this.renderHerokuButtonsList();
-
-    this.loadingIndicator.remove();
   };
 
   /**
@@ -247,7 +245,7 @@ export class HerokuStarterApps extends FASTElement {
       }
       const li = this.createRepoCard(item as RepoCardData);
       herokuElementsAppsReposFragment.appendChild(li);
-      this.reposRendered.add(item.repo_name);
+      this.reposRendered.set(item.repo_name, item as RepoCardData);
     });
 
     this.herokuElementsAppsUList.appendChild(herokuElementsAppsReposFragment);
@@ -266,7 +264,7 @@ export class HerokuStarterApps extends FASTElement {
       }
       const li = this.createRepoCard(item as RepoCardData);
       referenceAppReposFragment.appendChild(li);
-      this.reposRendered.add(item.name);
+      this.reposRendered.set(item.name, item as RepoCardData);
     });
 
     this.referenceAppsUList.appendChild(referenceAppReposFragment);
@@ -286,6 +284,7 @@ export class HerokuStarterApps extends FASTElement {
       }
       const li = this.createRepoCard(item as RepoCardData);
       herokuGettingStartedReposFragment.appendChild(li);
+      this.reposRendered.set(item.name, item as RepoCardData);
     });
 
     this.starterAppsUList.appendChild(herokuGettingStartedReposFragment);
