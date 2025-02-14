@@ -2728,12 +2728,18 @@
     },
     "commands": [
       {
-        "command": "heroku:remove-app-from-workspace",
-        "title": "Remove app from workspace"
+        "command": "heroku:welcome:link:apps",
+        "title": "Link app(s) to sources",
+        "category": "Heroku apps"
       },
       {
-        "command": "heroku:addons:show-addons-view",
-        "title": "Find more add-ons"
+        "command": "heroku:welcome:github:browse",
+        "title": "Browse starter repositories",
+        "category": "Heroku apps"
+      },
+      {
+        "command": "heroku:remove-app-from-workspace",
+        "title": "Remove app from workspace"
       },
       {
         "command": "heroku:sync-with-dashboard",
