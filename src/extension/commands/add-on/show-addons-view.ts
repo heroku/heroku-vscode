@@ -79,7 +79,7 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
    * any pending API requests.
    */
   public [Symbol.dispose](): void {
-    this.notifier?.removeAllListeners();
+    this.notifier?.removeListener('installedAddOnsChanged', this.onInstalledAddOnsChanged);
     this.abort();
   }
 
