@@ -66,3 +66,11 @@ Access Heroku CLI commands directly from VS Code:
 - Visual Studio Code 1.60.x or higher
 - Heroku CLI (version 9.5.x recommended)
 - Github account
+
+## Developing
+
+To build and run locally:
+
+1. npm install
+2. Open vscode
+3. From within "Run and Debug", click "Run Extension"
