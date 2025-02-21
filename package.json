@@ -4,6 +4,7 @@
   "publisher": "heroku",
   "description": "Heroku VSCode extension",
   "repository": "https://github.com/heroku/heroku-vscode",
+  "license": "BSD-3-Clause",
   "version": "0.0.1",
   "engines": {
     "vscode": ">=1.93.1",
@@ -25,6 +26,10 @@
     "color": "#79589F",
     "theme": "dark"
   },
+  "recommendations": [
+    "app.json",
+    "Procfile"
+  ],
   "contributes": {
     "jsonValidation": [
       {

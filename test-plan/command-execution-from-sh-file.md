@@ -169,7 +169,6 @@ This test plan covers the shell script integration features including:
 
 ## Edge Cases
 
-- Multiple commands on single line
 - Comments within commands
 - Unicode characters in commands
 - Very long command lines

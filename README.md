@@ -64,7 +64,7 @@ Access Heroku CLI commands directly from VS Code:
 ## Requirements
 
 - Visual Studio Code 1.60.x or higher
-- Heroku CLI (version 9.5.x recommended)
+- Heroku CLI (version ^9.5.x)
 - Github account
 
 ## Developing

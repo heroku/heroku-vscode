@@ -216,15 +216,23 @@ export class HerokuStarterApps extends FASTElement {
     this.githubService.accessToken = githubAccessToken;
 
     void (async (): Promise<void> => {
-      this.herokuGettingStartedRepos = await this.githubService.searchRepositories({
-        q: 'heroku-getting-started user:heroku',
-        sort: 'stars'
-      });
+      const [herokuGettingStartedRepoResult, herokuReferenceAppsResult] = await Promise.allSettled([
+        this.githubService.searchRepositories({
+          q: 'heroku-getting-started user:heroku',
+          sort: 'stars'
+        }),
+        this.githubService.searchRepositories({
+          q: 'user:heroku-reference-apps',
+          sort: 'stars'
+        })
+      ]);
 
-      this.referenceAppRepos = await this.githubService.searchRepositories({
-        q: 'user:heroku-reference-apps',
-        sort: 'stars'
-      });
+      if (herokuGettingStartedRepoResult.status === 'fulfilled') {
+        this.herokuGettingStartedRepos = herokuGettingStartedRepoResult.value;
+      }
+      if (herokuReferenceAppsResult.status === 'fulfilled') {
+        this.referenceAppRepos = herokuReferenceAppsResult.value;
+      }
       this.renderReferenceAppsList();
       this.renderStarterAppsList();
       this.renderHerokuButtonsList();

@@ -12,6 +12,6 @@ export class HerokuRedisCommandRunner extends HerokuContextMenuCommandRunner {
    * @inheritdoc
    */
   public async executeCommand(command: string): Promise<void> {
-    return super.executeCommand(command, this.commandName === 'redis:cli');
+    return super.executeCommand(command, this.commandName === 'redis:cli' || this.commandName === 'pg:psql');
   }
 }

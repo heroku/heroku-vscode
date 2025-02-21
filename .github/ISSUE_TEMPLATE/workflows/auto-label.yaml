@@ -1,0 +1,89 @@
+name: Auto Label Issues
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Label Issues
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read config.json
+            const configFile = fs.readFileSync('.git2gus/config.json', 'utf8');
+            const git2gusConfig = JSON.parse(configFile);
+
+            // Get available labels from config
+            const availableLabels = git2gusConfig.includedLabels || [];
+
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = issue.body ? issue.body.toLowerCase() : '';
+            const content = `${title} ${body}`;
+
+            // Template-based detection
+            const templatePatterns = {
+              bug: ['describe the bug', 'to reproduce', 'expected behavior'],
+              feature: ['feature request', 'solution you\'d like'],
+              enhancement: ['enhancement request', 'existing feature', 'improvement'],
+              documentation: ['documentation location', 'documentation issue'],
+              question: ['question/feedback topic']
+            };
+
+            // Keyword-based detection
+            const keywordPatterns = {
+              bug: ['error', 'broken', 'not working', 'fails', 'crash', 'issue'],
+              feature: ['new feature', 'would like to have', 'suggestion'],
+              enhancement: ['improve', 'better if', 'enhancement'],
+              documentation: ['docs', 'guide', 'readme', 'tutorial'],
+              question: ['how to', 'question', 'help', '?', 'clarification']
+            };
+
+            let labelsToAdd = new Set();
+
+            // Check template patterns
+            for (const [label, patterns] of Object.entries(templatePatterns)) {
+              if (patterns.some(pattern => content.includes(pattern.toLowerCase()))) {
+                if (availableLabels.includes(label)) {
+                  labelsToAdd.add(label);
+                }
+              }
+            }
+
+            // If no template match, check keywords
+            if (labelsToAdd.size === 0) {
+              for (const [label, patterns] of Object.entries(keywordPatterns)) {
+                if (patterns.some(pattern => content.includes(pattern.toLowerCase()))) {
+                  if (availableLabels.includes(label)) {
+                    labelsToAdd.add(label);
+                  }
+                }
+              }
+            }
+
+            // Default to question if no matches
+            if (labelsToAdd.size === 0 && availableLabels.includes('question')) {
+              labelsToAdd.add('question');
+            }
+
+            // Add labels to the issue
+            if (labelsToAdd.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: Array.from(labelsToAdd)
+              });
+
+              console.log(`Added labels: ${Array.from(labelsToAdd).join(', ')}`);
+            }
