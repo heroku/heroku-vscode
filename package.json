@@ -2,9 +2,9 @@
   "name": "heroku",
   "displayName": "Heroku",
   "publisher": "heroku",
-  "description": "Heroku VSCode extension",
+  "description": "Heroku extension for VSCode",
   "repository": "https://github.com/heroku/heroku-vscode",
-  "license": "BSD-3-Clause",
+  "license": "Apache-2.0",
   "version": "0.0.1",
   "engines": {
     "vscode": ">=1.93.1",

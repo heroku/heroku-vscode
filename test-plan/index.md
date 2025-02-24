@@ -1,4 +1,4 @@
-# Heroku VSCode Extension Test Plan
+# Heroku Extension for VSCode Test Plan
 
 ## 1. Installation and Authentication ✅
 
