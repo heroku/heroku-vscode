@@ -154,7 +154,7 @@ function registerCommandsFromManifest(): vscode.Disposable[] {
           void vscode.commands.executeCommand(HerokuPsRunner.COMMAND_ID, command, ...args);
         } else if (/^(addons)(:?)/.test(command)) {
           void vscode.commands.executeCommand(HerokuAddOnCommandRunner.COMMAND_ID, command, ...args);
-        } else if (/^(redis)(:?)/.test(command)) {
+        } else if (/^(redis|pg)(:?)/.test(command)) {
           void vscode.commands.executeCommand(HerokuRedisCommandRunner.COMMAND_ID, command, ...args);
         } else {
           void vscode.commands.executeCommand(HerokuContextMenuCommandRunner.COMMAND_ID, command, ...args);

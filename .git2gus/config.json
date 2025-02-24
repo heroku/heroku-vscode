@@ -1,0 +1,24 @@
+{
+  "productTag": "a1aEE0000018vgTYAQ",
+  "defaultBuild": "1",
+  "issueTypeLabels": {
+    "feature": "USER STORY",
+    "bug": "BUG P2",
+    "urgent": "BUG P0",
+    "question": "FEEDBACK",
+    "enhancement": "USER STORY",
+    "documentation": "DOCUMENTATION"
+  },
+  "priorities": {
+    "critical": "1",
+    "high": "2",
+    "medium": "3",
+    "low": "4"
+  },
+  "statusMapping": {
+    "closed": "Done",
+    "open": "New"
+  },
+  "includedLabels": ["feature", "bug", "question", "enhancement", "documentation"],
+  "hideWorkItemUrl": "true"
+}
