@@ -3,7 +3,7 @@
 Bring the power of Heroku right into your development workflow. Deploy, manage, and monitor your applications without
 leaving your editor.
 
-![Heroku VS Code Extension Overview](https://raw.githubusercontent.com/heroku/heroku-vscode-releases/refs/heads/main/resources/overview.gif)
+![Heroku Extension for VS Code Overview](https://raw.githubusercontent.com/heroku/heroku-vscode-releases/refs/heads/main/resources/overview.gif)
 
 ## Features
 
