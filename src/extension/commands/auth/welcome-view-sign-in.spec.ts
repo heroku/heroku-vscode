@@ -4,10 +4,13 @@ import sinon from 'sinon';
 import * as vscode from 'vscode';
 import { randomUUID } from 'node:crypto';
 import { WelcomeViewSignIn } from './welcome-view-sign-in';
+import { ValidateHerokuCLICommand } from '../heroku-cli/validate-heroku-cli';
 
-suite('The WelcomViewSignInCommand', () => {
+suite('The WelcomeViewSignInCommand', () => {
   let getSessionStub: sinon.SinonStub;
   let showErrorMessageStub: sinon.SinonStub;
+  let vsCodeExecCommandStub: sinon.SinonStub;
+  let hasCli = true;
 
   const sessionObject = {
     account: {
@@ -21,11 +24,16 @@ suite('The WelcomViewSignInCommand', () => {
   setup(() => {
     getSessionStub = sinon.stub(vscode.authentication, 'getSession');
     showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
+
+    vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
+    vsCodeExecCommandStub.withArgs(ValidateHerokuCLICommand.COMMAND_ID).resolves(hasCli);
+    vsCodeExecCommandStub.callThrough();
   });
 
   teardown(() => {
     getSessionStub.restore();
     showErrorMessageStub.restore();
+    vsCodeExecCommandStub.restore();
   });
 
   test('is registered', async () => {
@@ -50,5 +58,11 @@ suite('The WelcomViewSignInCommand', () => {
     getSessionStub.throws(new Error('failed!'));
     const result = await vscode.commands.executeCommand<string>(WelcomeViewSignIn.COMMAND_ID);
     assert.ok(showErrorMessageStub.called);
+  });
+
+  test('halts sign in when the cli was not found', async () => {
+    hasCli = false;
+    const result = await vscode.commands.executeCommand<string>(WelcomeViewSignIn.COMMAND_ID);
+    assert.equal(result, false);
   });
 });

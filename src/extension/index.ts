@@ -22,6 +22,7 @@ import './commands/auth/welcome-view-sign-in';
 import './commands/github/show-starter-repositories-view';
 import './commands/add-on/show-addons-view';
 import { ShowDeployAppEditor } from './commands/app/show-deploy-app-editor';
+import { ValidateHerokuCLICommand } from './commands/heroku-cli/validate-heroku-cli';
 
 const authProviderId = 'heroku:auth:login';
 const workspacesWithHerokuFiles: vscode.Uri[] = [];
@@ -61,6 +62,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   void onDidChangeSessions({ provider: { id: authProviderId, label: 'Heroku' } });
   void monitorWorkspaceForHerokuAppExistence();
+  void vscode.commands.executeCommand(ValidateHerokuCLICommand.COMMAND_ID);
 }
 
 /**

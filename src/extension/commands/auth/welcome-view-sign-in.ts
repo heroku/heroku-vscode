@@ -3,6 +3,7 @@ import vscode from 'vscode';
 import { HerokuCommand } from '../heroku-command';
 import { herokuCommand } from '../../meta/command';
 import { logExtensionEvent } from '../../utils/logger';
+import { ValidateHerokuCLICommand } from '../heroku-cli/validate-heroku-cli';
 import { LoginCommand } from './login';
 
 @herokuCommand()
@@ -10,7 +11,7 @@ import { LoginCommand } from './login';
  * The WelcomeViewSignIn command is executed when the
  * user uses the "Sign in" button on the welcome screen.
  */
-export class WelcomeViewSignIn extends HerokuCommand<void> {
+export class WelcomeViewSignIn extends HerokuCommand<boolean> {
   public static COMMAND_ID = 'heroku:welcome:signin' as const;
   /**
    * Attempts to query the session info from the
@@ -21,8 +22,12 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
    *
    * @returns void
    */
-  public async run(): Promise<void> {
-    await vscode.window.withProgress(
+  public async run(): Promise<boolean> {
+    const hasCli = await vscode.commands.executeCommand(ValidateHerokuCLICommand.COMMAND_ID);
+    if (!hasCli) {
+      return false;
+    }
+    return vscode.window.withProgress(
       {
         title: 'Authenticating with Heroku...',
         location: vscode.ProgressLocation.Notification,
@@ -36,6 +41,7 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
 
           if (session?.accessToken) {
             logExtensionEvent(`Successfully authenticated as ${session.account.label}`);
+            return true;
           }
         } catch (error) {
           const affirmative = 'Retry';
@@ -50,6 +56,7 @@ export class WelcomeViewSignIn extends HerokuCommand<void> {
           }
         }
         progress.report({ increment: 100 });
+        return false;
       }
     );
     logExtensionEvent('Authenticating with Heroku...');
