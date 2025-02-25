@@ -275,10 +275,10 @@ export class HerokuRepoCard extends FASTElement {
     this.metaItemStarCount.textContent = (item.stargazers_count ?? item.stars ?? '').toString();
 
     // forks
-    this.metaItemForkCount.textContent = (item.forks_count ?? item.forks).toString();
+    this.metaItemForkCount.textContent = (item.forks_count ?? item.forks ?? '').toString();
 
     // last updated
-    this.metaItemLastUpdated.textContent = `Last Updated: ${new Date(item.updated_at).toLocaleDateString()}`;
+    this.metaItemLastUpdated.textContent = `Last Updated: ${new Date(item.updated_at ?? Date.now()).toLocaleDateString()}`;
 
     // Form for data collection and submission
     this.deployOptionsForm.dataset.repoUrl = item.clone_url ?? `${item.public_repository}.git`;

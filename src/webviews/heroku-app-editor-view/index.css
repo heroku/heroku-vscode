@@ -34,7 +34,7 @@ section {
     padding: 1rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
-    .icon-logo-block-16 {
+    .icon-logo-outline-16 {
       color: var(--heroku-primary);
       font-size: 4rem;
       margin-right: 1rem;

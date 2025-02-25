@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         node-version: [22.x]
-        os: [sfdc-hk-ubuntu-22.04-arm-xlarge]
+        os: [pub-hk-ubuntu-22.04-small]
 
     steps:
       - name: Set up Xorg Server
