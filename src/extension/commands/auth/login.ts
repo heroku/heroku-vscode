@@ -20,7 +20,7 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
 
   /**
    * Event handler for the Heroku CLI stdout.
-   * This handler looks for the promt: "Press any key to open a browser.."
+   * This handler looks for the prompt: "Press any key to open a browser.."
    * and writes a keystroke to stdin to automate the opening
    * of the browser without the need for user input.
    *
@@ -56,7 +56,7 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
     }
 
     using cliAuthProcess = HerokuCommand.exec('heroku auth:login', { signal: this.signal, timeout: 120 * 1000 });
-    cliAuthProcess.stderr?.once('data', (data: string) => LoginCommand.onData(data, cliAuthProcess));
+    cliAuthProcess.stderr?.addListener('data', (data: string) => LoginCommand.onData(data, cliAuthProcess));
 
     let success = false;
     cliAuthProcess.stdout?.addListener('data', (chunk: string) => {

@@ -17,6 +17,12 @@ suite('HerokuResourceExplorerProvider', () => {
   let elementTypeMap: Map<unknown, unknown>;
   let childParentMap: Map<unknown, unknown>;
   let stream: Writable;
+  let mockWorkspaceFs: {
+    stat: sinon.SinonStub;
+    readFile: sinon.SinonStub;
+    delete: sinon.SinonStub;
+    writeFile: sinon.SinonStub;
+  };
 
   const mockApp = { id: 'app1', name: 'test-app', organization: { name: 'test-org' } } as App;
   const mockDyno = { type: 'web', name: 'web.1', state: 'up' } as Dyno;
@@ -24,6 +30,7 @@ suite('HerokuResourceExplorerProvider', () => {
   const mockAddOn = {
     id: 'addon1',
     name: 'test-addon',
+    config_vars: ['TEST_VAR'],
     addon_service: { name: 'test-service', id: 'test-service' }
   } as AddOn;
   const mockElementsAddon = { icon_url: 'https://test-icon-url.com' };
@@ -42,13 +49,21 @@ suite('HerokuResourceExplorerProvider', () => {
       subscriptions: [],
       asAbsolutePath(p: string) {
         return p;
-      }
+      },
+      globalStorageUri: vscode.Uri.parse('file:///test/path')
     } as any;
 
     getSessionStub = sinon
       .stub(vscode.authentication, 'getSession')
       .withArgs('heroku:auth:login')
       .resolves(sessionObject);
+
+    mockWorkspaceFs = {
+      stat: sinon.stub(),
+      readFile: sinon.stub().throws(new Error('File not found')),
+      delete: sinon.stub().throws(new Error('File not found')),
+      writeFile: sinon.stub()
+    };
 
     // LogStream stub
     stream = new Writable();
@@ -128,6 +143,7 @@ suite('HerokuResourceExplorerProvider', () => {
       } as vscode.Extension<GitExtension>;
     });
     sinon.replaceGetter(vscode.workspace, 'workspaceFolders', () => [mockWorkspaceFolder]);
+    sinon.replaceGetter(vscode.workspace, 'fs', () => mockWorkspaceFs as unknown as typeof vscode.workspace.fs);
   });
 
   teardown(() => {
@@ -141,6 +157,17 @@ suite('HerokuResourceExplorerProvider', () => {
     Reflect.deleteProperty(children[0], 'logSession');
     assert.strictEqual(children.length, 1);
     assert.deepStrictEqual(children[0], mockApp);
+  });
+
+  test('getChildren should return locally persisted apps when available', async () => {
+    mockWorkspaceFs.readFile.resolves(Buffer.from(JSON.stringify([[mockApp.name, mockApp]])));
+    const children = await provider.getChildren();
+    Reflect.deleteProperty(children[0], 'logSession');
+    assert.strictEqual(children.length, 1);
+    assert.deepStrictEqual(children[0], mockApp);
+    assert.ok(mockWorkspaceFs.readFile.calledOnce);
+    assert.ok(mockWorkspaceFs.delete.notCalled);
+    assert.ok(mockWorkspaceFs.writeFile.notCalled);
   });
 
   test('getChildren should return app categories when an app is provided', async () => {

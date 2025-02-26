@@ -129,7 +129,7 @@ export async function getAddOnTreeItem(
   }
 
   return {
-    id: addOn.id,
+    id: `${addOn.id}:${(addOn.config_vars || []).join(',')}`,
     label: addOn.addon_service.name,
     description: `- ${addOn.state}`,
     tooltip: `${addOn.name}`,
@@ -138,7 +138,7 @@ export async function getAddOnTreeItem(
     resourceUri: vscode.Uri.parse(`heroku:/addon/${addOn.addon_service.name}`)
   } as vscode.TreeItem;
 }
-
+let emptyDynoId = 0;
 /**
  * Consumes a Dyno object and returns a TreeItem.
  *
@@ -148,7 +148,7 @@ export async function getAddOnTreeItem(
 export function getDynoTreeItem(dyno: Dyno): vscode.TreeItem {
   if (dyno.type === 'empty') {
     return {
-      id: 'empty',
+      id: 'empty:' + emptyDynoId++,
       label: 'No Dynos running',
       iconPath: new vscode.ThemeIcon('warning')
     };
