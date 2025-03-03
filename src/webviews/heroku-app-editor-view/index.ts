@@ -84,11 +84,14 @@ export class HerokuAppEditor extends FASTElement {
     const mapTeams = mapTeamsByEnterpriseAccount(teams);
 
     void (async (): Promise<void> => {
-      const repos = await Promise.all(repoInfos.map((info) => this.githubService.getRepo(info.owner, info.repo)));
+      const repos = await Promise.allSettled(
+        repoInfos.map((info) => this.githubService.getRepo(info.owner, info.repo))
+      );
 
       for (let i = 0; i < appJsonList.length; i++) {
         const appJson = appJsonList[i];
         const repo = repos[i];
+        const repoInfo = repoInfos[i];
 
         const li = this.herokuRepoCardTemplate.content.cloneNode(true) as DocumentFragment;
         const repoCard = li.querySelector(HEROKU_REPO_CARD_TAG) as HerokuRepoCard;
@@ -97,7 +100,22 @@ export class HerokuAppEditor extends FASTElement {
         // any decorators have fully initialized and the shadow DOM
         // is available before we try to access it.
         requestAnimationFrame(() => {
-          repoCard.data = repo as RepoCardData;
+          if (repo.status === 'fulfilled') {
+            repoCard.data = repo.value as RepoCardData;
+          } else {
+            repoCard.data = {
+              name: appJson.name ?? repoInfo.repo ?? 'Unnamed App',
+              description: appJson.description ?? '',
+              stars: 0,
+              forks: 0,
+              language: 'Unknown',
+              // eslint-disable-next-line camelcase
+              html_url: appJson.repository ?? 'Unknown URL',
+              // eslint-disable-next-line camelcase
+              repo_name: appJson.repository ?? repoInfo.owner ?? 'Unknown owner'
+            } as RepoCardData;
+          }
+
           repoCard.spaces = mappedSpaces;
           repoCard.teams = mapTeams;
           repoCard.existingApps = existingApps;

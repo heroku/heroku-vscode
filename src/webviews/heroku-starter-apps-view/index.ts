@@ -6,7 +6,7 @@ import {
   type TextField,
   type ProgressRing
 } from '@vscode/webview-ui-toolkit';
-import type { GithubSearchResponse } from 'github-api';
+import type { RepoSearchResultItem } from 'github-api';
 import type { App, Space, Team } from '@heroku-cli/schema';
 import type { EnvironmentVariables } from '@heroku/app-json-schema';
 import { HerokuDeployButton } from '@heroku/elements';
@@ -85,8 +85,8 @@ export class HerokuStarterApps extends FASTElement {
   private existingApps: App[] = [];
   private teams: Map<string, Team[]> | undefined;
   private spaces: Map<string, Space[]> | undefined;
-  private referenceAppRepos: GithubSearchResponse | undefined;
-  private herokuGettingStartedRepos: GithubSearchResponse | undefined;
+  private referenceAppRepos: RepoSearchResultItem[] | undefined;
+  private herokuGettingStartedRepos: RepoSearchResultItem[] | undefined;
 
   private githubService = new GithubService();
   private configVarsByContentsUrl = new Map<string, EnvironmentVariables>();
@@ -218,7 +218,7 @@ export class HerokuStarterApps extends FASTElement {
     void (async (): Promise<void> => {
       const [herokuGettingStartedRepoResult, herokuReferenceAppsResult] = await Promise.allSettled([
         this.githubService.searchRepositories({
-          q: 'heroku-getting-started user:heroku',
+          q: 'heroku-getting-started',
           sort: 'stars'
         }),
         this.githubService.searchRepositories({
@@ -228,10 +228,12 @@ export class HerokuStarterApps extends FASTElement {
       ]);
 
       if (herokuGettingStartedRepoResult.status === 'fulfilled') {
-        this.herokuGettingStartedRepos = herokuGettingStartedRepoResult.value;
+        this.herokuGettingStartedRepos = herokuGettingStartedRepoResult.value?.items.filter((repo) =>
+          repo.name.startsWith('heroku-')
+        );
       }
       if (herokuReferenceAppsResult.status === 'fulfilled') {
-        this.referenceAppRepos = herokuReferenceAppsResult.value;
+        this.referenceAppRepos = herokuReferenceAppsResult.value?.items;
       }
       this.renderReferenceAppsList();
       this.renderStarterAppsList();
@@ -266,7 +268,7 @@ export class HerokuStarterApps extends FASTElement {
     this.referenceAppsUList.innerHTML = '';
 
     const referenceAppReposFragment = document.createDocumentFragment();
-    (this.referenceAppRepos?.items ?? []).forEach((item) => {
+    (this.referenceAppRepos ?? []).forEach((item) => {
       if (this.reposRendered.has(item.name)) {
         return;
       }
@@ -286,7 +288,7 @@ export class HerokuStarterApps extends FASTElement {
 
     const herokuGettingStartedReposFragment = document.createDocumentFragment();
 
-    (this.herokuGettingStartedRepos?.items ?? []).forEach((item) => {
+    (this.herokuGettingStartedRepos ?? []).forEach((item) => {
       if (this.reposRendered.has(item.name)) {
         return;
       }
