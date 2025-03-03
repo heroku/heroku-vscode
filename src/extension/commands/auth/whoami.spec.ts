@@ -45,7 +45,7 @@ suite('The WhoamiCommand', () => {
       return cp;
     });
     vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
-    vsCodeExecCommandStub.withArgs(TokenCommand.COMMAND_ID, sinon.match.any).resolves(sessionObject.accessToken);
+    vsCodeExecCommandStub.withArgs(TokenCommand.COMMAND_ID).resolves(sessionObject.accessToken);
 
     vsCodeExecCommandStub.callThrough();
   });

@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import AppService from '@heroku-cli/schema/services/app-service.js';
 import type { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
 import DynoService from '@heroku-cli/schema/services/dyno-service.js';
-import vscode from 'vscode';
+import vscode, { Uri } from 'vscode';
 
 import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { diff } from '../../utils/diff';
@@ -73,6 +73,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
   protected watchGitConfigDisposable: vscode.Disposable | undefined;
   protected syncAddonsPending = false;
+  protected readonly persistentStateLocation: Uri;
 
   /**
    * Bi-directional emitter used to maintain
@@ -90,7 +91,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   public constructor(private readonly context: vscode.ExtensionContext) {
     super();
     this.addonsViewEmitter.on('addonCreated', this.onAddonCreated);
-
+    this.persistentStateLocation = Uri.joinPath(context.globalStorageUri, 'heroku-apps.json');
     context.subscriptions.push(
       vscode.authentication.onDidChangeSessions(this.reSyncAllApps),
       vscode.commands.registerCommand('heroku:sync-with-dashboard', this.reSyncAllApps)
@@ -192,6 +193,21 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       }
       return [];
     } else {
+      // Initialize the last state of the explorer
+      // and schedule a full sync of apps from the git config.
+      try {
+        const state = await vscode.workspace.fs.readFile(this.persistentStateLocation);
+        const appStateJson = JSON.parse(state.toString()) as Array<[string, App]>;
+        this.apps = new Map(appStateJson);
+        this.apps.forEach((app) => {
+          this.elementTypeMap.set(app as T, 'App');
+          this.appToResourceMap.set(app, { dynos: [], formations: [], addOns: [], categories: [] });
+        });
+        this.logStreamClient.apps = Array.from(this.apps.values());
+      } catch {
+        // noop
+      }
+
       void this.watchGitConfig();
     }
 
@@ -547,6 +563,9 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     });
 
     await this.syncApps({ added: apps, removed: new Set() });
+
+    const state = JSON.stringify(Array.from(this.apps.entries()));
+    await vscode.workspace.fs.writeFile(this.persistentStateLocation, Buffer.from(state));
   }
 
   /**
@@ -557,6 +576,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    */
   private async syncApps(appDiffs: AppDiffs): Promise<void> {
     const session = await vscode.authentication.getSession('heroku:auth:login', []);
+    await this.deleteState();
 
     if (!session?.accessToken) {
       logExtensionEvent('Cannot sync apps: session is unavailable');
@@ -610,7 +630,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       : 'No apps found';
     logExtensionEvent(logMessage);
 
-    void vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
+    await vscode.commands.executeCommand('setContext', 'heroku:get:started', !this.apps.size);
   }
 
   /**
@@ -625,4 +645,17 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     void vscode.commands.executeCommand('setContext', 'heroku:get:started', false);
     void this.watchGitConfig();
   };
+
+  /**
+   * Deletes the state file containing the apps.
+   *
+   * @returns Promise<void>
+   */
+  private async deleteState(): Promise<void> {
+    try {
+      await vscode.workspace.fs.delete(this.persistentStateLocation, { recursive: true, useTrash: false });
+    } catch {
+      // no-op
+    }
+  }
 }

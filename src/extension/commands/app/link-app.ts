@@ -71,22 +71,20 @@ export class LinkApp extends HerokuCommand<void> {
     if (!selected) {
       return;
     }
-    await Promise.all(
-      selected.map((quickPickItem) => {
-        if (!quickPickItem.value) {
-          return vscode.commands.executeCommand(DeployToHeroku.COMMAND_ID);
-        }
-        const flags = new Map([['remote', `heroku-${quickPickItem.value}`]]);
-        return vscode.commands.executeCommand(
-          'heroku:user:git:remote',
-          { id: quickPickItem.value, name: quickPickItem.value },
-          undefined,
-          flags
-        );
-      })
-    );
-  }
 
+    for (const item of selected) {
+      if (!item.value) {
+        await vscode.commands.executeCommand(DeployToHeroku.COMMAND_ID);
+      }
+      const flags = new Map([['remote', `heroku-${item.value}`]]);
+      await vscode.commands.executeCommand(
+        'heroku:user:git:remote',
+        { id: item.value, name: item.value },
+        undefined,
+        flags
+      );
+    }
+  }
   /**
    * Maps apps by team name
    *

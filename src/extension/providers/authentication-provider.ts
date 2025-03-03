@@ -70,7 +70,8 @@ export class AuthenticationProvider
     })();
 
     const result = await this.getSessionPromise;
-    this.getSessionPromise = undefined;
+    // Keep this around for a bit in case vscode needs to call it again
+    setTimeout(() => (this.getSessionPromise = undefined), 1000);
 
     return result;
   }
