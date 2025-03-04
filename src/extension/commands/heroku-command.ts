@@ -1,6 +1,7 @@
 import type { ChildProcess } from 'node:child_process';
 import { exec } from 'node:child_process';
 
+import fs from 'node:fs';
 import vscode from 'vscode';
 import { RunnableCommand } from '../meta/command';
 
@@ -102,6 +103,29 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
   public [Symbol.dispose](): void {
     this.abort();
   }
+
+  /**
+   * Gets the working directory of the current workspace.
+   * If no workspace is open, the current directory is returned.
+   *
+   * @returns string the path of the working director
+   */
+  protected getWorkingDirectory = (): string => {
+    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+      return process.cwd(); // Fallback to current directory
+    }
+
+    // Use fsPath instead of path for better cross-platform compatibility
+    const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+
+    try {
+      // Verify the directory exists and is accessible
+      fs.accessSync(workspacePath, fs.constants.R_OK | fs.constants.X_OK);
+      return workspacePath;
+    } catch (error) {
+      return process.cwd(); // Fallback if workspace path is inaccessible
+    }
+  };
 
   public abstract run(...args: unknown[]): T | PromiseLike<T>;
 }
