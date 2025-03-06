@@ -170,7 +170,7 @@ export class HerokuRepoCard extends FASTElement {
   /**
    * @inheritdoc
    */
-  public declare addEventListener: <K extends keyof RepoCardEventMap>(
+  declare public addEventListener: <K extends keyof RepoCardEventMap>(
     type: K,
     listener: (this: HerokuRepoCard, ev: RepoCardEventMap[K]) => unknown,
     options?: boolean | AddEventListenerOptions
@@ -179,7 +179,7 @@ export class HerokuRepoCard extends FASTElement {
   /**
    * @inheritdoc
    */
-  public declare removeEventListener: <K extends keyof RepoCardEventMap>(
+  declare public removeEventListener: <K extends keyof RepoCardEventMap>(
     type: K,
     listener: (this: HerokuRepoCard, ev: RepoCardEventMap[K]) => unknown,
     options?: boolean | AddEventListenerOptions
@@ -188,7 +188,7 @@ export class HerokuRepoCard extends FASTElement {
   /**
    * @inheritdoc
    */
-  public declare dispatchEvent: <K extends keyof RepoCardEventMap>(
+  declare public dispatchEvent: <K extends keyof RepoCardEventMap>(
     ev: RepoCardEventMap[K]
   ) => ReturnType<typeof HTMLElement.prototype.dispatchEvent>;
 

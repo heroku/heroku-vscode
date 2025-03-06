@@ -7,7 +7,7 @@ export type RunnableCommand<T, Args extends unknown[] = unknown[]> = {
 
 export type RunnableCommandCtor<T = unknown> = {
   COMMAND_ID: string;
-  new (outputChannel?: vscode.OutputChannel): RunnableCommand<T>;
+  new (outputChannel?: vscode.OutputChannel, context?: vscode.ExtensionContext): RunnableCommand<T>;
 };
 
 export type CommandDecoratorConfig = {
@@ -53,6 +53,23 @@ export function getOutputChannel(config?: CommandDecoratorConfig | undefined): v
 }
 
 const registeredCommands = new Set<string>();
+let extensionContext: vscode.ExtensionContext;
+/**
+ * Sets the extension context for the extension.
+ * This is used to dispose of the output channels
+ * when the extension is deactivated
+ * and make the context object available for commands
+ *
+ * @param context The extension context
+ */
+export function setExtensionContext(context: vscode.ExtensionContext): void {
+  extensionContext = context;
+  context.subscriptions.push({
+    dispose() {
+      commandOutputChannels.forEach((channel) => channel.dispose());
+    }
+  });
+}
 
 /**
  * Decorator for registering VSCode commands.
@@ -70,7 +87,7 @@ export function herokuCommand<const C extends RunnableCommandCtor>(config?: Comm
 
       vscode.commands.registerCommand(target.COMMAND_ID, async (...args: unknown[]): Promise<unknown> => {
         const outputChannel = getOutputChannel(config);
-        using runnableCommand = new target(outputChannel);
+        using runnableCommand = new target(outputChannel, extensionContext);
         return await (runnableCommand.run(...args) as Promise<unknown>);
       });
       registeredCommands.add(target.COMMAND_ID);

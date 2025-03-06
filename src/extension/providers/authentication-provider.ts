@@ -17,8 +17,9 @@ export class AuthenticationProvider
 {
   public static SESSION_KEY = 'heroku.session' as const;
   public onDidChangeSessions = this.event;
-  private netRcDisposable: vscode.Disposable | undefined;
   private getSessionPromise: Promise<vscode.AuthenticationSession[]> | undefined;
+  private netrcDisposable: vscode.Disposable | undefined;
+  private netrcChangedDebounce: NodeJS.Timeout | undefined;
 
   /**
    * Constructs a new AuthenticationProvider
@@ -60,7 +61,7 @@ export class AuthenticationProvider
       if (!accessToken || !whoami) {
         await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
         await vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
-        logExtensionEvent('No session found, prompting for login');
+        logExtensionEvent('No session found');
         return [];
       }
       const session: vscode.AuthenticationSession = createSessionObject(whoami as string, accessToken, scopes ?? []);
@@ -96,8 +97,9 @@ export class AuthenticationProvider
     } catch (error) {
       const { message } = error as Error;
       await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
-      logExtensionEvent(`Failed to log in to Heroku: ${message}`);
-      throw new Error(`Failed to log in to Heroku: ${message}`);
+      const eventMessage = `Failed to log in to Heroku: ${message}`;
+      logExtensionEvent(eventMessage);
+      throw new Error(eventMessage);
     }
 
     await this.context.secrets.store(AuthenticationProvider.SESSION_KEY, JSON.stringify(session));
@@ -129,7 +131,7 @@ export class AuthenticationProvider
    */
   public async dispose(): Promise<void> {
     await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
-    this.netRcDisposable?.dispose();
+    this.netrcDisposable?.dispose();
     super.dispose();
   }
 
@@ -142,32 +144,66 @@ export class AuthenticationProvider
    *
    * This watcher allows the Extension to maintain
    * synchronicity with the auth state of the Heroku CLI.
+   *
+   * @returns boolean indicating if a netrc file was found
    */
-  private async watchNetrc(): Promise<void> {
+  private async watchNetrc(): Promise<boolean> {
+    this.netrcDisposable?.dispose();
     const file = await getNetrcFileLocation();
     const uri = vscode.Uri.file(file);
+    // Determine if we have a netrc file to watch
+    // if not, let's poll every 3 seconds
+    try {
+      await vscode.workspace.fs.stat(uri);
+    } catch {
+      await vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      if (await this.watchNetrc()) {
+        this.onNetrcChanged();
+        return true;
+      }
+      return false;
+    }
 
     const netrcWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(uri, '*'));
-    const disposable = netrcWatcher.onDidChange(async () => {
-      const accessToken = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
-      if (!accessToken) {
-        const sessionJson = await this.context.secrets.get(AuthenticationProvider.SESSION_KEY);
-        if (sessionJson) {
-          await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
-          const session = JSON.parse(sessionJson) as vscode.AuthenticationSession;
-          await vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
-          logExtensionEvent(`${session.account.label} signed out of Heroku externally`);
-          this.fire({ added: undefined, removed: [session], changed: undefined });
-        }
-      } else {
-        const { account } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
-        const session = createSessionObject(account.email, accessToken, []);
-        await this.context.secrets.store(AuthenticationProvider.SESSION_KEY, JSON.stringify(session));
-        await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);
-        logExtensionEvent(`Externally logged in to Heroku as ${account.email}`);
-        this.fire({ added: [session], removed: undefined, changed: undefined });
+    this.netrcDisposable = netrcWatcher.onDidChange(this.onNetrcChanged);
+    return true;
+  }
+
+  /**
+   * Change handler for the netrc file.
+   * This function maintains sync with the netrc
+   * state which is used by the Heroku CLI for auth.
+   */
+  private onNetrcChanged = (): void => {
+    if (this.netrcChangedDebounce) {
+      clearTimeout(this.netrcChangedDebounce);
+    }
+    this.netrcChangedDebounce = setTimeout(() => void this.updateSessionState(), 2000);
+  };
+
+  /**
+   * Updates the session state based on the current
+   * state of the Heroku CLI.
+   */
+  private async updateSessionState(): Promise<void> {
+    const accessToken = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
+    if (!accessToken) {
+      const sessionJson = await this.context.secrets.get(AuthenticationProvider.SESSION_KEY);
+      if (sessionJson) {
+        await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
+        const session = JSON.parse(sessionJson) as vscode.AuthenticationSession;
+        await vscode.commands.executeCommand('setContext', 'heroku:login:required', true);
+        logExtensionEvent(`${session.account.label} signed out of Heroku externally`);
+        this.fire({ added: undefined, removed: [session], changed: undefined });
       }
-    });
-    this.context.subscriptions.push(disposable);
+    } else {
+      const { account } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
+      const session = createSessionObject(account.email, accessToken, []);
+      await this.context.secrets.store(AuthenticationProvider.SESSION_KEY, JSON.stringify(session));
+      await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);
+      logExtensionEvent(`Externally logged in to Heroku as ${account.email}`);
+      this.fire({ added: [session], removed: undefined, changed: undefined });
+    }
   }
 }

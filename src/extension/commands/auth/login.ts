@@ -5,6 +5,8 @@ import vscode from 'vscode';
 import { herokuCommand } from '../../meta/command';
 import { HerokuCommand, HerokuCommandCompletionInfo } from '../heroku-command';
 import { logExtensionEvent } from '../../utils/logger';
+import { canEncrypt, findPasswordLineNumber, getNetRcContents, getNetrcFileLocation } from '../../utils/netrc-locator';
+import { WhoAmI, WhoAmIResult } from './whoami';
 
 export type AuthCompletionInfo = HerokuCommandCompletionInfo & {
   authType: 'browser' | 'terminal';
@@ -52,7 +54,44 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
     // browser since we're probably going to get an
     // "IP Mismatch" error.
     if (this.isRunningInContainer()) {
-      return this.runInTerminal();
+      const token = await vscode.window.showInputBox({
+        title: 'Heroku API Key',
+        prompt: 'Enter your Heroku API key',
+        placeHolder: 'HRKU...',
+        password: true,
+        ignoreFocusOut: true,
+        validateInput(value): string | undefined {
+          if (!value) {
+            return 'API key is required';
+          }
+
+          return undefined;
+        }
+      });
+
+      if (token) {
+        const { account } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID, false, token);
+        if (account) {
+          try {
+            await this.writeNetRc(token, account.email);
+            return {
+              authType: 'terminal',
+              errorMessage: '',
+              exitCode: 0,
+              output: `Logged in as ${account.email}`
+            };
+          } catch (error) {
+            const { message } = error as Error;
+            logExtensionEvent(`Error writing to netrc file: ${message}`);
+          }
+        }
+      }
+      return {
+        authType: 'terminal',
+        errorMessage: 'Auth failed',
+        exitCode: 1,
+        output: ''
+      };
     }
 
     using cliAuthProcess = HerokuCommand.exec('heroku auth:login', { signal: this.signal, timeout: 120 * 1000 });
@@ -74,11 +113,52 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
   }
 
   /**
+   * Writes the token to the netrc file. This is required
+   * by the Heroku CLI when run in an external terminal.
+   *
+   * @param token the auth token to write to the netrc file
+   * @param user the user this token belongs to
+   */
+  protected async writeNetRc(token: string, user: string): Promise<void> {
+    const herokuMachine = `machine api.heroku.com\n  login ${user}\n  password ${token}\n`;
+
+    let netrcContents = '';
+    try {
+      netrcContents = (await getNetRcContents()) ?? '';
+      const lines = netrcContents.split('\n');
+      const pwLine = findPasswordLineNumber(lines);
+
+      if (pwLine === -1) {
+        netrcContents += herokuMachine;
+      } else {
+        lines[pwLine] = `  password ${token}`;
+        netrcContents = `${lines.join('\n')}`;
+      }
+    } catch {
+      netrcContents = herokuMachine;
+    }
+
+    const netrcFile = await getNetrcFileLocation();
+    const hasGpg = await canEncrypt();
+    if (netrcFile.endsWith('.gpg') || hasGpg) {
+      logExtensionEvent('Writing to encrypted netrc file');
+      const ext = netrcFile.endsWith('.gpg') ? '' : '.gpg';
+      const gpgProcess = HerokuCommand.exec(
+        `echo "${netrcContents}" | gpg -a --batch --default-recipient-self -e -o ${netrcFile}${ext}`
+      );
+      await HerokuCommand.waitForCompletion(gpgProcess);
+    } else {
+      logExtensionEvent('Writing to netrc file');
+      await vscode.workspace.fs.writeFile(vscode.Uri.parse(netrcFile), Buffer.from(netrcContents));
+    }
+  }
+
+  /**
    *
    *
    * @returns the result from running auth in a terminal
    */
-  private async runInTerminal(): Promise<AuthCompletionInfo> {
+  protected async runInTerminal(): Promise<AuthCompletionInfo> {
     const stdoutFileLoc = vscode.Uri.file(`${os.tmpdir()}/${Date.now()}-auth-result.log`);
     const successWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(stdoutFileLoc, '*'));
     await vscode.workspace.fs.writeFile(stdoutFileLoc, new Uint8Array());
