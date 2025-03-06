@@ -103,4 +103,30 @@ suite('The TokenCommand', () => {
     const result = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
     assert.equal(result, null);
   });
+
+  test('handles GPG non-zero exit codes', async () => {
+    execStub.callsFake(() => {
+      const cp = new (class extends EventEmitter {
+        public stdout = new EventEmitter();
+        public [Symbol.dispose]() {}
+      })() as childProcess.ChildProcess;
+      setTimeout(() => cp.emit('exit', 1), 50);
+      return cp;
+    });
+
+    const result = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
+    assert.equal(result, null);
+  });
+
+  test('handles non-encrypted alternate whitespace formats', async () => {
+    netrcContent = `
+    machine api.heroku.com
+  login tester@heroku.com
+  password abc-123
+machine git.heroku.com
+  login tester@heroku.com
+  password abc-123`;
+    const result = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
+    assert.equal(result, 'abc-123');
+  });
 });

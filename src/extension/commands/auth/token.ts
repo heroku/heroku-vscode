@@ -37,16 +37,27 @@ export class TokenCommand extends HerokuCommand<string | null> {
       netrcContents = netRcBuffer.toString();
     }
 
-    const machines = netrcContents.split(/(?:\n(?! ))/);
-    const machine = machines.find((m) => m.startsWith('machine api.heroku.com'));
-    if (!machine) {
-      return null;
-    }
-    const password = machine.split(/(?:\n)/).find((f) => f.trim().startsWith('password'));
-    if (!password) {
+    // Split into lines and normalize whitespace
+    const lines = netrcContents.split('\n').map((line) => line.trim());
+
+    // Find the index of the Heroku API machine entry
+    const machineIndex = lines.findIndex((line) => line === 'machine api.heroku.com');
+
+    if (machineIndex === -1) {
       return null;
     }
 
-    return password.replace('password', '').trim();
+    // Look for password in subsequent lines until we hit another machine or end
+    for (let i = machineIndex + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('machine')) {
+        break;
+      }
+      if (line.startsWith('password')) {
+        return line.replace('password', '').trim();
+      }
+    }
+
+    return null;
   }
 }

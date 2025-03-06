@@ -129,7 +129,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
       signal: this.signal,
       windowsHide: true,
       env: { ...process.env, FORCE_COLOR: '3' },
-      cwd: vscode.workspace.workspaceFolders?.[0].uri.path
+      cwd: this.getWorkingDirectory()
     });
 
     // We want to distinguish between user input
