@@ -10,6 +10,7 @@ import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
 import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 import { getHerokuAppNames, getRootRepository } from '../../utils/git-utils';
 import { logExtensionEvent } from '../../utils/logger';
+import { generateRequestInit } from '../../utils/generate-service-request-init';
 import {
   LogStreamClient,
   LogStreamEvents,
@@ -67,7 +68,6 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected apps: Map<App['name'], App> = new Map();
   protected appToResourceMap = new WeakMap<App, AppResources>();
 
-  protected requestInit = { headers: {} };
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
   protected childParentMap = new WeakMap<T, T>();
 
@@ -315,7 +315,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (!dyno) {
       void (async (): Promise<void> => {
         try {
-          dyno = await this.dynoService.info(app.id, dynoName, this.requestInit);
+          dyno = await this.dynoService.info(app.id, dynoName, await generateRequestInit());
         } catch {
           // Dynos that are newly provisioning are 404
           // for a little while on some formations...not sure why.
@@ -370,7 +370,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         // Does this dyno need to be removed?
         void (async (): Promise<void> => {
           try {
-            await this.dynoService.info(app.id, dynoName, this.requestInit);
+            await this.dynoService.info(app.id, dynoName, await generateRequestInit());
           } catch {
             // not found - remove it
             const idx = dynos.findIndex((d) => d.name === dynoName);
@@ -458,7 +458,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (cachedFormations?.length) {
       return cachedFormations;
     }
-    const formations = await this.formationService.list(app.id, this.requestInit);
+    const formations = await this.formationService.list(app.id, await generateRequestInit());
     formations.forEach((formation) => {
       this.elementTypeMap.set(formation as T, 'Formation');
       this.childParentMap.set(formation as T, parent);
@@ -483,7 +483,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       return cachedDynos;
     }
 
-    const dynos = await this.dynoService.list(app.id, this.requestInit);
+    const dynos = await this.dynoService.list(app.id, await generateRequestInit());
     if (!dynos.length) {
       const empty = {
         type: 'empty'
@@ -589,14 +589,14 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       }
       return;
     }
-    Reflect.set(this.requestInit.headers, 'Authorization', `Bearer ${session.accessToken}`);
 
     const { added, removed } = appDiffs;
     if (added.size) {
       let appsNotFound = [];
       const addedArray = Array.from(added).filter((appName) => !this.apps.has(appName));
+      const requestInit = await generateRequestInit(undefined, session.accessToken);
       const appResults = await Promise.allSettled(
-        addedArray.map((appName) => this.appService.info(appName, this.requestInit))
+        addedArray.map((appName) => this.appService.info(appName, requestInit))
       );
       for (let i = 0; i < appResults.length; i++) {
         const result = appResults[i];

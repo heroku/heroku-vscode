@@ -59,6 +59,5 @@ export class WelcomeViewSignIn extends HerokuCommand<boolean> {
         return false;
       }
     );
-    logExtensionEvent('Authenticating with Heroku...');
   }
 }

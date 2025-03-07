@@ -9,11 +9,13 @@ import { AuthCompletionInfo, LoginCommand } from './login';
 import { HerokuCommand } from '../heroku-command';
 import { setup, teardown } from 'mocha';
 import { EventEmitter } from 'node:stream';
-import { writeFile } from 'node:fs';
+import { WhoAmI } from './whoami';
 
 suite('The LoginCommand', () => {
   let execStub: sinon.SinonStub;
   let createTerminalStub: sinon.SinonStub;
+  let showInputBoxStub: sinon.SinonStub;
+  let vsCodeExecCommandStub: sinon.SinonStub;
   let mockTerminal: { show: sinon.SinonStub; sendText: sinon.SinonStub; dispose: sinon.SinonStub };
   const logFile = vscode.Uri.parse('auth-result.log');
 
@@ -58,6 +60,14 @@ suite('The LoginCommand', () => {
     createTerminalStub = sinon
       .stub(vscode.window, 'createTerminal')
       .returns(mockTerminal as unknown as vscode.Terminal);
+
+    showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').callsFake(async () => 'HKRU-123-abc');
+
+    vsCodeExecCommandStub = sinon.stub(vscode.commands, 'executeCommand');
+    vsCodeExecCommandStub
+      .withArgs(WhoAmI.COMMAND_ID, false, 'HKRU-123-abc')
+      .resolves({ account: { email: 'tester123@heroku.com' } });
+    vsCodeExecCommandStub.callThrough();
   });
 
   teardown(() => {
@@ -75,7 +85,7 @@ suite('The LoginCommand', () => {
     assert.equal(result?.exitCode, 0, 'The LoginCommand did not complete successfully.');
   });
 
-  test('Delegates auth to the terminal in interactive mode when the extension is running in a container', async () => {
+  test('Delegates auth to a manual API key input when the extension is running in a container', async () => {
     // Mock the environment to simulate running in a container
     const originalEnv = process.env;
     process.env.REMOTE_CONTAINERS = 'true';
@@ -84,14 +94,7 @@ suite('The LoginCommand', () => {
       const result = await vscode.commands.executeCommand<AuthCompletionInfo>(LoginCommand.COMMAND_ID);
 
       // Verify the terminal was created and used correctly
-      assert.ok(createTerminalStub.calledOnce, 'Terminal should be created');
-
-      // Verify the correct command was sent to the terminal
-      assert.ok(mockTerminal.show.calledOnce, 'Terminal should be shown');
-      assert.ok(
-        mockTerminal.sendText.calledWith(`heroku auth:login --interactive 2>&1 | tee ${logFile.fsPath}`, true),
-        'Correct auth command should be sent to terminal'
-      );
+      assert.ok(showInputBoxStub.calledOnce, 'API key input should be shown');
 
       // Verify the returned result
       assert.deepStrictEqual(

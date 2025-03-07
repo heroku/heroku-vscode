@@ -10,7 +10,7 @@ import * as netrcLocator from '../../utils/netrc-locator';
 suite('The TokenCommand', () => {
   let execStub: sinon.SinonStub;
   let netRcLocatorStub: sinon.SinonStub;
-  let netrcContent = '';
+  let netrcContent = 'machine api.heroku.com\n  login user@example.com\n  password def-456\n';
   setup(() => {
     // Stub file system operations
     sinon.stub(vscode.workspace, 'fs').value({
@@ -23,6 +23,16 @@ suite('The TokenCommand', () => {
 
     // Stub child process for GPG
     execStub = sinon.stub(HerokuCommand, 'exec');
+    execStub.callsFake(() => {
+      const cp = new (class extends EventEmitter {
+        public stdout = new EventEmitter();
+        public [Symbol.dispose]() {}
+      })() as childProcess.ChildProcess;
+
+      setTimeout(() => cp.stdout?.emit('data', netrcContent));
+      setTimeout(() => cp.emit('exit', 0), 50);
+      return cp;
+    });
   });
 
   teardown(() => {
@@ -36,26 +46,13 @@ suite('The TokenCommand', () => {
   });
 
   test('successfully reads token from unencrypted .netrc', async () => {
-    netrcContent = 'machine api.heroku.com\n  login user@example.com\n  password abc-123\nmachine api.github.com';
     const result = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
-    assert.equal(result, 'abc-123');
+    assert.equal(result, 'def-456');
   });
 
   test('successfully reads token from encrypted .netrc.gpg', async () => {
     // Simulate GPG decryption
     netRcLocatorStub.resolves('netrc-file.gpg');
-    execStub.callsFake(() => {
-      const cp = new (class extends EventEmitter {
-        public stdout = new EventEmitter();
-        public [Symbol.dispose]() {}
-      })() as childProcess.ChildProcess;
-
-      setTimeout(() =>
-        cp.stdout?.emit('data', 'machine api.heroku.com\n  login user@example.com\n  password def-456\n')
-      );
-      setTimeout(() => cp.emit('exit', 0), 50);
-      return cp;
-    });
 
     const result = await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
     assert.equal(result, 'def-456');
@@ -63,6 +60,7 @@ suite('The TokenCommand', () => {
 
   test('returns null when no .netrc or .netrc.gpg found', async () => {
     netRcLocatorStub.resolves(null);
+    netrcContent = '';
     execStub.callsFake(() => {
       const cp = new (class extends EventEmitter {
         public stdout = new EventEmitter();

@@ -117,7 +117,11 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
   protected async executeCommand(fullyHydratedCommand: string, useTerminal?: boolean): Promise<void> {
     // fire-and-forget - no way to get output but it's a "real" terminal
     if (useTerminal) {
-      const terminal = vscode.window.createTerminal(this.commandName, vscode.env.shell, []);
+      const terminal = vscode.window.createTerminal({
+        name: this.commandName,
+        shellPath: vscode.env.shell,
+        shellArgs: []
+      });
       terminal.show();
       terminal.sendText(fullyHydratedCommand, true);
       return;
