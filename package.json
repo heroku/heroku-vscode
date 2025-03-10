@@ -4245,7 +4245,7 @@
   },
   "dependencies": {
     "@heroku-cli/schema": "file:heroku-cli-schema-1.0.25.tgz",
-    "@microsoft/fast-element": "^1.14.0",
+    "@microsoft/fast-element": "^2.1.0",
     "@vscode/codicons": "^0.0.36",
     "@vscode/l10n": "0.0.x",
     "@vscode/webview-ui-toolkit": "^1.4.0",
