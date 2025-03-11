@@ -14,16 +14,20 @@ export type HerokuCommandCompletionInfo = { exitCode: number | string; errorMess
  */
 export abstract class HerokuCommand<T> extends AbortController implements Disposable, RunnableCommand<T> {
   public static exec: typeof exec = exec;
+
+  protected readonly context: vscode.ExtensionContext | undefined;
   protected readonly outputChannel: vscode.OutputChannel | undefined;
 
   /**
    * Constructs a new HerokuCommand
    *
    * @param outputChannel The optional output channel. This can be used to pipe the Heroku CLI stdout or sdterr messages.
+   * @param context The extension context.
    */
-  public constructor(outputChannel?: vscode.OutputChannel) {
+  public constructor(outputChannel?: vscode.OutputChannel, context?: vscode.ExtensionContext) {
     super();
     this.outputChannel = outputChannel;
+    this.context = context;
   }
 
   /**

@@ -23,6 +23,7 @@ import './commands/github/show-starter-repositories-view';
 import './commands/add-on/show-addons-view';
 import { ShowDeployAppEditor } from './commands/app/show-deploy-app-editor';
 import { ValidateHerokuCLICommand } from './commands/heroku-cli/validate-heroku-cli';
+import { setExtensionContext } from './meta/command';
 
 const authProviderId = 'heroku:auth:login';
 const workspacesWithHerokuFiles: vscode.Uri[] = [];
@@ -32,6 +33,7 @@ const workspacesWithHerokuFiles: vscode.Uri[] = [];
  * @param context The extension context provided by VSCode
  */
 export function activate(context: vscode.ExtensionContext): void {
+  setExtensionContext(context);
   void context.secrets.delete(AuthenticationProvider.SESSION_KEY);
   const { authentication, languages, commands, window } = vscode;
   const selector: DocumentSelector = { scheme: 'file', language: 'shellscript' };

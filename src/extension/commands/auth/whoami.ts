@@ -3,6 +3,7 @@ import type { Account } from '@heroku-cli/schema';
 import vscode from 'vscode';
 import { herokuCommand } from '../../meta/command';
 import { HerokuCommand } from '../heroku-command';
+import { generateRequestInit } from '../../utils/generate-service-request-init';
 import { TokenCommand } from './token';
 
 export type WhoAmIResult = { account: Account; token: string };
@@ -23,14 +24,18 @@ export class WhoAmI<T extends WhoAmIResult = WhoAmIResult> extends HerokuCommand
    * signed in.
    *
    * @param omitToken Omits the bearer token from the results.
+   * @param tokenOverride Overrides the bearer token to use for the request.
    * @returns The identity of the current user or null if no user is signed in.
    */
-  public async run(omitToken = false): Promise<T> {
-    const token = omitToken ? undefined : await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID);
+  public async run(omitToken = false, tokenOverride = undefined): Promise<T> {
+    const token = omitToken
+      ? undefined
+      : (tokenOverride ?? (await vscode.commands.executeCommand<string>(TokenCommand.COMMAND_ID)));
     if (!token) {
       return { token: '', account: WhoAmI.account ?? {} } as T;
     }
-    const requestInit = { signal: this.signal, headers: { Authorization: `Bearer ${token}` } };
+
+    const requestInit = await generateRequestInit(this.signal, token);
     const account = (WhoAmI.account ??= await this.accountService.info(requestInit));
     return { token, account } as T;
   }
