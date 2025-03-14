@@ -4,6 +4,7 @@ import { exec } from 'node:child_process';
 import fs from 'node:fs';
 import vscode from 'vscode';
 import { RunnableCommand } from '../meta/command';
+import { generateRequestInit } from '../utils/generate-service-request-init';
 
 export type HerokuCommandCompletionInfo = { exitCode: number | string; errorMessage: string; output: string };
 
@@ -130,6 +131,18 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
       return process.cwd(); // Fallback if workspace path is inaccessible
     }
   };
+
+  /**
+   * Gets the CLI environment variables for the current session.
+   *
+   * @returns Promise<Record<string, string>>
+   */
+  protected async getCLIHeaders(): Promise<string> {
+    const { headers = {} } = await generateRequestInit();
+
+    Reflect.deleteProperty(headers, 'User-Agent');
+    return JSON.stringify(headers);
+  }
 
   public abstract run(...args: unknown[]): T | PromiseLike<T>;
 }
