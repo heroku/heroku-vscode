@@ -18,8 +18,10 @@ export class ValidateHerokuCLICommand extends HerokuCommand<boolean> {
   public async run(): Promise<boolean> {
     let isInstalled = true;
     try {
-      using process = HerokuCommand.exec('heroku --version');
-      const result = await HerokuCommand.waitForCompletion(process);
+      using versionProc = HerokuCommand.exec('heroku --version', {
+        env: { ...process.env, HEROKU_HEADERS: await this.getCLIHeaders() }
+      });
+      const result = await HerokuCommand.waitForCompletion(versionProc);
       isInstalled = result.exitCode === 0;
     } catch (e) {
       isInstalled = false;

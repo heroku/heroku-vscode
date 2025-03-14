@@ -41,6 +41,7 @@ export class AuthenticationProvider
       const sessionJson = await this.context.secrets.get(AuthenticationProvider.SESSION_KEY);
       let accessToken: string | undefined;
       let whoami: string | Error | undefined;
+      let userId: string | undefined;
 
       if (sessionJson) {
         const session = JSON.parse(sessionJson) as vscode.AuthenticationSession;
@@ -52,6 +53,7 @@ export class AuthenticationProvider
           const { account, token: gpgToken } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
           whoami = account.email;
           accessToken = gpgToken;
+          userId = account.id;
         } catch (error) {
           const { message } = error as Error;
           logExtensionEvent(`Failed to get session: ${message}`);
@@ -64,7 +66,12 @@ export class AuthenticationProvider
         logExtensionEvent('No session found');
         return [];
       }
-      const session: vscode.AuthenticationSession = createSessionObject(whoami as string, accessToken, scopes ?? []);
+      const session: vscode.AuthenticationSession = createSessionObject(
+        whoami as string,
+        accessToken,
+        scopes ?? [],
+        userId as string
+      );
       await this.context.secrets.store(AuthenticationProvider.SESSION_KEY, JSON.stringify(session));
       await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);
       return [session];
@@ -93,7 +100,7 @@ export class AuthenticationProvider
     let session: vscode.AuthenticationSession | undefined;
     try {
       const { account, token: accessToken } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
-      session = createSessionObject(account.email, accessToken, scopes);
+      session = createSessionObject(account.email, accessToken, scopes, account.id);
     } catch (error) {
       const { message } = error as Error;
       await this.context.secrets.delete(AuthenticationProvider.SESSION_KEY);
@@ -199,7 +206,7 @@ export class AuthenticationProvider
       }
     } else {
       const { account } = await vscode.commands.executeCommand<WhoAmIResult>(WhoAmI.COMMAND_ID);
-      const session = createSessionObject(account.email, accessToken, []);
+      const session = createSessionObject(account.email, accessToken, [], account.id);
       await this.context.secrets.store(AuthenticationProvider.SESSION_KEY, JSON.stringify(session));
       await vscode.commands.executeCommand('setContext', 'heroku:login:required', false);
       logExtensionEvent(`Externally logged in to Heroku as ${account.email}`);

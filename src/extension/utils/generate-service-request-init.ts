@@ -1,6 +1,6 @@
 import vscode, { type AuthenticationSession } from 'vscode';
 
-const extension = vscode.extensions.getExtension('heroku.heroku') ?? { packageJSON: {} };
+const extension = vscode.extensions.getExtension('Heroku-Dev-Tools.heroku') ?? { packageJSON: {} };
 const version = (Reflect.get(extension.packageJSON, 'version') as string) ?? '';
 
 /**
@@ -12,15 +12,26 @@ const version = (Reflect.get(extension.packageJSON, 'version') as string) ?? '';
  */
 export async function generateRequestInit(signal?: AbortSignal, token?: string): Promise<RequestInit> {
   let accessToken = token;
+  let id = '';
   if (!accessToken) {
-    ({ accessToken } = (await vscode.authentication.getSession('heroku:auth:login', [])) as AuthenticationSession);
+    ({ accessToken = '', id = '' } = ((await vscode.authentication.getSession('heroku:auth:login', [])) ??
+      {}) as AuthenticationSession);
   }
+  const headers = {
+    Referer: `vscode-heroku-extension/${version}`,
+    'User-Agent': `VSCode-Heroku-Extension/${version} (${process.platform}; ${process.arch}) VSCode/${vscode.version}`
+  };
+
+  if (accessToken) {
+    Reflect.set(headers, 'Authorization', `Bearer ${accessToken.trim()}`);
+  }
+
+  if (id) {
+    Reflect.set(headers, 'X-Account-Id', id);
+  }
+
   return {
     signal,
-    headers: {
-      Authorization: `Bearer ${accessToken.trim()}`,
-      Referer: `vscode-heroku-extension/${version}`,
-      'User-Agent': `VSCode-Heroku-Extension/${version} (${process.platform}; ${process.arch}) VSCode/${vscode.version}`
-    }
+    headers
   };
 }

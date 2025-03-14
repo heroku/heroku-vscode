@@ -132,7 +132,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     const herokuProcess = HerokuCommand.exec(fullyHydratedCommand, {
       signal: this.signal,
       windowsHide: true,
-      env: { ...process.env, FORCE_COLOR: '3' },
+      env: { ...process.env, FORCE_COLOR: '3', HEROKU_HEADERS: await this.getCLIHeaders() },
       cwd: this.getWorkingDirectory()
     });
 
