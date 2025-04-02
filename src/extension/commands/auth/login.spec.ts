@@ -17,7 +17,7 @@ suite('The LoginCommand', () => {
   let showInputBoxStub: sinon.SinonStub;
   let vsCodeExecCommandStub: sinon.SinonStub;
   let mockTerminal: { show: sinon.SinonStub; sendText: sinon.SinonStub; dispose: sinon.SinonStub };
-  const logFile = vscode.Uri.parse('auth-result.log');
+  const logFile = vscode.Uri.file('auth-result.log');
 
   setup(() => {
     execStub = sinon.stub(HerokuCommand, 'exec').callsFake(() => {

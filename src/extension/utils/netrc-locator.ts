@@ -68,7 +68,9 @@ export async function getNetRcContents(): Promise<string | null> {
     }
     netrcContents = output;
   } else {
-    const netRcBuffer = await vscode.workspace.fs.readFile(vscode.Uri.parse(file));
+    // Convert the file path to a proper URI format that works on all platforms
+    const fileUri = vscode.Uri.file(file);
+    const netRcBuffer = await vscode.workspace.fs.readFile(fileUri);
     netrcContents = netRcBuffer.toString();
   }
   return netrcContents;

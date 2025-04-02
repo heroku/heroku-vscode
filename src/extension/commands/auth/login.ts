@@ -149,7 +149,7 @@ export class LoginCommand extends HerokuCommand<AuthCompletionInfo> {
       await HerokuCommand.waitForCompletion(gpgProcess);
     } else {
       logExtensionEvent('Writing to netrc file');
-      await vscode.workspace.fs.writeFile(vscode.Uri.parse(netrcFile), Buffer.from(netrcContents));
+      await vscode.workspace.fs.writeFile(vscode.Uri.file(netrcFile), Buffer.from(netrcContents));
     }
   }
 
