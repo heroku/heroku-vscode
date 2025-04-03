@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
-import sinon from 'sinon';
+import sinon, { spy } from 'sinon';
 import { EventEmitter } from 'events';
-import { LogStreamClient, LogStreamEvents } from './log-stream-client';
+import { LogStreamClient, LogStreamEvents, StateChangedInfo } from './log-stream-client';
 import * as vscode from 'vscode';
 import { App, Dyno, Formation } from '@heroku-cli/schema';
 import { type LogSessionStream, StartLogSession } from '../../commands/app/context-menu/start-log-session';
@@ -202,21 +202,24 @@ suite('LogStreamClient', () => {
     });
 
     test('should handle partial lines', async () => {
-      const spy = sinon.spy();
-      logStreamClient.on(LogStreamEvents.STATE_CHANGED, spy);
+      let state: StateChangedInfo = {} as StateChangedInfo;
+      logStreamClient.on(LogStreamEvents.STATE_CHANGED, (newState) => {
+        state = newState;
+      });
 
       logStreamClient.apps = [mockApp];
       await writeToStream('app[web.1]: State changed ');
       await writeToStream('from starting to up\n');
 
-      assert.ok(
-        spy.calledOnceWith({
-          app: mockApp,
-          type: 'app',
+      const { dynoName, from, to, type } = state;
+      assert.deepEqual(
+        { dynoName, from, to, type },
+        {
           dynoName: 'web.1',
           from: 'starting',
-          to: 'up'
-        })
+          to: 'up',
+          type: 'app'
+        }
       );
     });
   });
