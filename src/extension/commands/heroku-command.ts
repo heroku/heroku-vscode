@@ -139,8 +139,8 @@ export abstract class HerokuCommand<T> extends AbortController implements Dispos
    */
   protected async getCLIHeaders(): Promise<string> {
     const { headers = {} } = await generateRequestInit();
-    const userAgent = Reflect.get(headers, 'User-Agent') as string;
-    userAgent.replace('vscode-heroku-extension', 'heroku-cli::vscode-heroku-extension');
+    let userAgent = Reflect.get(headers, 'User-Agent') as string;
+    userAgent = `heroku-cli::${userAgent}`;
 
     Reflect.set(headers, 'User-Agent', userAgent);
     return JSON.stringify(headers);
