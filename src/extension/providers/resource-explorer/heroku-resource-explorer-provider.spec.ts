@@ -62,7 +62,7 @@ suite('HerokuResourceExplorerProvider', () => {
       stat: sinon.stub(),
       readFile: sinon.stub().throws(new Error('File not found')),
       delete: sinon.stub().throws(new Error('File not found')),
-      writeFile: sinon.stub()
+      writeFile: sinon.stub().resolves()
     };
 
     // LogStream stub
@@ -151,6 +151,7 @@ suite('HerokuResourceExplorerProvider', () => {
   });
 
   test('getChildren should return apps when no element is provided', async () => {
+    mockWorkspaceFs.writeFile.rejects(new Error("EROFS: read-only file system, mkdir '/test'"));
     await provider.getChildren(); // <-- first call initializes the git config watcher
     await new Promise((resolve) => provider.event(resolve));
     const children = await provider.getChildren();
