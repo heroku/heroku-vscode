@@ -5,7 +5,7 @@
   "description": "The official Heroku extension for VSCode",
   "repository": "https://github.com/heroku/heroku-vscode",
   "license": "Apache-2.0",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "engines": {
     "vscode": ">=1.93.1",
     "node": ">=22.0.0"
