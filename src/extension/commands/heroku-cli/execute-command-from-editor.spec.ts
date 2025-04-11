@@ -34,9 +34,15 @@ suite('ExecuteCommandFromEditor', () => {
     sb.replace(HerokuCommand, 'exec', ((cmd: string) => {
       commands.push(cmd);
       using cp = new (class extends EventEmitter {
-        public stderr = new Readable();
-        public stdout = new Readable();
-        public stdin = new Writable();
+        public stderr = new Readable({
+          read() {}
+        });
+        public stdout = new Readable({
+          read() {}
+        });
+        public stdin = new Writable({
+          write() {}
+        });
         public [Symbol.dispose]() {}
       })() as childProcess.ChildProcess;
 

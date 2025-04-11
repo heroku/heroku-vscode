@@ -65,7 +65,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   protected appService = new AppService(fetch, 'https://api.heroku.com');
   protected formationService = new FormationService(fetch, 'https://api.heroku.com');
 
-  protected apps: Map<App['name'], App> = new Map();
+  protected apps: Map<App['name'], LogSessionCapableApp> = new Map();
   protected appToResourceMap = new WeakMap<App, AppResources>();
 
   protected elementTypeMap = new WeakMap<T, 'App' | 'Dyno' | 'AddOn' | 'Formation'>();
@@ -564,8 +564,19 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
 
     await this.syncApps({ added: apps, removed: new Set() });
 
-    const state = JSON.stringify(Array.from(this.apps.entries()));
-    await vscode.workspace.fs.writeFile(this.persistentStateLocation, Buffer.from(state));
+    try {
+      const state = JSON.stringify(
+        Array.from(this.apps.entries()).map(([key, app]) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { logSession, ...appWithoutLogSession } = app;
+          return [key, appWithoutLogSession];
+        })
+      );
+      await vscode.workspace.fs.writeFile(this.persistentStateLocation, Buffer.from(state));
+    } catch (error) {
+      // Ignore file system errors - state persistence is optional
+      logExtensionEvent(`Failed to persist state: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**

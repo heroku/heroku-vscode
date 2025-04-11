@@ -25,6 +25,7 @@ suite('The LoginCommand', () => {
         public stderr = new EventEmitter();
         public stdout = new EventEmitter();
         public [Symbol.dispose]() {}
+        public kill() {}
       })() as childProcess.ChildProcess;
 
       setTimeout(() => cp.stderr?.emit('data', 'Press any key to open up the browser to login or q to exit:'), 50);
