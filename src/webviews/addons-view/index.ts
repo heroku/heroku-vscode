@@ -297,9 +297,9 @@ export class HerokuAddOnsMarketplace extends FASTElement {
     for (const plan of plans) {
       const perMonthMax = currencyFormatter.format(plan.price.cents / 100);
       const perHourCost = currencyFormatter.format(plan.price.cents / 100 / (24 * 30));
-
+      const priceText = plan.price.metered ? 'Metered' : `${perHourCost} / hour (Max ${perMonthMax}/month)`;
       const option = document.createElement('vscode-option') as Option;
-      option.textContent = `${plan.human_name} - ${perHourCost} / hour (Max ${perMonthMax}/month)`;
+      option.textContent = `${plan.human_name} - ${priceText}`;
       option.value = plan.id;
       if (installedAddon?.plan.id === plan.id) {
         selectedPlan = plan.id;
