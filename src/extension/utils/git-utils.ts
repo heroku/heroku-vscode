@@ -15,18 +15,30 @@ export async function getHerokuAppNames(): Promise<string[]> {
   if (!remotes) {
     return [];
   }
-  const herokuRemotes = remotes.filter(
-    (remote) => remote.name.includes('heroku') && !!remote.pushUrl?.includes('heroku')
-  );
 
   const appNames = new Set<string>();
-  for (const herokuRemote of herokuRemotes ?? []) {
-    const { pushUrl } = herokuRemote;
-    if (!URL.canParse(pushUrl!)) {
+  for (const remote of remotes) {
+    const url = remote.pushUrl ?? remote.fetchUrl;
+    if (!url) continue;
+
+    // Match SSH: git@heroku.com:<app-name>.git
+    const sshMatch = url.match(/^git@heroku\.com:([^/]+)\.git$/);
+    if (sshMatch) {
+      appNames.add(sshMatch[1]);
       continue;
     }
-    const { pathname } = new URL(pushUrl!);
-    appNames.add(pathname.replaceAll(/(\/|.git)/g, ''));
+
+    // Match HTTPS: https://git.heroku.com/<app-name>.git
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === 'git.heroku.com' && parsed.pathname.match(/^\/[A-Za-z0-9-_.]+\.git$/)) {
+        const appName = parsed.pathname.replace(/^\//, '').replace(/\.git$/, '');
+        appNames.add(appName);
+      }
+    } catch {
+      // Not a valid URL, skip
+      continue;
+    }
   }
   return Array.from(appNames.values());
 }

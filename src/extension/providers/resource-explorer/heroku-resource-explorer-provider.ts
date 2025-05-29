@@ -94,6 +94,7 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     this.persistentStateLocation = Uri.joinPath(context.globalStorageUri, 'heroku-apps.json');
     context.subscriptions.push(
       vscode.authentication.onDidChangeSessions(this.reSyncAllApps),
+      vscode.workspace.onDidChangeWorkspaceFolders(this.reSyncAllApps),
       vscode.commands.registerCommand('heroku:sync-with-dashboard', this.reSyncAllApps)
     );
   }
