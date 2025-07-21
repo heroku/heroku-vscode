@@ -1,5 +1,5 @@
 {
-  "productTag": "a1aEE0000018vgTYAQ",
+  "productTag": "a1aEE000000dvRRYAY",
   "defaultBuild": "1",
   "issueTypeLabels": {
     "feature": "USER STORY",
@@ -20,5 +20,6 @@
     "open": "New"
   },
   "includedLabels": ["feature", "bug", "question", "enhancement", "documentation"],
-  "hideWorkItemUrl": "true"
+  "hideWorkItemUrl": "true",
+  "statusWhenClosed": "CLOSED"
 }
