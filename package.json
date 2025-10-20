@@ -4250,7 +4250,7 @@
     "@vscode/l10n": "0.0.x",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "jsonschema": "^1.4.1",
-    "marked": "^15.0.2",
+    "marked": "^16.4.1",
     "mvdan-sh": "^0.10.1",
     "resolve.exports": "^2.0.2",
     "tar-stream": "^3.1.7",
