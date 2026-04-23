@@ -89,15 +89,15 @@
   },
   {
     "id": "4aa75dc8-5a4b-4860-a456-cc3ed0049386",
-    "deploy_url": "https://www.heroku.com/deploy?template=https://github.com/heroku/node-js-getting-started/tree/main",
-    "public_description": "A barebones Node.js app using Express 4",
+    "deploy_url": "https://www.heroku.com/deploy?template=https://github.com/heroku/nodejs-getting-started/tree/main",
+    "public_description": "A barebones Node.js app using Express",
     "public_name": "Start on Heroku: Node.js",
-    "public_repository": "https://github.com/heroku/node-js-getting-started",
+    "public_repository": "https://github.com/heroku/nodejs-getting-started",
     "public_user_avatar_url": "https://avatars.githubusercontent.com/u/23211?v=3",
     "public_username": "heroku",
-    "public_logo": "https://cdn.rawgit.com/heroku/node-js-getting-started/main/public/node.svg",
+    "public_logo": "https://cdn.rawgit.com/heroku/nodejs-getting-started/main/public/node.svg",
     "recent_deploys": 263,
-    "repo_name": "node-js-getting-started",
+    "repo_name": "nodejs-getting-started",
     "logo": {
       "icon_url": "https://s3.amazonaws.com/assets.heroku.com/addons.heroku.com/uploaded_logos/2550/icon.png?1476395955",
       "icon_retina_url": "https://s3.amazonaws.com/assets.heroku.com/addons.heroku.com/uploaded_logos/2550/icon_retina.png?1476395955"
