@@ -4255,5 +4255,10 @@
     "resolve.exports": "^2.0.2",
     "tar-stream": "^3.1.7",
     "tslib": "2.8.1"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree@6.21.0": {
+      "minimatch": "^9.0.7"
+    }
   }
 }
