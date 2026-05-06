@@ -4255,5 +4255,8 @@
     "resolve.exports": "^2.0.2",
     "tar-stream": "^3.1.7",
     "tslib": "2.8.1"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.5"
   }
 }
