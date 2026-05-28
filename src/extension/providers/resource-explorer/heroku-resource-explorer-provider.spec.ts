@@ -107,8 +107,23 @@ suite('HerokuResourceExplorerProvider', () => {
     sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
     sinon.stub(vscode.commands, 'registerCommand');
 
+    // The provider now reaches the SDK through createHerokuSDK; bypass
+    // the real ESM dynamic-import path and have it call our fetch stub
+    // directly so existing URL-based fixtures keep working.
     const HerokuResourceExplorerProviderCtor = proxyquire('./heroku-resource-explorer-provider', {
-      getHerokuAppNames: () => Promise.resolve(['app1'])
+      getHerokuAppNames: () => Promise.resolve(['app1']),
+      '../../utils/heroku-sdk': {
+        createHerokuSDK: async () => ({
+          platform: {
+            app: {
+              info: async (name: string) => {
+                const res = await fetch(`https://api.heroku.com/apps/${name}`);
+                return res.json();
+              }
+            }
+          }
+        })
+      }
     }).HerokuResourceExplorerProvider;
 
     provider = new HerokuResourceExplorerProviderCtor(mockContext);

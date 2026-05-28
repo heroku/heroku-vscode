@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events';
-import AppService from '@heroku-cli/schema/services/app-service.js';
 import type { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
 import DynoService from '@heroku-cli/schema/services/dyno-service.js';
 import vscode, { Uri } from 'vscode';
@@ -11,6 +10,7 @@ import type { LogSessionStream } from '../../commands/app/context-menu/start-log
 import { getHerokuAppNames, getRootRepository } from '../../utils/git-utils';
 import { logExtensionEvent } from '../../utils/logger';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 import {
   LogStreamClient,
   LogStreamEvents,
@@ -62,7 +62,6 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   public onDidChangeTreeData: vscode.Event<T | T[] | undefined> = this.event;
 
   protected dynoService = new DynoService(fetch, 'https://api.heroku.com');
-  protected appService = new AppService(fetch, 'https://api.heroku.com');
   protected formationService = new FormationService(fetch, 'https://api.heroku.com');
 
   protected apps: Map<App['name'], LogSessionCapableApp> = new Map();
@@ -606,9 +605,13 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (added.size) {
       let appsNotFound = [];
       const addedArray = Array.from(added).filter((appName) => !this.apps.has(appName));
-      const requestInit = await generateRequestInit(undefined, session.accessToken);
+      // The resource explorer's internal types are still tied to the
+      // legacy @heroku-cli/schema App shape; cast at the boundary so
+      // the rest of the file stays unchanged. Drop the cast once the
+      // file is fully migrated off the schema package.
+      const sdk = await createHerokuSDK(undefined, session.accessToken);
       const appResults = await Promise.allSettled(
-        addedArray.map((appName) => this.appService.info(appName, requestInit))
+        addedArray.map((appName) => sdk.platform.app.info(appName) as Promise<App>)
       );
       for (let i = 0; i < appResults.length; i++) {
         const result = appResults[i];

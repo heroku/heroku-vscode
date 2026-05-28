@@ -4,13 +4,13 @@ import SpaceService from '@heroku-cli/schema/services/space-service.js';
 import { ValidatorResult } from 'jsonschema';
 import type { AppJson } from '@heroku/app-json-schema';
 import type { DeployPayload } from '@heroku/repo-card';
-import AppService from '@heroku-cli/schema/services/app-service.js';
 import { HerokuCommand } from '../heroku-command';
 import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
 import { readAppJson } from '../../utils/read-app-json';
 import { logExtensionEvent } from '../../utils/logger';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
 import { getGithubSession, getGitRepositoryInfoByUri } from '../../utils/git-utils';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 import { herokuCommand } from '../../meta/command';
 import { DeploymentOptions, DeployToHeroku } from './deploy-to-heroku';
 
@@ -24,7 +24,6 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
 
   private teamService = new TeamService(fetch, 'https://api.heroku.com');
   private spaceService = new SpaceService(fetch, 'https://api.heroku.com');
-  private appService = new AppService(fetch, 'https://api.heroku.com');
 
   private workspaceUris: vscode.Uri[] | undefined;
   private workspaceUrlByRepoName = new Map<string, vscode.Uri>();
@@ -59,6 +58,7 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
     if (message.type === 'connected') {
       logExtensionEvent('preparing deploy to heroku editor...');
       const requestInit = await generateRequestInit(this.signal);
+      const sdk = await createHerokuSDK(this.signal);
       const repoInfos = await Promise.all(this.workspaceUris?.map(getGitRepositoryInfoByUri) ?? []);
       repoInfos.forEach((repoInfo, index) => {
         if (repoInfo) {
@@ -69,7 +69,7 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
       const [teams, spaces, existingApps, githubSession, ...appJsonResults] = await Promise.allSettled([
         this.teamService.list(requestInit),
         this.spaceService.list(requestInit),
-        this.appService.list(requestInit),
+        sdk.platform.app.list(),
         getGithubSession(),
         ...(this.workspaceUris?.map(readAppJson) ?? [])
       ]);

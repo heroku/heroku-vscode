@@ -3,7 +3,6 @@ import vscode, { type Uri } from 'vscode';
 import { ValidatorResult } from 'jsonschema';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
 import { App, AppSetup, AppSetupCreatePayload, Build, BuildCreatePayload } from '@heroku-cli/schema';
-import AppService from '@heroku-cli/schema/services/app-service.js';
 import SourceService from '@heroku-cli/schema/services/source-service.js';
 import BuildService from '@heroku-cli/schema/services/build-service.js';
 import { herokuCommand } from '../../meta/command';
@@ -12,6 +11,7 @@ import type { AppJson, EnvironmentVariables } from '../../../../@types/app-json-
 import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { packSources } from '../../utils/tarball';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 import { getHerokuAppNames } from '../../utils/git-utils';
 import { uploadWithDetailedProgress } from '../../utils/upload-with-progress';
 import { readAppJson } from '../../utils/read-app-json';
@@ -80,11 +80,9 @@ class DeploymentError extends Error {
  *
  * @see {@link HerokuCommand}
  * @see {@link AppSetupService}
- * @see {@link AppService}
  */
 export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
   public static COMMAND_ID = 'heroku:deploy-to-heroku';
-  protected appService = new AppService(fetch, 'https://api.heroku.com');
   protected sourcesService = new SourceService(fetch, 'https://api.heroku.com');
 
   protected appSetupService = new AppSetupService(fetch, 'https://api.heroku.com');
@@ -320,9 +318,12 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
         return null;
       }
       // Check if the app exists om Heroku. If so,
-      // this is an existing app deployment
+      // this is an existing app deployment.
+      // Note: this file's existing types still use the @heroku-cli/schema App
+      // shape; cast at the SDK boundary so callers see the expected type.
       try {
-        targetApp = await this.appService.info(maybeAppName, this.requestInit);
+        const sdk = await createHerokuSDK(this.signal);
+        targetApp = (await sdk.platform.app.info(maybeAppName)) as App;
         isExistingDeployment = true;
       } catch {
         this.deploymentOptions.name = maybeAppName;
@@ -338,7 +339,8 @@ export class DeployToHeroku extends HerokuCommand<DeploymentResult> {
     if (!isExistingDeployment && result) {
       // Add the new remote to the workspace
       logExtensionEvent(`Adding remote heroku-${result.name}...`);
-      const app = await this.appService.info(result.name, this.requestInit);
+      const sdk = await createHerokuSDK(this.signal);
+      const app = await sdk.platform.app.info(result.name);
       const gitProcess = HerokuCommand.exec(`git remote add heroku-${result.name} ${app.git_url}`, {
         cwd: rootUri!.fsPath,
         signal: this.signal

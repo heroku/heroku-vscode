@@ -1,9 +1,8 @@
-import AppService from '@heroku-cli/schema/services/app-service.js';
-import type { App } from '@heroku-cli/schema';
+import type { App } from '@heroku/types/3.sdk';
 import vscode from 'vscode';
 import { herokuCommand } from '../../meta/command';
 import { HerokuCommand } from '../heroku-command';
-import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 import { DeployToHeroku } from './deploy-to-heroku';
 
 type PickItem = vscode.QuickPickItem & { value?: string };
@@ -20,15 +19,13 @@ type PickItem = vscode.QuickPickItem & { value?: string };
 export class LinkApp extends HerokuCommand<void> {
   public static COMMAND_ID = 'heroku:link-app-to-sources' as const;
 
-  private appService = new AppService(fetch, 'https://api.heroku.com');
-
   /**
    * @inheritDoc
    */
   public async run(): Promise<void> {
     const thenable = (async (): Promise<PickItem[]> => {
-      const requestInit = await generateRequestInit(this.signal);
-      const apps = await this.appService.list(requestInit);
+      const sdk = await createHerokuSDK(this.signal);
+      const apps = await sdk.platform.app.list();
       const appsByTeam = this.mapAppsByTeam(apps);
       const items = [] as PickItem[];
 
@@ -90,12 +87,11 @@ export class LinkApp extends HerokuCommand<void> {
    *
    * @param apps The array of apps to map by team
    * @returns A map of apps by team
-   * @see AppService.list
    */
   private mapAppsByTeam(apps: App[]): Map<string, App[]> {
     const teams = new Map<string, App[]>();
     apps.sort((a: App, b: App) => {
-      const name = a.name.localeCompare(b.name);
+      const name = (a.name ?? '').localeCompare(b.name ?? '');
       const teamName = (a.team?.name ?? 'aaaa').localeCompare(b.team?.name ?? 'aaaa');
 
       return teamName ?? name;
