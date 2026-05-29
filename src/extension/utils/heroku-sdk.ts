@@ -17,6 +17,17 @@ const TELEMETRY_HEADERS = {
  * via `withOptions` so callers can write `sdk.platform.app.list()`
  * and still get cancellation on disposal.
  *
+ * The signal is bound at construction and shared by every call made
+ * through the returned SDK. That matches our usage — callers want the
+ * lifecycle signal of the unit of work (typically `HerokuCommand`) to
+ * abort every in-flight request when the command is disposed. Do not
+ * stash the returned SDK on a longer-lived owner: once the captured
+ * signal aborts, every subsequent call through that SDK rejects.
+ *
+ * If a single call needs a different signal, override per-call via
+ * `withOptions` (last-one-wins): `sdk.platform.withOptions({signal:
+ * other}).app.info(...)`.
+ *
  * Pass `token` only when there is no active session yet (e.g. inside
  * the login flow itself); otherwise the helper resolves the token
  * from `vscode.authentication.getSession`.
