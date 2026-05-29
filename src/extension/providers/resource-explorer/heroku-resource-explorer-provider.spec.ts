@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import { App, Dyno, Formation, AddOn } from '@heroku-cli/schema';
 import { randomUUID } from 'node:crypto';
 import * as gitUtils from '../../utils/git-utils';
+import * as herokuSdkUtil from '../../utils/heroku-sdk';
 import { Readable, Writable } from 'node:stream';
 import type { HerokuResourceExplorerProvider } from './heroku-resource-explorer-provider';
 import { GitExtension, Repository } from '../../../../@types/git';
@@ -107,23 +108,22 @@ suite('HerokuResourceExplorerProvider', () => {
     sinon.stub(gitUtils, 'getHerokuAppNames').resolves(['app1']);
     sinon.stub(vscode.commands, 'registerCommand');
 
-    // The provider now reaches the SDK through createHerokuSDK; bypass
-    // the real ESM dynamic-import path and have it call our fetch stub
-    // directly so existing URL-based fixtures keep working.
-    const HerokuResourceExplorerProviderCtor = proxyquire('./heroku-resource-explorer-provider', {
-      getHerokuAppNames: () => Promise.resolve(['app1']),
-      '../../utils/heroku-sdk': {
-        createHerokuSDK: async () => ({
-          platform: {
-            app: {
-              info: async (name: string) => {
-                const res = await fetch(`https://api.heroku.com/apps/${name}`);
-                return res.json();
-              }
-            }
+    // Bypass the real ESM dynamic-import path and have createHerokuSDK
+    // delegate to our fetch stub directly so existing URL-based
+    // fixtures keep working.
+    sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
+      platform: {
+        app: {
+          info: async (name: string) => {
+            const res = await fetch(`https://api.heroku.com/apps/${name}`);
+            return res.json();
           }
-        })
+        }
       }
+    } as never);
+
+    const HerokuResourceExplorerProviderCtor = proxyquire('./heroku-resource-explorer-provider', {
+      getHerokuAppNames: () => Promise.resolve(['app1'])
     }).HerokuResourceExplorerProvider;
 
     provider = new HerokuResourceExplorerProviderCtor(mockContext);

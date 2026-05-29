@@ -148,6 +148,13 @@ suite('DeployToHeroku Tests', () => {
     });
     mockAppSetupService.create.resolves(mockAppSetup);
     mockAppSetupService.info.resolves(mockAppSetup);
+    // The post-create flow also calls sdk.platform.app.info(...) to
+    // fetch the new app's git_url for the remote. Stubbing it here so
+    // the path is at least covered if/when the test reaches it; today
+    // the surrounding deploy flow may short-circuit before we get
+    // there, but the stub keeps the test resilient to that internal
+    // change and avoids a silent NPE on app.git_url.
+    appInfoStub.resolves({ git_url: 'test-git-url' });
 
     await command.run(null, null);
 

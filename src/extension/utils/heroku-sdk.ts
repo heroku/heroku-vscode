@@ -80,3 +80,27 @@ export async function createHerokuSDK(
     }
   };
 }
+
+/**
+ * Returns a `platform` client wrapped to request a larger
+ * `app.list` page than the API default of 200, so accounts with many
+ * apps don't see silent truncation.
+ *
+ * Temporary helper until the SDK ships native list-pagination
+ * (W-22717723). Callers use it like:
+ *
+ * ```ts
+ * const apps = await appsClient(sdk).app.list();
+ * ```
+ *
+ * The 1000 ceiling matches what the Platform tolerates in a single
+ * `Range` request and is enough for everyone we know about today.
+ *
+ * @param sdk An SDK (typically from `createHerokuSDK`) whose
+ *   `platform` namespace will be wrapped.
+ * @returns A platform client whose every call carries the bumped
+ *   `Range` header.
+ */
+export function appsClient(sdk: Pick<HerokuSDK, 'platform'>): HerokuSDK['platform'] {
+  return sdk.platform.withOptions({ headers: { Range: 'name ..; max=1000;' } }) as HerokuSDK['platform'];
+}

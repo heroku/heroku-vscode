@@ -2,7 +2,7 @@ import type { App } from '@heroku/types/3.sdk';
 import vscode from 'vscode';
 import { herokuCommand } from '../../meta/command';
 import { HerokuCommand } from '../heroku-command';
-import { createHerokuSDK } from '../../utils/heroku-sdk';
+import { appsClient, createHerokuSDK } from '../../utils/heroku-sdk';
 import { DeployToHeroku } from './deploy-to-heroku';
 
 type PickItem = vscode.QuickPickItem & { value?: string };
@@ -25,10 +25,7 @@ export class LinkApp extends HerokuCommand<void> {
   public async run(): Promise<void> {
     const thenable = (async (): Promise<PickItem[]> => {
       const sdk = await createHerokuSDK(this.signal);
-      // Heroku's /apps endpoint paginates at 200 by default; bump the
-      // page size so accounts with more apps don't see silent
-      // truncation. SDK-side pagination is the proper fix (W-22717723).
-      const apps = await sdk.platform.withOptions({ headers: { Range: 'name ..; max=1000;' } }).app.list();
+      const apps = await appsClient(sdk).app.list();
       const appsByTeam = this.mapAppsByTeam(apps);
       const items = [] as PickItem[];
 

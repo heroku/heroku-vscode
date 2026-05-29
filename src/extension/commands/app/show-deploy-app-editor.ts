@@ -10,7 +10,7 @@ import { readAppJson } from '../../utils/read-app-json';
 import { logExtensionEvent } from '../../utils/logger';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
 import { getGithubSession, getGitRepositoryInfoByUri } from '../../utils/git-utils';
-import { createHerokuSDK } from '../../utils/heroku-sdk';
+import { appsClient, createHerokuSDK } from '../../utils/heroku-sdk';
 import { herokuCommand } from '../../meta/command';
 import { DeploymentOptions, DeployToHeroku } from './deploy-to-heroku';
 
@@ -66,14 +66,10 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
         }
       });
 
-      // Heroku's /apps endpoint paginates at 200 by default; bump the
-      // page size so accounts with more apps don't see silent
-      // truncation. SDK-side pagination is the proper fix (W-22717723).
-      const appsClient = sdk.platform.withOptions({ headers: { Range: 'name ..; max=1000;' } });
       const [teams, spaces, existingApps, githubSession, ...appJsonResults] = await Promise.allSettled([
         this.teamService.list(requestInit),
         this.spaceService.list(requestInit),
-        appsClient.app.list(),
+        appsClient(sdk).app.list(),
         getGithubSession(),
         ...(this.workspaceUris?.map(readAppJson) ?? [])
       ]);

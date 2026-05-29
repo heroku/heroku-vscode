@@ -7,7 +7,7 @@ import { herokuCommand, RunnableCommand } from '../../meta/command';
 import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { DeployToHeroku } from '../app/deploy-to-heroku';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
-import { createHerokuSDK } from '../../utils/heroku-sdk';
+import { appsClient, createHerokuSDK } from '../../utils/heroku-sdk';
 import { getGithubSession } from '../../utils/git-utils';
 import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
 import { CloneRepository } from './clone-repository';
@@ -77,14 +77,10 @@ export class ShowStarterRepositories extends AbortController implements Runnable
       const sdk = await createHerokuSDK(this.signal);
 
       logExtensionEvent('getting teams and spaces for user');
-      // Heroku's /apps endpoint paginates at 200 by default; bump the
-      // page size so accounts with more apps don't see silent
-      // truncation. SDK-side pagination is the proper fix (W-22717723).
-      const appsClient = sdk.platform.withOptions({ headers: { Range: 'name ..; max=1000;' } });
       const [teams, spaces, existingApps, githubSession] = await Promise.allSettled([
         this.teamService.list(requestInit),
         this.spaceService.list(requestInit),
-        appsClient.app.list(),
+        appsClient(sdk).app.list(),
         getGithubSession()
       ]);
       await ShowStarterRepositories.webviewPanel?.webview.postMessage({
