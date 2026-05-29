@@ -25,7 +25,10 @@ export class LinkApp extends HerokuCommand<void> {
   public async run(): Promise<void> {
     const thenable = (async (): Promise<PickItem[]> => {
       const sdk = await createHerokuSDK(this.signal);
-      const apps = await sdk.platform.app.list();
+      // Heroku's /apps endpoint paginates at 200 by default; bump the
+      // page size so accounts with more apps don't see silent
+      // truncation. SDK-side pagination is the proper fix (W-22717723).
+      const apps = await sdk.platform.withOptions({ headers: { Range: 'name ..; max=1000;' } }).app.list();
       const appsByTeam = this.mapAppsByTeam(apps);
       const items = [] as PickItem[];
 

@@ -66,10 +66,14 @@ export class ShowDeployAppEditor extends HerokuCommand<void> {
         }
       });
 
+      // Heroku's /apps endpoint paginates at 200 by default; bump the
+      // page size so accounts with more apps don't see silent
+      // truncation. SDK-side pagination is the proper fix (W-22717723).
+      const appsClient = sdk.platform.withOptions({ headers: { Range: 'name ..; max=1000;' } });
       const [teams, spaces, existingApps, githubSession, ...appJsonResults] = await Promise.allSettled([
         this.teamService.list(requestInit),
         this.spaceService.list(requestInit),
-        sdk.platform.app.list(),
+        appsClient.app.list(),
         getGithubSession(),
         ...(this.workspaceUris?.map(readAppJson) ?? [])
       ]);
