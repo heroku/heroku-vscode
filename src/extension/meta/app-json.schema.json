@@ -92,8 +92,7 @@
               "type": "string",
               "enum": ["secret"]
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false
@@ -101,20 +100,44 @@
     "dynoSize": {
       "type": "string",
       "enum": [
-        "free",
-        "eco",
-        "hobby",
-        "basic",
-        "standard-1x",
-        "standard-2x",
-        "performance-m",
-        "performance-l",
-        "private-s",
-        "private-m",
-        "private-l",
-        "shield-s",
-        "shield-m",
-        "shield-l"
+        "Eco",
+        "Basic",
+        "Standard-1X",
+        "Standard-2X",
+        "Performance-M",
+        "Performance-L",
+        "Performance-XL",
+        "Performance-2XL",
+        "Performance-L-RAM",
+        "Private-S",
+        "Private-M",
+        "Private-L",
+        "Private-XL",
+        "Private-2XL",
+        "Private-L-RAM",
+        "Shield-S",
+        "Shield-M",
+        "Shield-L",
+        "Shield-XL",
+        "Shield-2XL",
+        "Shield-L-RAM",
+        "dyno-1c-0.5gb",
+        "dyno-1c-4gb",
+        "dyno-1c-8gb",
+        "dyno-2c-1gb",
+        "dyno-2c-4gb",
+        "dyno-2c-8gb",
+        "dyno-2c-16gb",
+        "dyno-4c-8gb",
+        "dyno-4c-16gb",
+        "dyno-4c-32gb",
+        "dyno-8c-16gb",
+        "dyno-8c-32gb",
+        "dyno-8c-64gb",
+        "dyno-16c-32gb",
+        "dyno-16c-64gb",
+        "dyno-16c-128gb",
+        "dyno-32c-64gb"
       ]
     },
     "formation": {

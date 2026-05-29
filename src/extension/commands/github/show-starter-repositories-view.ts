@@ -2,12 +2,12 @@ import { promisify } from 'node:util';
 import vscode, { Uri, WebviewPanel } from 'vscode';
 import TeamService from '@heroku-cli/schema/services/team-service.js';
 import SpaceService from '@heroku-cli/schema/services/space-service.js';
-import AppService from '@heroku-cli/schema/services/app-service.js';
 import { DeployPayload } from '@heroku/repo-card';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import { logExtensionEvent, showExtensionLogs } from '../../utils/logger';
 import { DeployToHeroku } from '../app/deploy-to-heroku';
 import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { appsClient, createHerokuSDK } from '../../utils/heroku-sdk';
 import { getGithubSession } from '../../utils/git-utils';
 import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
 import { CloneRepository } from './clone-repository';
@@ -32,7 +32,6 @@ export class ShowStarterRepositories extends AbortController implements Runnable
   private static webviewPanel: WebviewPanel | undefined;
   private teamService = new TeamService(fetch, 'https://api.heroku.com');
   private spaceService = new SpaceService(fetch, 'https://api.heroku.com');
-  private appService = new AppService(fetch, 'https://api.heroku.com');
 
   /**
    * Creates and displays a webview for showing
@@ -75,12 +74,13 @@ export class ShowStarterRepositories extends AbortController implements Runnable
     if (message.type === 'connected') {
       logExtensionEvent('getting Heroku starter repos in GitHub');
       const requestInit = await generateRequestInit(this.signal);
+      const sdk = await createHerokuSDK(this.signal);
 
       logExtensionEvent('getting teams and spaces for user');
       const [teams, spaces, existingApps, githubSession] = await Promise.allSettled([
         this.teamService.list(requestInit),
         this.spaceService.list(requestInit),
-        this.appService.list(requestInit),
+        appsClient(sdk).app.list(),
         getGithubSession()
       ]);
       await ShowStarterRepositories.webviewPanel?.webview.postMessage({

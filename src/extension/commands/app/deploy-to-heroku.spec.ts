@@ -5,10 +5,10 @@ import { DeployToHeroku } from './deploy-to-heroku';
 import { GitExtension, Repository } from '../../../../@types/git';
 import SourceService from '@heroku-cli/schema/services/source-service.js';
 import AppSetupService from '@heroku-cli/schema/services/app-setup-service.js';
-import AppService from '@heroku-cli/schema/services/app-service.js';
 import BuildService from '@heroku-cli/schema/services/build-service.js';
 import { App } from '@heroku-cli/schema';
 import { Readable, Writable } from 'node:stream';
+import * as herokuSdkUtil from '../../utils/heroku-sdk';
 
 suite('DeployToHeroku Tests', () => {
   let command: DeployToHeroku;
@@ -25,7 +25,7 @@ suite('DeployToHeroku Tests', () => {
     create: sinon.SinonStub;
     info: sinon.SinonStub;
   };
-  let mockAppService: Pick<AppService, 'info'> & { info: sinon.SinonStub };
+  let appInfoStub: sinon.SinonStub;
 
   let mockWorkspaceFolder: vscode.WorkspaceFolder;
   let fetchStub: typeof fetch & sinon.SinonStub;
@@ -44,9 +44,11 @@ suite('DeployToHeroku Tests', () => {
       create: sinon.stub(),
       info: sinon.stub()
     };
-    mockAppService = {
-      info: sinon.stub()
-    };
+    appInfoStub = sinon.stub();
+    sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
+      platform: { app: { info: appInfoStub } },
+      data: {}
+    } as never);
 
     const readable = Readable.from(
       (async function* () {
@@ -109,7 +111,6 @@ suite('DeployToHeroku Tests', () => {
     command = new DeployToHeroku();
     Reflect.set(command, 'appSetupService', mockAppSetupService);
     Reflect.set(command, 'buildService', mockBuildService);
-    Reflect.set(command, 'appService', mockAppService);
     Reflect.set(command, 'sourcesService', mockSourcesService);
   });
 
@@ -147,6 +148,13 @@ suite('DeployToHeroku Tests', () => {
     });
     mockAppSetupService.create.resolves(mockAppSetup);
     mockAppSetupService.info.resolves(mockAppSetup);
+    // The post-create flow also calls sdk.platform.app.info(...) to
+    // fetch the new app's git_url for the remote. Stubbing it here so
+    // the path is at least covered if/when the test reaches it; today
+    // the surrounding deploy flow may short-circuit before we get
+    // there, but the stub keeps the test resilient to that internal
+    // change and avoids a silent NPE on app.git_url.
+    appInfoStub.resolves({ git_url: 'test-git-url' });
 
     await command.run(null, null);
 
@@ -178,7 +186,7 @@ suite('DeployToHeroku Tests', () => {
       }
     });
     mockBuildService.create.resolves(mockBuild);
-    mockAppService.info.resolves({ git_url: 'test-git-url' });
+    appInfoStub.resolves({ git_url: 'test-git-url' });
 
     await command.run(mockApp as App, null);
 
@@ -230,7 +238,7 @@ suite('DeployToHeroku Tests', () => {
       }
     });
     mockBuildService.create.resolves(mockBuild);
-    mockAppService.info.resolves({ ...mockApp, git_url: 'test-git-url' });
+    appInfoStub.resolves({ ...mockApp, git_url: 'test-git-url' });
     mockBuildService.info.resolves(mockBuild);
 
     await command.run(null, null, { appNames: ['test-id'] });
