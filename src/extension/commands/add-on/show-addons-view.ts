@@ -89,8 +89,8 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       case 'addons':
         {
           const addonsByCategoryResponse = await fetch('https://addons.heroku.com/api/v2/categories');
-          const sdk = await createHerokuSDK(this.signal);
-          const installedAddons = await sdk.platform.addOn.listByApp(this.appIdentifier);
+          const { platform } = await createHerokuSDK(this.signal);
+          const installedAddons = await platform.addOn.listByApp(this.appIdentifier);
           if (addonsByCategoryResponse.ok) {
             const addons = (await addonsByCategoryResponse.json()) as CategoriesResponse;
             await webview.postMessage({ type: 'addons', payload: { categories: addons.categories, installedAddons } });
@@ -101,8 +101,8 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       case 'addonPlans':
         {
           try {
-            const sdk = await createHerokuSDK(this.signal, undefined, ['addOnExtensions']);
-            const addonPlans = await sdk.platform.addOn.listPlans(message.id);
+            const { platform } = await createHerokuSDK(this.signal, undefined, ['addOnExtensions']);
+            const addonPlans = await platform.addOn.listPlans(message.id);
             await webview.postMessage({ type: 'addonPlans', payload: addonPlans, id: message.id });
           } catch {
             // no-op
@@ -145,17 +145,17 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
   ): Promise<void> {
     const { webview } = ShowAddonsViewCommand.addonsPanel as WebviewPanel;
     try {
-      const sdk = await createHerokuSDK(this.signal, undefined, ['addOnExtensions']);
+      const { platform } = await createHerokuSDK(this.signal, undefined, ['addOnExtensions']);
       let newlyCreatedOrUpdatedAddon: AddOn;
       if (type === 'installAddon') {
-        newlyCreatedOrUpdatedAddon = (await sdk.platform.addOn.create(this.appIdentifier, { plan })) as AddOn;
+        newlyCreatedOrUpdatedAddon = (await platform.addOn.create(this.appIdentifier, { plan })) as AddOn;
       } else {
         // Use the SDK's `upgrade` extension rather than a raw `update`:
         // it resolves the add-on identity first and qualifies the plan
         // name with the addon_service prefix when needed. The webview
         // already passes a fully-qualified plan, so qualification is a
         // no-op here, but the resolve adds safety.
-        newlyCreatedOrUpdatedAddon = (await sdk.platform.addOn.upgrade(installedAddonId as string, plan)) as AddOn;
+        newlyCreatedOrUpdatedAddon = (await platform.addOn.upgrade(installedAddonId as string, plan)) as AddOn;
       }
 
       await webview.postMessage({ type: 'addonCreated', payload: newlyCreatedOrUpdatedAddon, id: addOnId });

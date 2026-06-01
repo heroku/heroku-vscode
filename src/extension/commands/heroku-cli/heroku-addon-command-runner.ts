@@ -68,9 +68,9 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
       return;
     }
     const thenable = (async (): Promise<vscode.QuickPickItem[]> => {
-      const sdk = await createHerokuSDK(undefined, undefined, ['addOnExtensions']);
+      const { platform } = await createHerokuSDK(undefined, undefined, ['addOnExtensions']);
       // Cast to schema Plan since the rest of this file uses that type.
-      const plans = (await sdk.platform.addOn.listPlansForAddon(addOn.id)) as unknown as Plan[];
+      const plans = (await platform.addOn.listPlansForAddon(addOn.id)) as unknown as Plan[];
       const items: vscode.QuickPickItem[] = [];
       let lastPlanPrefix = '';
 
@@ -85,7 +85,7 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
           });
         }
         lastPlanPrefix = planPrefix;
-        const priceSuffix = sdk.platform.addOn.formatPlanPriceLabel(plan as never);
+        const priceSuffix = platform.addOn.formatPlanPriceLabel(plan as never);
         items.push({
           label: priceSuffix ? `${plan.human_name} - ${priceSuffix}` : plan.human_name,
           description: plan.description,

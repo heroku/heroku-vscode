@@ -20,11 +20,11 @@ export class ListAddOnsByApp extends AbortController implements RunnableCommand<
   public async run(appIdentifier: string, debounce = true): Promise<AddOn[]> {
     let request = ListAddOnsByApp.debounceRequestsByApp.get(appIdentifier);
     if (!request || !debounce) {
-      const sdk = await createHerokuSDK(this.signal);
+      const { platform } = await createHerokuSDK(this.signal);
       // The resource explorer's existing types are tied to the
       // legacy @heroku-cli/schema AddOn shape; cast at the boundary
       // so the rest of the file stays unchanged.
-      request = sdk.platform.addOn.listByApp(appIdentifier) as Promise<AddOn[]>;
+      request = platform.addOn.listByApp(appIdentifier) as Promise<AddOn[]>;
     }
     if (debounce) {
       ListAddOnsByApp.debounceRequestsByApp.set(appIdentifier, request);
