@@ -1,8 +1,14 @@
-import type { HerokuSDK } from '@heroku/sdk';
+import type { HerokuSDK, ResourceExtension } from '@heroku/sdk';
 import type * as PlatformExtensions from '@heroku/sdk/extensions/platform';
 import vscode from 'vscode';
 
-type PlatformExtensionName = keyof typeof PlatformExtensions;
+// Filter the platform-extensions barrel to just the ResourceExtension
+// values (excludes pure utility exports like `priceForPlan` and
+// type-only exports). This is what `createHerokuSDK`'s extensionNames
+// param accepts.
+type PlatformExtensionName = {
+  [K in keyof typeof PlatformExtensions]: (typeof PlatformExtensions)[K] extends ResourceExtension ? K : never;
+}[keyof typeof PlatformExtensions];
 
 const extension = vscode.extensions.getExtension('Heroku-Dev-Tools.heroku') ?? { packageJSON: {} };
 const version = (Reflect.get(extension.packageJSON, 'version') as string) ?? '';

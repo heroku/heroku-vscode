@@ -69,12 +69,8 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
     }
     const thenable = (async (): Promise<vscode.QuickPickItem[]> => {
       const sdk = await createHerokuSDK(undefined, undefined, ['addOnExtensions']);
-      // The SDK's listPlans extension returns plans sorted by price
-      // ascending. The downstream code below regroups them by human_name
-      // prefix; the price-sort within each group is the same as before.
       // Cast to schema Plan since the rest of this file uses that type.
-      const plans = (await sdk.platform.addOn.listPlans(addOn.addon_service.id)) as unknown as Plan[];
-      const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+      const plans = (await sdk.platform.addOn.listPlansForAddon(addOn.id)) as unknown as Plan[];
       const items: vscode.QuickPickItem[] = [];
       let lastPlanPrefix = '';
 
@@ -89,10 +85,9 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
           });
         }
         lastPlanPrefix = planPrefix;
-        const perMonthMax = currencyFormatter.format(plan.price.cents / 100);
-        const perHourCost = currencyFormatter.format(plan.price.cents / 100 / (24 * 30));
+        const priceSuffix = sdk.platform.addOn.formatPlanPriceLabel(plan as never);
         items.push({
-          label: `${plan.human_name} - ${perHourCost} / hour (Max ${perMonthMax}/month)`,
+          label: priceSuffix ? `${plan.human_name} - ${priceSuffix}` : plan.human_name,
           description: plan.description,
           value: plan.name,
           picked: plan.id === addOn.plan.id

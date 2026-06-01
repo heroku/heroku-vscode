@@ -51,7 +51,15 @@ suite('The HerokuAddOnCommandRunner', () => {
       } as Plan
     ]);
     Sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
-      platform: { addOn: { listPlans: planServiceStub } },
+      platform: {
+        addOn: {
+          listPlansForAddon: planServiceStub,
+          // The pure helper now lives on the factory too. Stub it
+          // with a deterministic suffix so the test asserts the
+          // composition, not the formatter's internals.
+          formatPlanPriceLabel: (plan: Plan) => `\$${plan.price.cents / 100} / hour`
+        }
+      },
       data: {}
     } as never);
 
