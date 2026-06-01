@@ -205,7 +205,7 @@ export class HerokuAddOnsMarketplace extends FASTElement {
    */
   private onMessage = (
     event: MessageEvent<{
-      type: 'addons' | 'addonPlans' | 'addonCreated' | 'addonCreationFailed';
+      type: 'addons' | 'addonPlans' | 'addonPlansFailed' | 'addonCreated' | 'addonCreationFailed';
       payload: unknown;
       id?: string;
     }>
@@ -217,6 +217,13 @@ export class HerokuAddOnsMarketplace extends FASTElement {
         {
           this.onAddonPlansMessage(event.data as AddonPlansMessage);
         }
+        break;
+
+      case 'addonPlansFailed':
+        // Stop the spinner on the add-on card whose plan list failed,
+        // restore the install button so the user can retry. The
+        // surface mirrors the addonCreationFailed flow.
+        this.onAddonCreationFailedMessage(event.data.id as string);
         break;
 
       case 'addons':

@@ -5,6 +5,7 @@ import { CategoriesResponse } from '@heroku/elements';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
 import { createHerokuSDK } from '../../utils/heroku-sdk';
+import { logExtensionEvent } from '../../utils/logger';
 
 type MessagePayload =
   | {
@@ -88,12 +89,25 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
     switch (message.type) {
       case 'addons':
         {
-          const addonsByCategoryResponse = await fetch('https://addons.heroku.com/api/v2/categories');
-          const { platform } = await createHerokuSDK(this.signal);
-          const installedAddons = await platform.addOn.listByApp(this.appIdentifier);
-          if (addonsByCategoryResponse.ok) {
-            const addons = (await addonsByCategoryResponse.json()) as CategoriesResponse;
-            await webview.postMessage({ type: 'addons', payload: { categories: addons.categories, installedAddons } });
+          try {
+            const addonsByCategoryResponse = await fetch('https://addons.heroku.com/api/v2/categories');
+            const { platform } = await createHerokuSDK(this.signal);
+            const installedAddons = await platform.addOn.listByApp(this.appIdentifier);
+            if (addonsByCategoryResponse.ok) {
+              const addons = (await addonsByCategoryResponse.json()) as CategoriesResponse;
+              await webview.postMessage({
+                type: 'addons',
+                payload: { categories: addons.categories, installedAddons }
+              });
+            }
+          } catch (e) {
+            // The user closed the panel — propagate via abort, no UI signal.
+            if (this.signal.aborted) {
+              return;
+            }
+            const { message: errorMessage } = e as Error;
+            logExtensionEvent(`Failed to load add-ons for ${this.appIdentifier}: ${errorMessage}`);
+            await vscode.window.showErrorMessage(`Failed to load add-ons: ${errorMessage}`);
           }
         }
         break;
@@ -104,8 +118,14 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
             const { platform } = await createHerokuSDK(this.signal, undefined, ['addOnExtensions']);
             const addonPlans = await platform.addOn.listPlans(message.id);
             await webview.postMessage({ type: 'addonPlans', payload: addonPlans, id: message.id });
-          } catch {
-            // no-op
+          } catch (e) {
+            // The user closed the panel — propagate via abort, no UI signal.
+            if (this.signal.aborted) {
+              return;
+            }
+            const { message: errorMessage } = e as Error;
+            logExtensionEvent(`Failed to load plans for add-on ${message.id}: ${errorMessage}`);
+            await webview.postMessage({ type: 'addonPlansFailed', payload: errorMessage, id: message.id });
           }
         }
         break;
