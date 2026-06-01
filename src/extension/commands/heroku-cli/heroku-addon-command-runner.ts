@@ -1,10 +1,10 @@
-import type { AddOn } from '@heroku-cli/schema';
-import PlanService from '@heroku-cli/schema/services/plan-service.js';
+import type { AddOn, Plan } from '@heroku-cli/schema';
 import vscode from 'vscode';
 import type { Command } from '@oclif/config';
 import AddOnAttachmentService from '@heroku-cli/schema/services/add-on-attachment-service.js';
 import type { CommandMeta } from '../../manifest';
 import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 import { HerokuContextMenuCommandRunner } from './heroku-context-menu-command-runner';
 
 @herokuCommand({ outputChannelId: HerokuOutputChannel.CommandOutput })
@@ -67,15 +67,13 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
     if (!addOn) {
       return;
     }
-    const planService = new PlanService(fetch, 'https://api.heroku.com');
     const thenable = (async (): Promise<vscode.QuickPickItem[]> => {
-      const { accessToken } = (await vscode.authentication.getSession(
-        'heroku:auth:login',
-        []
-      )) as vscode.AuthenticationSession;
-      const plans = await planService.listByAddOn(addOn.addon_service.id, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+      const sdk = await createHerokuSDK(undefined, undefined, ['addOnExtensions']);
+      // The SDK's listPlans extension returns plans sorted by price
+      // ascending. The downstream code below regroups them by human_name
+      // prefix; the price-sort within each group is the same as before.
+      // Cast to schema Plan since the rest of this file uses that type.
+      const plans = (await sdk.platform.addOn.listPlans(addOn.addon_service.id)) as unknown as Plan[];
       const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
       const items: vscode.QuickPickItem[] = [];
       let lastPlanPrefix = '';

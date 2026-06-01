@@ -4,9 +4,9 @@ import Sinon, { type SinonMock, type SinonStub } from 'sinon';
 import LogSessionService from '@heroku-cli/schema/services/log-session-service.js';
 import type { AddOnAttachment, App, LogSession, Plan, Price } from '@heroku-cli/schema';
 import { HerokuAddOnCommandRunner } from './heroku-addon-command-runner';
-import PlanService from '@heroku-cli/schema/services/plan-service.js';
 import AddOnAttachmentService from '@heroku-cli/schema/services/add-on-attachment-service.js';
 import { Command } from '@oclif/config';
+import * as herokuSdkUtil from '../../utils/heroku-sdk';
 
 suite('The HerokuAddOnCommandRunner', () => {
   let logServiceStub: SinonStub;
@@ -33,7 +33,8 @@ suite('The HerokuAddOnCommandRunner', () => {
       accessToken: 'token'
     } as vscode.AuthenticationSession);
 
-    planServiceStub = Sinon.stub(PlanService.prototype, 'listByAddOn').resolves([
+    planServiceStub = Sinon.stub();
+    planServiceStub.resolves([
       {
         human_name: 'Basic Plan',
         name: 'basic',
@@ -49,6 +50,10 @@ suite('The HerokuAddOnCommandRunner', () => {
         description: 'Pro plan'
       } as Plan
     ]);
+    Sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
+      platform: { addOn: { listPlans: planServiceStub } },
+      data: {}
+    } as never);
 
     attachmentServiceStub = Sinon.stub(AddOnAttachmentService.prototype, 'listByAddOn').resolves([
       { name: 'Attachment 1', id: 'attachment-1' } as AddOnAttachment,
@@ -94,7 +99,6 @@ suite('The HerokuAddOnCommandRunner', () => {
     assert.strictEqual(result[1].value, 'basic', 'Basic Plan value is incorrect.');
 
     assert.ok(planServiceStub.calledOnce, 'The plan service was not called.');
-    assert.ok(authStub.calledOnce, 'The authentication service was not called.');
   });
 
   test('injectAttachmentOptionsIntoCommand adds attachment options for addons:detach command', async () => {
