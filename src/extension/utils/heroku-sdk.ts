@@ -1,5 +1,14 @@
-import type { HerokuSDK } from '@heroku/sdk';
+import type { HerokuSDK, ResourceExtension } from '@heroku/sdk';
+import type * as PlatformExtensions from '@heroku/sdk/extensions/platform';
 import vscode from 'vscode';
+
+// Filter the platform-extensions barrel to just the ResourceExtension
+// values (excludes pure utility exports like `priceForPlan` and
+// type-only exports). This is what `createHerokuSDK`'s extensionNames
+// param accepts.
+type PlatformExtensionName = {
+  [K in keyof typeof PlatformExtensions]: (typeof PlatformExtensions)[K] extends ResourceExtension ? K : never;
+}[keyof typeof PlatformExtensions];
 
 const extension = vscode.extensions.getExtension('Heroku-Dev-Tools.heroku') ?? { packageJSON: {} };
 const version = (Reflect.get(extension.packageJSON, 'version') as string) ?? '';
@@ -35,17 +44,35 @@ const TELEMETRY_HEADERS = {
  * @param signal Optional AbortSignal threaded into every route call.
  * @param token Optional explicit bearer token; falls back to the
  *   active VS Code authentication session when omitted.
+ * @param extensionNames Optional names of platform extensions to
+ *   register on the SDK (e.g. `'addOnExtensions'`). The helper
+ *   resolves them via dynamic import so consumers don't need to add
+ *   their own ESM-from-CJS workaround. Methods from registered
+ *   extensions become callable on the matching namespace, e.g.
+ *   `sdk.platform.addOn.listPlans(...)`.
  * @returns An SDK exposing `platform` and `data` namespaces.
  * @example
  * ```ts
  * const sdk = await createHerokuSDK(this.signal);
  * const apps = await sdk.platform.app.list();
+ *
+ * // with extensions
+ * const sdkExt = await createHerokuSDK(this.signal, undefined, ['addOnExtensions']);
+ * const plans = await sdkExt.platform.addOn.listPlans('heroku-redis');
  * ```
  */
-export async function createHerokuSDK(
+export async function createHerokuSDK<const Names extends readonly PlatformExtensionName[] = readonly []>(
   signal?: AbortSignal,
-  token?: string
-): Promise<Pick<HerokuSDK, 'data' | 'platform'>> {
+  token?: string,
+  extensionNames?: Names
+): Promise<
+  Pick<
+    HerokuSDK<{
+      [K in keyof Names]: (typeof PlatformExtensions)[Names[K] & PlatformExtensionName];
+    }>,
+    'data' | 'platform'
+  >
+> {
   const session = token ? undefined : await vscode.authentication.getSession('heroku:auth:login', []);
 
   const headers: Record<string, string> = { ...TELEMETRY_HEADERS };
@@ -62,23 +89,41 @@ export async function createHerokuSDK(
   // compilation.
   // eslint-disable-next-line no-eval
   const { HerokuSDK: HerokuSDKCtor } = (await (0, eval)('import("@heroku/sdk")')) as typeof import('@heroku/sdk');
+
+  let extensions: readonly unknown[] | undefined;
+  if (extensionNames?.length) {
+    // eslint-disable-next-line no-eval
+    const platformExtensions = (await (0, eval)(
+      'import("@heroku/sdk/extensions/platform")'
+    )) as typeof PlatformExtensions;
+    extensions = extensionNames.map((name) => platformExtensions[name]);
+  }
+
   const sdk = new HerokuSDKCtor({
     clientOptions: {
       headers,
       token: resolvedToken
-    }
+    },
+    extensions: extensions as never
   });
 
-  if (!signal) return sdk;
+  type ResolvedSDK = Pick<
+    HerokuSDK<{
+      [K in keyof Names]: (typeof PlatformExtensions)[Names[K] & PlatformExtensionName];
+    }>,
+    'data' | 'platform'
+  >;
+
+  if (!signal) return sdk as never;
 
   return {
-    get data(): HerokuSDK['data'] {
-      return sdk.data.withOptions({ signal }) as HerokuSDK['data'];
+    get data() {
+      return sdk.data.withOptions({ signal });
     },
-    get platform(): HerokuSDK['platform'] {
-      return sdk.platform.withOptions({ signal }) as HerokuSDK['platform'];
+    get platform() {
+      return sdk.platform.withOptions({ signal });
     }
-  };
+  } as ResolvedSDK;
 }
 
 /**

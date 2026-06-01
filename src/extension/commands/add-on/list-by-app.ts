@@ -1,7 +1,6 @@
 import type { AddOn } from '@heroku-cli/schema';
-import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import { herokuCommand, type RunnableCommand } from '../../meta/command';
-import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 
 @herokuCommand()
 /**
@@ -10,8 +9,6 @@ import { generateRequestInit } from '../../utils/generate-service-request-init';
 export class ListAddOnsByApp extends AbortController implements RunnableCommand<AddOn[]> {
   public static COMMAND_ID = 'heroku:addons:list-by-app' as const;
   private static debounceRequestsByApp = new Map<string, Promise<AddOn[]>>();
-
-  protected addOnService = new AddOnService(fetch, 'https://api.heroku.com');
 
   /**
    * Constructs a new instance of the ListAddOnsByApp class
@@ -23,8 +20,11 @@ export class ListAddOnsByApp extends AbortController implements RunnableCommand<
   public async run(appIdentifier: string, debounce = true): Promise<AddOn[]> {
     let request = ListAddOnsByApp.debounceRequestsByApp.get(appIdentifier);
     if (!request || !debounce) {
-      const requestInit = await generateRequestInit(this.signal);
-      request = this.addOnService.listByApp(appIdentifier, requestInit);
+      const { platform } = await createHerokuSDK(this.signal);
+      // The resource explorer's existing types are tied to the
+      // legacy @heroku-cli/schema AddOn shape; cast at the boundary
+      // so the rest of the file stays unchanged.
+      request = platform.addOn.listByApp(appIdentifier) as Promise<AddOn[]>;
     }
     if (debounce) {
       ListAddOnsByApp.debounceRequestsByApp.set(appIdentifier, request);

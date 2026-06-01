@@ -1,10 +1,10 @@
-import type { AddOn } from '@heroku-cli/schema';
-import PlanService from '@heroku-cli/schema/services/plan-service.js';
+import type { AddOn, Plan } from '@heroku-cli/schema';
 import vscode from 'vscode';
 import type { Command } from '@oclif/config';
 import AddOnAttachmentService from '@heroku-cli/schema/services/add-on-attachment-service.js';
 import type { CommandMeta } from '../../manifest';
 import { herokuCommand, HerokuOutputChannel } from '../../meta/command';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 import { HerokuContextMenuCommandRunner } from './heroku-context-menu-command-runner';
 
 @herokuCommand({ outputChannelId: HerokuOutputChannel.CommandOutput })
@@ -67,16 +67,10 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
     if (!addOn) {
       return;
     }
-    const planService = new PlanService(fetch, 'https://api.heroku.com');
     const thenable = (async (): Promise<vscode.QuickPickItem[]> => {
-      const { accessToken } = (await vscode.authentication.getSession(
-        'heroku:auth:login',
-        []
-      )) as vscode.AuthenticationSession;
-      const plans = await planService.listByAddOn(addOn.addon_service.id, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+      const { platform } = await createHerokuSDK(undefined, undefined, ['addOnExtensions']);
+      // Cast to schema Plan since the rest of this file uses that type.
+      const plans = (await platform.addOn.listPlansForAddon(addOn.id)) as unknown as Plan[];
       const items: vscode.QuickPickItem[] = [];
       let lastPlanPrefix = '';
 
@@ -91,10 +85,16 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
           });
         }
         lastPlanPrefix = planPrefix;
-        const perMonthMax = currencyFormatter.format(plan.price.cents / 100);
-        const perHourCost = currencyFormatter.format(plan.price.cents / 100 / (24 * 30));
+        // Schema's `Plan.compliance` and SDK's are not assignable in
+        // either direction (slightly different union shapes), even
+        // though every real payload satisfies both. Cast to the
+        // exact parameter type rather than the bag-of-anything
+        // `as never` so the bypass is documented.
+        const priceSuffix = platform.addOn.formatPlanPriceLabel(
+          plan as Parameters<typeof platform.addOn.formatPlanPriceLabel>[0]
+        );
         items.push({
-          label: `${plan.human_name} - ${perHourCost} / hour (Max ${perMonthMax}/month)`,
+          label: priceSuffix ? `${plan.human_name} - ${priceSuffix}` : plan.human_name,
           description: plan.description,
           value: plan.name,
           picked: plan.id === addOn.plan.id

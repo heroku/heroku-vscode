@@ -1,12 +1,11 @@
 import EventEmitter from 'node:events';
 import vscode, { WebviewPanel } from 'vscode';
-import PlanService from '@heroku-cli/schema/services/plan-service.js';
-import AddOnService from '@heroku-cli/schema/services/add-on-service.js';
 import { AddOn } from '@heroku-cli/schema';
 import { CategoriesResponse } from '@heroku/elements';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
 import { prepareHerokuWebview } from '../../utils/prepare-heroku-web-view';
-import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
+import { logExtensionEvent } from '../../utils/logger';
 
 type MessagePayload =
   | {
@@ -36,8 +35,6 @@ type MessagePayload =
 export class ShowAddonsViewCommand extends AbortController implements RunnableCommand<Promise<void>> {
   public static COMMAND_ID = 'heroku:addons:show-addons-view' as const;
   private static addonsPanel: WebviewPanel | undefined;
-  private planService = new PlanService(fetch, 'https://api.heroku.com');
-  private addonService = new AddOnService(fetch, 'https://api.heroku.com');
 
   private appIdentifier!: string;
   private notifier: EventEmitter | undefined;
@@ -92,11 +89,25 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
     switch (message.type) {
       case 'addons':
         {
-          const addonsByCategoryResponse = await fetch('https://addons.heroku.com/api/v2/categories');
-          const installedAddons = await this.addonService.listByApp(this.appIdentifier, await generateRequestInit());
-          if (addonsByCategoryResponse.ok) {
-            const addons = (await addonsByCategoryResponse.json()) as CategoriesResponse;
-            await webview.postMessage({ type: 'addons', payload: { categories: addons.categories, installedAddons } });
+          try {
+            const addonsByCategoryResponse = await fetch('https://addons.heroku.com/api/v2/categories');
+            const { platform } = await createHerokuSDK(this.signal);
+            const installedAddons = await platform.addOn.listByApp(this.appIdentifier);
+            if (addonsByCategoryResponse.ok) {
+              const addons = (await addonsByCategoryResponse.json()) as CategoriesResponse;
+              await webview.postMessage({
+                type: 'addons',
+                payload: { categories: addons.categories, installedAddons }
+              });
+            }
+          } catch (e) {
+            // The user closed the panel — propagate via abort, no UI signal.
+            if (this.signal.aborted) {
+              return;
+            }
+            const { message: errorMessage } = e as Error;
+            logExtensionEvent(`Failed to load add-ons for ${this.appIdentifier}: ${errorMessage}`);
+            await vscode.window.showErrorMessage(`Failed to load add-ons: ${errorMessage}`);
           }
         }
         break;
@@ -104,10 +115,17 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       case 'addonPlans':
         {
           try {
-            const addonPlans = await this.planService.listByAddOn(message.id, await generateRequestInit());
+            const { platform } = await createHerokuSDK(this.signal, undefined, ['addOnExtensions']);
+            const addonPlans = await platform.addOn.listPlans(message.id);
             await webview.postMessage({ type: 'addonPlans', payload: addonPlans, id: message.id });
-          } catch {
-            // no-op
+          } catch (e) {
+            // The user closed the panel — propagate via abort, no UI signal.
+            if (this.signal.aborted) {
+              return;
+            }
+            const { message: errorMessage } = e as Error;
+            logExtensionEvent(`Failed to load plans for add-on ${message.id}: ${errorMessage}`);
+            await webview.postMessage({ type: 'addonPlansFailed', payload: errorMessage, id: message.id });
           }
         }
         break;
@@ -147,17 +165,12 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
   ): Promise<void> {
     const { webview } = ShowAddonsViewCommand.addonsPanel as WebviewPanel;
     try {
-      const requestInit = await generateRequestInit();
+      const { platform } = await createHerokuSDK(this.signal, undefined, ['addOnExtensions']);
       let newlyCreatedOrUpdatedAddon: AddOn;
       if (type === 'installAddon') {
-        newlyCreatedOrUpdatedAddon = await this.addonService.create(this.appIdentifier, { plan }, requestInit);
+        newlyCreatedOrUpdatedAddon = (await platform.addOn.create(this.appIdentifier, { plan })) as AddOn;
       } else {
-        newlyCreatedOrUpdatedAddon = await this.addonService.update(
-          this.appIdentifier,
-          installedAddonId as string,
-          { plan },
-          requestInit
-        );
+        newlyCreatedOrUpdatedAddon = (await platform.addOn.upgrade(installedAddonId as string, plan)) as AddOn;
       }
 
       await webview.postMessage({ type: 'addonCreated', payload: newlyCreatedOrUpdatedAddon, id: addOnId });
