@@ -102,11 +102,64 @@ suite('The HerokuAddOnCommandRunner', () => {
     const options = upgradePlanArgs.options as unknown as Promise<(vscode.QuickPickItem & { value: string })[]>;
 
     const result = await options;
+    // The 4 items are: separator "Basic", Basic Plan, separator "Pro", Pro Plan.
     assert.strictEqual(result?.length, 4, 'Incorrect number of plan options returned.');
-    assert.ok(result[1].label.includes('Basic Plan'), 'Basic Plan option is missing or incorrect.');
+
+    // Basic Plan = 1000 cents → stub returns "$10 / hour"
+    assert.strictEqual(
+      result[1].label,
+      'Basic Plan - $10 / hour',
+      'Basic Plan label should compose human_name with the formatPlanPriceLabel suffix.'
+    );
     assert.strictEqual(result[1].value, 'basic', 'Basic Plan value is incorrect.');
 
+    // Pro Plan = 5000 cents → stub returns "$50 / hour"
+    assert.strictEqual(
+      result[3].label,
+      'Pro Plan - $50 / hour',
+      'Pro Plan label should compose human_name with the formatPlanPriceLabel suffix.'
+    );
+    assert.strictEqual(result[3].value, 'pro', 'Pro Plan value is incorrect.');
+
     assert.ok(planServiceStub.calledOnce, 'The plan service was not called.');
+  });
+
+  test('injectPlanOptionsIntoCommand omits the suffix when formatPlanPriceLabel returns an empty string', async () => {
+    // Real-world case: metered or contract-priced plans return ''
+    // from formatPlanPriceLabel. The label should fall back to just
+    // the human_name without a trailing " - ".
+    Sinon.restore();
+    const meteredStub = Sinon.stub();
+    meteredStub.resolves([
+      {
+        human_name: 'Metered Plan',
+        name: 'metered',
+        id: 'metered-id',
+        price: { cents: 0 } as Price,
+        description: 'pay per use'
+      } as Plan
+    ]);
+    Sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
+      platform: {
+        addOn: {
+          listPlansForAddon: meteredStub,
+          formatPlanPriceLabel: () => ''
+        }
+      },
+      data: {}
+    } as never);
+
+    const upgradePlanArgs = {} as Command.Arg;
+    await runner['injectPlanOptionsIntoCommand'](upgradePlanArgs, mockAddOn);
+    const options = upgradePlanArgs.options as unknown as Promise<(vscode.QuickPickItem & { value: string })[]>;
+    const result = await options;
+
+    // result[0] is the section separator; result[1] is the plan.
+    assert.strictEqual(
+      result[1].label,
+      'Metered Plan',
+      'Plan label should be human_name alone when formatPlanPriceLabel returns empty.'
+    );
   });
 
   test('injectAttachmentOptionsIntoCommand adds attachment options for addons:detach command', async () => {

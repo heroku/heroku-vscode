@@ -85,7 +85,14 @@ export class HerokuAddOnCommandRunner extends HerokuContextMenuCommandRunner {
           });
         }
         lastPlanPrefix = planPrefix;
-        const priceSuffix = platform.addOn.formatPlanPriceLabel(plan as never);
+        // Schema's `Plan.compliance` and SDK's are not assignable in
+        // either direction (slightly different union shapes), even
+        // though every real payload satisfies both. Cast to the
+        // exact parameter type rather than the bag-of-anything
+        // `as never` so the bypass is documented.
+        const priceSuffix = platform.addOn.formatPlanPriceLabel(
+          plan as Parameters<typeof platform.addOn.formatPlanPriceLabel>[0]
+        );
         items.push({
           label: priceSuffix ? `${plan.human_name} - ${priceSuffix}` : plan.human_name,
           description: plan.description,

@@ -150,11 +150,6 @@ export class ShowAddonsViewCommand extends AbortController implements RunnableCo
       if (type === 'installAddon') {
         newlyCreatedOrUpdatedAddon = (await platform.addOn.create(this.appIdentifier, { plan })) as AddOn;
       } else {
-        // Use the SDK's `upgrade` extension rather than a raw `update`:
-        // it resolves the add-on identity first and qualifies the plan
-        // name with the addon_service prefix when needed. The webview
-        // already passes a fully-qualified plan, so qualification is a
-        // no-op here, but the resolve adds safety.
         newlyCreatedOrUpdatedAddon = (await platform.addOn.upgrade(installedAddonId as string, plan)) as AddOn;
       }
 
