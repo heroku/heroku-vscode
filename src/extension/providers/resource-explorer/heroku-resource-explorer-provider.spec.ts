@@ -118,6 +118,17 @@ suite('HerokuResourceExplorerProvider', () => {
             const res = await fetch(`https://api.heroku.com/apps/${name}`);
             return res.json();
           }
+        },
+        logSession: {
+          // eslint-disable-next-line require-jsdoc
+          streamLogs: async function* () {
+            for await (const chunk of readable) {
+              const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString();
+              for (const line of text.split('\n')) {
+                if (line) yield line;
+              }
+            }
+          }
         }
       }
     } as never);

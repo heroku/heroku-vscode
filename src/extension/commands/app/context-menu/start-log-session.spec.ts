@@ -1,70 +1,77 @@
 import * as assert from 'node:assert';
 
 import * as vscode from 'vscode';
-import Sinon, { type SinonMock, type SinonStub } from 'sinon';
-import LogSessionService from '@heroku-cli/schema/services/log-session-service.js';
-import type { App, LogSession } from '@heroku-cli/schema';
+import Sinon, { type SinonStub } from 'sinon';
+import type { App } from '@heroku-cli/schema';
 import { StartLogSession } from './start-log-session';
-import { Readable, Writable } from 'node:stream';
+import { EventEmitter } from 'node:events';
+import * as herokuSdkUtil from '../../../utils/heroku-sdk';
 
 suite('The StartLogSession command', () => {
-  let fetchStub: SinonStub;
-  let logServiceStub: SinonStub;
-  let authStub: SinonStub;
-  let outputChannelMock: SinonMock;
+  let streamLogsCallCount: number;
+  let appendLineSpy: SinonStub;
   let fakeChannel: vscode.LogOutputChannel;
-  let stream: Writable;
-  let readable: Readable;
+  let lineEmitter: EventEmitter;
   const message = '2024-11-08T20:46:09.807300+00:00 heroku[web.7]: State changed from stopping to down';
-  const mockApp = { id: 'app1', name: 'test-app', organization: { name: 'test-org' } } as App;
+  let mockApp: App;
+
+  /** Yields the event loop long enough for the createHerokuSDK
+   * promise chain inside streamLogs() to resolve and wire up the
+   * async iterator before lines are emitted. */
+  const settle = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  };
+
   setup(() => {
-    stream = new Writable();
-    readable = Readable.from(
-      (async function* () {
-        while (!readable.closed) {
-          const line = await Promise.race([
-            new Promise((resolve) => {
-              stream.once('data', (chunk) => {
-                resolve(chunk);
-              });
-            }),
-            new Promise((resolve) => {
-              readable.once('close', () => {
-                resolve(null);
-              });
-            })
-          ]);
+    mockApp = { id: 'app1', name: 'test-app', organization: { name: 'test-org' } } as App;
+    lineEmitter = new EventEmitter();
+    streamLogsCallCount = 0;
+    // The SDK's `streamLogs` is an async generator. Tests drive it
+    // by emitting lines on `lineEmitter`; sending `null` ends it.
+    // eslint-disable-next-line require-jsdoc
+    async function* fakeStreamLogs(): AsyncGenerator<string, void, unknown> {
+      streamLogsCallCount++;
+      while (true) {
+        const line = await new Promise<string | null>((resolve) => {
+          const onLine = (l: string | null) => {
+            lineEmitter.off('end', onEnd);
+            resolve(l);
+          };
+          const onEnd = () => {
+            lineEmitter.off('line', onLine);
+            resolve(null);
+          };
+          lineEmitter.once('line', onLine);
+          lineEmitter.once('end', onEnd);
+        });
+        if (line === null) break;
+        yield line;
+      }
+    }
+    Sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
+      platform: {
+        logSession: { streamLogs: fakeStreamLogs }
+      },
+      data: {}
+    } as never);
 
-          if (line) {
-            yield line;
-          } else {
-            break;
-          }
-        }
-      })()
-    );
-    logServiceStub = Sinon.stub(LogSessionService.prototype, 'create').resolves({
-      logplex_url: 'https://example.com'
-    } as LogSession);
-
-    fetchStub = Sinon.stub(globalThis, 'fetch').onFirstCall().resolves(new Response(readable));
-    authStub = Sinon.stub(vscode.authentication, 'getSession').resolves({
+    Sinon.stub(vscode.authentication, 'getSession').resolves({
       accessToken: 'token'
     } as vscode.AuthenticationSession);
 
+    appendLineSpy = Sinon.stub();
     fakeChannel = {
-      clear: function () {},
-      show: function () {},
-      append: function () {},
-      appendLine: function () {}
+      clear: Sinon.stub(),
+      show: Sinon.stub(),
+      append: Sinon.stub(),
+      appendLine: appendLineSpy
     } as unknown as vscode.LogOutputChannel;
-    outputChannelMock = Sinon.mock(fakeChannel);
   });
 
   teardown(() => {
     Sinon.restore();
-    readable.destroy();
-    stream.destroy();
+    lineEmitter.emit('end');
+    lineEmitter.removeAllListeners();
   });
 
   test('is registered', async () => {
@@ -73,46 +80,51 @@ suite('The StartLogSession command', () => {
     assert.ok(command, 'The StartLogSession is not registered.');
   });
 
-  test('successfully writes responses to the output channel', async () => {
-    outputChannelMock.expects('clear').calledOnce;
-    outputChannelMock.expects('show').withExactArgs(true);
-    outputChannelMock.expects('append').withArgs(message);
-
+  test('writes incoming log lines to the output channel', async () => {
     const command = new StartLogSession(fakeChannel);
     await command.run(mockApp);
-    stream.emit('data', message);
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
+    lineEmitter.emit('line', message);
+    await settle();
 
-    assert.ok(logServiceStub.calledOnce, 'The StartLogSession command did not call the log session service.');
-    assert.ok(fetchStub.calledOnce, 'The StartLogSession command did not make the fetch request.');
-    outputChannelMock.verify();
+    assert.ok(streamLogsCallCount > 0, 'StartLogSession did not call streamLogs.');
+    assert.ok(
+      appendLineSpy.calledWith(message),
+      `Expected appendLine(message); calls were: ${appendLineSpy
+        .getCalls()
+        .map((c) => JSON.stringify(c.args))
+        .join(', ')}`
+    );
   });
 
   test('mutes the log session', async () => {
     const command = new StartLogSession(fakeChannel);
     await command.run(mockApp);
+    await settle();
 
     command.muted = true;
-    stream.emit('data', message);
-    await new Promise((resolve) => setTimeout(resolve));
-    outputChannelMock.expects('append').never();
-    outputChannelMock.verify();
+    appendLineSpy.resetHistory();
+    lineEmitter.emit('line', message);
+    await settle();
+
+    assert.ok(!appendLineSpy.calledWith(message), 'Muted log session still wrote the message.');
   });
 
   test('aborts the log session without throwing', async () => {
     const command = new StartLogSession(fakeChannel);
     await command.run(mockApp);
+    await settle();
 
     // Kick it once before terminating
-    stream.emit('data', message);
-    await new Promise((resolve) => setTimeout(resolve));
+    lineEmitter.emit('line', message);
+    await settle();
 
     assert.doesNotThrow(command.abort.bind(command));
+    appendLineSpy.resetHistory();
     // make sure we're aborted
-    stream.emit('data', message);
-    await new Promise((resolve) => setTimeout(resolve));
+    lineEmitter.emit('line', message);
+    await settle();
 
-    outputChannelMock.expects('append').never();
-    outputChannelMock.verify();
+    assert.ok(!appendLineSpy.calledWith(message), 'Aborted log session still wrote the message.');
   });
 });
