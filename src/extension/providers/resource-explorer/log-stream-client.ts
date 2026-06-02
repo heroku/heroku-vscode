@@ -318,7 +318,7 @@ export class LogStreamClient extends EventEmitter {
       case 'attachment-updated':
         this.emit(LogStreamEvents.ATTACHMENT_UPDATED, {
           app,
-          type: event.type,
+          type: event.service,
           configVar: event.configVar
         });
         break;
@@ -340,12 +340,17 @@ export class LogStreamClient extends EventEmitter {
         this.emit(LogStreamEvents.PROVISIONING_COMPLETED, { app, ref: event.ref });
         break;
       case 'scaled-to':
-        this.emit(LogStreamEvents.SCALED_TO, {
-          app,
-          dynoType: event.dynoType,
-          quantity: event.quantity,
-          size: event.size
-        });
+        // A single scale line can list multiple dyno types — emit one
+        // SCALED_TO event per entry so per-process listeners (e.g. the
+        // resource explorer) update each row.
+        for (const entry of event.entries) {
+          this.emit(LogStreamEvents.SCALED_TO, {
+            app,
+            dynoType: entry.dynoType,
+            quantity: entry.quantity,
+            size: entry.size
+          });
+        }
         break;
       case 'starting-process':
         this.emit(LogStreamEvents.STARTING_PROCESS, {

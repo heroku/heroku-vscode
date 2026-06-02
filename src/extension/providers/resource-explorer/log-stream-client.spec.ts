@@ -201,7 +201,7 @@ suite('LogStreamClient', () => {
           app: mockApp,
           type: 'app',
           dynoName: 'web.1',
-          command: '`npm start`'
+          command: 'npm start'
         })
       );
     });
