@@ -1,10 +1,9 @@
 import { type ReadableStreamDefaultReader } from 'node:stream/web';
-import LogSessionService from '@heroku-cli/schema/services/log-session-service.js';
 import * as vscode from 'vscode';
 import type { App, LogSession } from '@heroku-cli/schema';
 import { herokuCommand, HerokuOutputChannel, type RunnableCommand } from '../../../meta/command';
 import { logExtensionEvent } from '../../../utils/logger';
-import { generateRequestInit } from '../../../utils/generate-service-request-init';
+import { createHerokuSDK } from '../../../utils/heroku-sdk';
 
 /**
  * Represents a callback to be executed when a chunk
@@ -74,7 +73,6 @@ export class StartLogSession extends AbortController implements LogSessionStream
   public static COMMAND_ID = 'heroku:start-log-session' as const;
   private static visibleLogSession: StartLogSession | undefined;
 
-  private logService = new LogSessionService(fetch, 'https://api.heroku.com');
   private buffer = '';
   private streamListeners: Set<LogStreamCallback> = new Set();
   private muteListeners: Set<(muted: boolean) => void> = new Set();
@@ -263,14 +261,12 @@ export class StartLogSession extends AbortController implements LogSessionStream
    * @returns The log session.
    */
   private async fetchLogSession(app: App, lines = this.maxLines): Promise<LogSession> {
-    let logSession: LogSession | undefined;
     try {
-      const requestInit = await generateRequestInit(this.signal);
-      logSession = await this.logService.create(app.id, { tail: true, lines }, requestInit);
+      const { platform } = await createHerokuSDK(this.signal);
+      return (await platform.logSession.create(app.id, { tail: true, lines })) as LogSession;
     } catch (e) {
       throw new Error(`Failed to create a log session: ${(e as Error).message}`);
     }
-    return logSession;
   }
 
   /**

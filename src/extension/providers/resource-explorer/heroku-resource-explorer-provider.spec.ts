@@ -118,6 +118,9 @@ suite('HerokuResourceExplorerProvider', () => {
             const res = await fetch(`https://api.heroku.com/apps/${name}`);
             return res.json();
           }
+        },
+        logSession: {
+          create: async () => ({ logplex_url: 'https://fake.logplex.com' })
         }
       }
     } as never);

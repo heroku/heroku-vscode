@@ -2,10 +2,10 @@ import * as assert from 'node:assert';
 
 import * as vscode from 'vscode';
 import Sinon, { type SinonMock, type SinonStub } from 'sinon';
-import LogSessionService from '@heroku-cli/schema/services/log-session-service.js';
 import type { App, LogSession } from '@heroku-cli/schema';
 import { StartLogSession } from './start-log-session';
 import { Readable, Writable } from 'node:stream';
+import * as herokuSdkUtil from '../../../utils/heroku-sdk';
 
 suite('The StartLogSession command', () => {
   let fetchStub: SinonStub;
@@ -43,9 +43,15 @@ suite('The StartLogSession command', () => {
         }
       })()
     );
-    logServiceStub = Sinon.stub(LogSessionService.prototype, 'create').resolves({
+    logServiceStub = Sinon.stub().resolves({
       logplex_url: 'https://example.com'
     } as LogSession);
+    Sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
+      platform: {
+        logSession: { create: logServiceStub }
+      },
+      data: {}
+    } as never);
 
     fetchStub = Sinon.stub(globalThis, 'fetch').onFirstCall().resolves(new Response(readable));
     authStub = Sinon.stub(vscode.authentication, 'getSession').resolves({
