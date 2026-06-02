@@ -31,7 +31,7 @@ suite('LogStreamClient', () => {
   };
 
   setup(() => {
-    mockApp = { id: 'app1', name: 'test-app' } as App & { logSession: LogSessionStream };
+    mockApp = { id: 'app1', name: 'test-app' } as App & { logSession?: LogSessionStream };
     logStreamClient = new LogStreamClient();
     getSessionStub = sinon.stub(vscode.authentication, 'getSession').callsFake(async (providerId: string) => {
       if (providerId === 'heroku:auth:login') {
@@ -41,25 +41,32 @@ suite('LogStreamClient', () => {
     });
 
     lineEmitter = new EventEmitter();
+    // The SDK's `streamLogs` is an async generator. Tests drive it
+    // by emitting `'line'`; teardown emits `'end'` to unblock and
+    // exit. Both `once` listeners deregister each other so we don't
+    // leak `'end'` listeners across loop iterations.
+    // eslint-disable-next-line require-jsdoc
+    async function* fakeStreamLogs(): AsyncGenerator<string, void, unknown> {
+      while (true) {
+        const line = await new Promise<string | null>((resolve) => {
+          const onLine = (l: string | null) => {
+            lineEmitter.off('end', onEnd);
+            resolve(l);
+          };
+          const onEnd = () => {
+            lineEmitter.off('line', onLine);
+            resolve(null);
+          };
+          lineEmitter.once('line', onLine);
+          lineEmitter.once('end', onEnd);
+        });
+        if (line === null) break;
+        yield line;
+      }
+    }
     sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
       platform: {
-        logSession: {
-          // eslint-disable-next-line require-jsdoc
-          streamLogs: async function* () {
-            while (true) {
-              const line = await new Promise<string | null>((resolve) => {
-                const onLine = (l: string | null) => resolve(l);
-                lineEmitter.once('line', onLine);
-                lineEmitter.once('end', () => {
-                  lineEmitter.off('line', onLine);
-                  resolve(null);
-                });
-              });
-              if (line === null) break;
-              yield line;
-            }
-          }
-        }
+        logSession: { streamLogs: fakeStreamLogs }
       },
       data: {}
     } as never);
@@ -73,7 +80,7 @@ suite('LogStreamClient', () => {
 
   suite('apps setter', () => {
     test('should attach log streams to new apps', async () => {
-      const attachStub = sinon.stub(logStreamClient, 'attachLogStreams' as keyof LogStreamClient);
+      const attachStub = sinon.stub(logStreamClient, 'attachLogStreams' as keyof LogStreamClient).resolves();
       logStreamClient.apps = [mockApp];
       await new Promise((resolve) => setTimeout(resolve, 1050));
 

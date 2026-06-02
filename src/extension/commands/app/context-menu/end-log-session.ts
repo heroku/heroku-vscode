@@ -16,6 +16,12 @@ export class EndLogSession extends AbortController implements RunnableCommand<vo
    */
   public run(app: App & { logSession?: LogSessionStream }): void {
     if (app.logSession) {
+      // Setting `muted = true` flows through StartLogSession's
+      // setter, which clears the visible output channel and fires
+      // MUTED_CHANGED. The underlying stream keeps running so the
+      // resource explorer continues to receive state updates.
+      // `Reflect.set` here only because `no-param-reassign` flags
+      // direct property writes through `app`.
       Reflect.set(app.logSession, 'muted', true);
     }
   }

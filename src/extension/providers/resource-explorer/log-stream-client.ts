@@ -147,19 +147,21 @@ export enum LogStreamEvents {
 type ReadOnlyAppArray = ReadonlyArray<(App | TeamApp) & { logSession?: LogSessionStream }> | undefined;
 
 /**
- * LogStreamClient is a component for handling and processing log streams from multiple Heroku applications.
- * It extends EventEmitter to provide custom event handling for various log stream events.
+ * LogStreamClient observes log streams across multiple Heroku apps
+ * and emits typed runtime events (state changes, scaling, attachment
+ * lifecycle) for the resource explorer to react to.
  *
- * Key features:
- * - Manages multiple Heroku app log streams
- * - Parses log data using regex to identify specific events
- * - Emits typed custom events for state changes, attachment updates, scaling, etc.
- * - Provides methods for attaching and detaching log streams
- * - Buffers and processes partial log lines
- * - Integrates with VSCode commands for starting log sessions
+ * Lifecycle:
+ * - Set `apps` to the current set of apps; the client diffs against
+ *   the previous set and starts/ends log sessions accordingly.
+ * - Each app's session is driven by `StartLogSession`, which in turn
+ *   delegates to the SDK's `streamLogs` for connection lifecycle.
+ * - Lines that arrive are passed to `parseHerokuLogLine` from
+ *   `@heroku/sdk/extensions/platform`; matched events are re-emitted
+ *   on this client as typed `LogStreamEvents`.
  *
- * This class enables real-time monitoring and reaction to events in Heroku applications
- * and is the primary driver for real-time updates in the HerokuResourceExplorerProvider.
+ * This class is the primary driver for real-time updates in the
+ * HerokuResourceExplorerProvider.
  *
  * @see HerokuResourceExplorerProvider
  * @see StartLogSession
@@ -194,7 +196,9 @@ export class LogStreamClient extends EventEmitter {
 
     this.detachLogStreams(Array.from(toDetach));
     this.#apps = value;
-    void this.attachLogStreams(Array.from(toAttach));
+    void this.attachLogStreams(Array.from(toAttach)).catch((e) =>
+      logExtensionEvent(`Failed to attach log streams: ${(e as Error).message}`)
+    );
   }
 
   /**
@@ -248,9 +252,11 @@ export class LogStreamClient extends EventEmitter {
       return;
     }
     for (const app of toDetach) {
+      // app.logSession will be cleared by StartLogSession.streamLogs's
+      // finally once the iterator unwinds; we only need to detach our
+      // listener and signal the stream to stop.
       app.logSession?.detach(this.onLogStreamData);
       app.logSession?.abort();
-      app.logSession = undefined;
       logExtensionEvent(`Detached log stream for ${app.name}`);
     }
   }
@@ -276,14 +282,17 @@ export class LogStreamClient extends EventEmitter {
     for (const result of logSessions) {
       const { status } = result;
       if (status === 'rejected') {
-        logExtensionEvent(`Live updates unavaiable: ${result.reason}`);
+        logExtensionEvent(`Live updates unavailable: ${result.reason}`);
         continue;
       }
       const logSession = result.value;
       logSession.attach(this.onLogStreamData);
       logSession.onDidUpdateMute(() => this.emit(LogStreamEvents.MUTED_CHANGED, logSession.app as App));
+      // STREAM_ENDED fires for any termination (abort, remote close,
+      // error) — listening to `signal.aborted` alone misses the
+      // natural-completion path.
+      logSession.onDidEnd(() => this.emit(LogStreamEvents.STREAM_ENDED, logSession.app as App));
       this.emit(LogStreamEvents.STREAM_STARTED, logSession.app as App);
-      logSession.signal.addEventListener('abort', () => this.emit(LogStreamEvents.STREAM_ENDED, logSession.app as App));
       logExtensionEvent(`Live updates active for ${logSession.app!.name}`);
     }
   }

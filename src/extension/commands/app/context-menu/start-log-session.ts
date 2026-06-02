@@ -51,6 +51,17 @@ export type LogSessionStream = AbortController & {
    * @returns void
    */
   onDidUpdateMute: (cb: (muted: boolean) => void) => void;
+
+  /**
+   * Adds a callback that is executed once when the log stream ends,
+   * whether by abort, by the platform closing the connection, or by
+   * an error. The callback receives no arguments and is invoked at
+   * most once per session.
+   *
+   * @param cb The callback to execute when the log stream ends.
+   * @returns void
+   */
+  onDidEnd: (cb: () => void) => void;
 };
 
 @herokuCommand({ outputChannelId: HerokuOutputChannel.LogOutput, languageId: 'heroku-logs' })
@@ -77,6 +88,8 @@ export class StartLogSession extends AbortController implements LogSessionStream
   private buffer = '';
   private streamListeners: Set<LogStreamCallback> = new Set();
   private muteListeners: Set<(muted: boolean) => void> = new Set();
+  private endListeners: Set<() => void> = new Set();
+  private ended = false;
   private maxLines = 100;
 
   // Backing property for the readonly app getter
@@ -142,16 +155,15 @@ export class StartLogSession extends AbortController implements LogSessionStream
       visibleLogSession.outputChannel?.clear();
     }
 
-    const { outputChannel, buffer, app, muted: oldMuted } = existingLogSession;
+    const { outputChannel, buffer, app, maxLines } = existingLogSession;
     if (!muted) {
       this.prepareOutputChannelForLogSession(outputChannel, app!.name);
-      // Take upto maxLines from the buffer and append to the output channel
-      outputChannel?.append(buffer.split('\n').slice(0, visibleLogSession?.maxLines).join('\n'));
+      // Replay up to `maxLines` recent lines of the existing buffer.
+      const replayLines = buffer.split('\n').filter(Boolean).slice(-maxLines);
+      for (const line of replayLines) {
+        outputChannel?.appendLine(line);
+      }
       StartLogSession.visibleLogSession = existingLogSession;
-    }
-
-    if (muted !== oldMuted) {
-      Reflect.set(existingLogSession, 'muted', muted);
     }
   }
 
@@ -181,6 +193,21 @@ export class StartLogSession extends AbortController implements LogSessionStream
    */
   public onDidUpdateMute(cb: (muted: boolean) => void): void {
     this.muteListeners.add(cb);
+  }
+
+  /**
+   * Adds a callback that fires once when the underlying stream ends
+   * (abort, remote close, or error). If the stream has already ended,
+   * the callback fires synchronously on the next microtask.
+   *
+   * @param cb The callback to execute when the stream ends.
+   */
+  public onDidEnd(cb: () => void): void {
+    if (this.ended) {
+      queueMicrotask(cb);
+      return;
+    }
+    this.endListeners.add(cb);
   }
 
   /**
@@ -228,7 +255,11 @@ export class StartLogSession extends AbortController implements LogSessionStream
     Reflect.set(app, 'logSession', this);
     // Streams in the background — we don't await it here so callers
     // can wire up listeners synchronously after run() resolves.
-    void this.streamLogs();
+    // streamLogs() handles its own errors; the .catch is a guard
+    // against future regressions.
+    void this.streamLogs().catch((e) =>
+      logExtensionEvent(`Unhandled streamLogs error for ${app.name}: ${(e as Error).message}`)
+    );
     return Promise.resolve(this);
   }
 
@@ -265,14 +296,21 @@ export class StartLogSession extends AbortController implements LogSessionStream
         if (this.signal.aborted) {
           break;
         }
-        this.streamListeners.forEach((cb) => cb(line, app));
-        this.buffer += `${line}\n`;
+        for (const cb of this.streamListeners) {
+          try {
+            cb(line, app);
+          } catch (e) {
+            // A single bad listener (e.g. a parsing bug downstream)
+            // must not tear down the iterator — the SDK doesn't
+            // recreate after we exit, and the resource explorer
+            // would lose live updates for this app.
+            logExtensionEvent(`Log stream listener threw for ${app.name}: ${(e as Error).message}`);
+          }
+        }
+
+        this.appendToBuffer(line);
         if (!this.muted) {
           this.outputChannel?.appendLine(line);
-        }
-        const lines = this.buffer.split('\n');
-        if (lines.length > this.maxLines) {
-          this.buffer = lines.slice(-this.maxLines).join('\n');
         }
       }
     } catch (e) {
@@ -281,8 +319,38 @@ export class StartLogSession extends AbortController implements LogSessionStream
       }
       logExtensionEvent(`Log stream error for ${app.name}: ${(e as Error).message}`);
     } finally {
-      app.logSession = undefined;
+      // Only clear if we still own the slot — a fresh StartLogSession
+      // for the same app may have already replaced this one (e.g.
+      // detach + immediate reattach via the resource explorer).
+      if (app.logSession === this) {
+        app.logSession = undefined;
+      }
+      this.ended = true;
+      for (const cb of this.endListeners) {
+        try {
+          cb();
+        } catch (e) {
+          logExtensionEvent(`Log stream end-listener threw for ${app.name}: ${(e as Error).message}`);
+        }
+      }
+      this.endListeners.clear();
       logExtensionEvent(`Log session ended for ${app.name}`);
+    }
+  }
+
+  /**
+   * Appends a line to the in-memory replay buffer and trims to the
+   * last `maxLines` lines. Stored without trailing newline so a
+   * `split('\n')` doesn't yield an empty trailing entry that the
+   * replay path would re-emit as a blank line.
+   *
+   * @param line The line to append.
+   */
+  private appendToBuffer(line: string): void {
+    this.buffer = this.buffer ? `${this.buffer}\n${line}` : line;
+    const lines = this.buffer.split('\n');
+    if (lines.length > this.maxLines) {
+      this.buffer = lines.slice(-this.maxLines).join('\n');
     }
   }
 }
