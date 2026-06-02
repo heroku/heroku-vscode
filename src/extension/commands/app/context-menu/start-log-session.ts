@@ -91,6 +91,11 @@ export class StartLogSession extends AbortController implements LogSessionStream
   private endListeners: Set<() => void> = new Set();
   private ended = false;
   private maxLines = 100;
+  // Lines of pre-tail history the platform should replay; 0 means
+  // live events only. Forwarded to streamLogs on each session start
+  // (and recreate). Independent of `maxLines`, the local replay
+  // buffer cap.
+  private historyLines = 100;
 
   // Backing property for the readonly app getter
   #app: (App & { logSession?: StartLogSession }) | undefined;
@@ -237,17 +242,26 @@ export class StartLogSession extends AbortController implements LogSessionStream
    *
    * @param app The App object to run the command against.
    * @param muted Boolean indicating whether the log stream should be piped to the output channel.
-   * @param lines The number of lines from the log history to show in the output channel.
+   * @param historyLines Lines of pre-tail history the platform should replay on the underlying log session.
+   *   Pass `0` for "live events only" (the resource explorer's case);
+   *   defaults to 100 for the user-visible "Start log session" path.
    * @returns Promise<LogSessionStream>
    */
-  public run(app: App & { logSession?: StartLogSession }, muted = false, lines = 100): Promise<LogSessionStream> {
-    this.maxLines = lines;
+  public run(
+    app: App & { logSession?: StartLogSession },
+    muted = false,
+    historyLines = 100
+  ): Promise<LogSessionStream> {
+    // The replay buffer is sized to surface a recent window when an
+    // already-running muted session becomes visible, regardless of
+    // what history the platform replayed at session start.
+    this.maxLines = 100;
+    this.historyLines = historyLines;
     this.#muted = muted;
     this.#app = app;
     // Log session already exists, just mute/unmute it
     const { logSession: existingLogSession } = app;
     if (existingLogSession && !existingLogSession.signal.aborted) {
-      existingLogSession.maxLines = lines;
       existingLogSession.muted = !existingLogSession.muted ? false : muted; // a value of false becomes 'sticky';
       return Promise.resolve(existingLogSession);
     }
@@ -286,7 +300,7 @@ export class StartLogSession extends AbortController implements LogSessionStream
     try {
       const { platform } = await herokuSdkUtil.createHerokuSDK(this.signal, undefined, ['logSessionExtensions']);
       const iterator = platform.logSession.streamLogs(app.id, {
-        lines: this.maxLines,
+        lines: this.historyLines,
         signal: this.signal,
         tail: true
       });

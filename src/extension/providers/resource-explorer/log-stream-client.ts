@@ -273,12 +273,14 @@ export class LogStreamClient extends EventEmitter {
     // Warm the parser before any line arrives so `onLogStreamData`
     // can stay synchronous.
     await loadParser();
+    // `lines: 0` tells the platform not to replay history before
+    // tailing — we only want live events. Without this, every
+    // SDK-internal session recreate (every ~15 min on Cedar) replays
+    // history and re-fires state-changed/scaled-to events, causing
+    // resource-explorer flicker.
     const logSessions = await Promise.allSettled(
-      toAttach.map((app) => vscode.commands.executeCommand<LogSessionStream>(StartLogSession.COMMAND_ID, app, true))
+      toAttach.map((app) => vscode.commands.executeCommand<LogSessionStream>(StartLogSession.COMMAND_ID, app, true, 0))
     );
-    // Since the first few writes from the stream may contain
-    // log history, we wait a second to begin processing real-time logs
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     for (const result of logSessions) {
       const { status } = result;
       if (status === 'rejected') {
