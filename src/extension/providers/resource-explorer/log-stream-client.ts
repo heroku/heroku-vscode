@@ -273,14 +273,20 @@ export class LogStreamClient extends EventEmitter {
     // Warm the parser before any line arrives so `onLogStreamData`
     // can stay synchronous.
     await loadParser();
-    // `lines: 0` tells the platform not to replay history before
-    // tailing — we only want live events. Without this, every
-    // SDK-internal session recreate (every ~15 min on Cedar) replays
-    // history and re-fires state-changed/scaled-to events, causing
-    // resource-explorer flicker.
+    // The platform replays history at session start; with `tail:
+    // true` and the SDK's internal recreate (every ~15 min on Cedar,
+    // on transient disconnects), each recreate would replay history
+    // and re-fire state-changed/scaled-to events through the parser,
+    // causing resource-explorer flicker. Pass `lines: 1` to keep the
+    // history burst minimal. (`lines: 0` triggered a Cedar-side bug
+    // that closes the session within ~1s of opening — see the SDK
+    // follow-up for a proper fix.)
     const logSessions = await Promise.allSettled(
-      toAttach.map((app) => vscode.commands.executeCommand<LogSessionStream>(StartLogSession.COMMAND_ID, app, true, 0))
+      toAttach.map((app) => vscode.commands.executeCommand<LogSessionStream>(StartLogSession.COMMAND_ID, app, true, 1))
     );
+    // Skip the (now minimal) burst of replayed history — wait
+    // briefly so we don't re-fire state events for past actions.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     for (const result of logSessions) {
       const { status } = result;
       if (status === 'rejected') {

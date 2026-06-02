@@ -83,6 +83,7 @@ export type LogSessionStream = AbortController & {
  */
 export class StartLogSession extends AbortController implements LogSessionStream, RunnableCommand<LogSessionStream> {
   public static COMMAND_ID = 'heroku:start-log-session' as const;
+  private static readonly RECONNECT_DELAY_MS = 2000;
   private static visibleLogSession: StartLogSession | undefined;
 
   private buffer = '';
@@ -287,9 +288,14 @@ export class StartLogSession extends AbortController implements LogSessionStream
   /**
    * Drives the SDK log iterator: prepares the channel (when
    * unmuted), pumps each line into the buffer / listeners /
-   * channel, and trims the replay buffer to `maxLines`. Returns
-   * when the signal is aborted or the SDK iterator finishes; logs
-   * (without throwing) on unexpected errors.
+   * channel, and trims the replay buffer to `maxLines`.
+   *
+   * Wraps the iteration in a retry loop so transport-level errors
+   * (e.g. `'terminated'` from a forcibly-closed connection) don't
+   * end the session — without this, the resource explorer would
+   * silently stop receiving state updates after any network blip.
+   * The SDK's own recreate handles platform-timeout cases; this
+   * loop covers everything else short of an abort.
    */
   private async streamLogs(): Promise<void> {
     const app = this.#app!;
@@ -297,41 +303,65 @@ export class StartLogSession extends AbortController implements LogSessionStream
       StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, app.name);
     }
 
+    // After history-replay we don't want the next session to dump
+    // history again; the platform's `lines` is per-session and
+    // history we've already shown should not be re-shown on retry.
+    let historyLines = this.historyLines;
+
     try {
-      const { platform } = await herokuSdkUtil.createHerokuSDK(this.signal, undefined, ['logSessionExtensions']);
-      const iterator = platform.logSession.streamLogs(app.id, {
-        lines: this.historyLines,
-        signal: this.signal,
-        tail: true
-      });
-      logExtensionEvent(`Log stream started for ${app.name}`);
+      // eslint-disable-next-line no-await-in-loop
+      while (!this.signal.aborted) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          const { platform } = await herokuSdkUtil.createHerokuSDK(this.signal, undefined, ['logSessionExtensions']);
+          const iterator = platform.logSession.streamLogs(app.id, {
+            lines: historyLines,
+            signal: this.signal,
+            tail: true
+          });
+          logExtensionEvent(`Log stream started for ${app.name}`);
 
-      for await (const line of iterator) {
-        if (this.signal.aborted) {
-          break;
-        }
-        for (const cb of this.streamListeners) {
-          try {
-            cb(line, app);
-          } catch (e) {
-            // A single bad listener (e.g. a parsing bug downstream)
-            // must not tear down the iterator — the SDK doesn't
-            // recreate after we exit, and the resource explorer
-            // would lose live updates for this app.
-            logExtensionEvent(`Log stream listener threw for ${app.name}: ${(e as Error).message}`);
+          // eslint-disable-next-line no-await-in-loop
+          for await (const line of iterator) {
+            if (this.signal.aborted) {
+              break;
+            }
+            for (const cb of this.streamListeners) {
+              try {
+                cb(line, app);
+              } catch (e) {
+                // A single bad listener (e.g. a parsing bug downstream)
+                // must not tear down the iterator — the resource
+                // explorer would lose live updates for this app.
+                logExtensionEvent(`Log stream listener threw for ${app.name}: ${(e as Error).message}`);
+              }
+            }
+
+            this.appendToBuffer(line);
+            if (!this.muted) {
+              this.outputChannel?.appendLine(line);
+            }
           }
+          // Iterator returned cleanly. With `tail: true` this is rare
+          // (the SDK keeps recreating internally on session timeout),
+          // but if it happens we treat it like an error and retry —
+          // bail only on abort.
+          if (this.signal.aborted) break;
+          logExtensionEvent(`Log stream closed unexpectedly for ${app.name}; reconnecting`);
+        } catch (e) {
+          if (this.signal.aborted) break;
+          logExtensionEvent(`Log stream error for ${app.name} (will reconnect): ${(e as Error).message}`);
         }
 
-        this.appendToBuffer(line);
-        if (!this.muted) {
-          this.outputChannel?.appendLine(line);
+        historyLines = 0; // No replay on retry.
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await wait(StartLogSession.RECONNECT_DELAY_MS, this.signal);
+        } catch {
+          // Signal aborted during the backoff; the while-condition
+          // will break us out of the loop on the next check.
         }
       }
-    } catch (e) {
-      if (this.signal.aborted) {
-        return;
-      }
-      logExtensionEvent(`Log stream error for ${app.name}: ${(e as Error).message}`);
     } finally {
       // Only clear if we still own the slot — a fresh StartLogSession
       // for the same app may have already replaced this one (e.g.
@@ -367,4 +397,31 @@ export class StartLogSession extends AbortController implements LogSessionStream
       this.buffer = lines.slice(-this.maxLines).join('\n');
     }
   }
+}
+
+/**
+ * Resolves after `ms` milliseconds, or rejects if the signal aborts
+ * first. Used to back off between reconnect attempts so a persistent
+ * upstream failure doesn't busy-loop.
+ *
+ * @param ms How long to wait.
+ * @param signal Abort signal that interrupts the wait.
+ * @returns A promise that resolves when the wait completes.
+ */
+function wait(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const handle = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = (): void => {
+      clearTimeout(handle);
+      reject(signal.reason);
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
 }
