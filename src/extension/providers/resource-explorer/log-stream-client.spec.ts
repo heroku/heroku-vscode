@@ -1,25 +1,23 @@
 import * as assert from 'node:assert';
-import sinon, { spy } from 'sinon';
-import { EventEmitter } from 'events';
-import { LogStreamClient, LogStreamEvents, StateChangedInfo } from './log-stream-client';
+import sinon from 'sinon';
+import { EventEmitter } from 'node:events';
+import { LogStreamClient, LogStreamEvents } from './log-stream-client';
 import * as vscode from 'vscode';
-import { App, Dyno, Formation } from '@heroku-cli/schema';
-import { type LogSessionStream, StartLogSession } from '../../commands/app/context-menu/start-log-session';
+import type { App, Dyno, Formation } from '@heroku-cli/schema';
+import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 import { randomUUID } from 'node:crypto';
-
-import { Readable, Writable } from 'node:stream';
+import * as herokuSdkUtil from '../../utils/heroku-sdk';
 
 suite('LogStreamClient', () => {
   let logStreamClient: LogStreamClient;
   let mockApp: App;
-  let fetchStub: sinon.SinonStub;
   let getSessionStub: sinon.SinonStub;
-  let stream: Writable;
+  let lineEmitter: EventEmitter;
 
-  const writeToStream = async (data: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 1005)); // Wait for attach to complete
-    stream.emit('data', data);
-    await new Promise((resolve) => setTimeout(resolve, 0)); // wait for async stream to yield
+  const writeToStream = async (line: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 1005)); // Wait for attach + parser load
+    lineEmitter.emit('line', line);
+    await new Promise((resolve) => setImmediate(resolve)); // wait for async generator to yield
   };
 
   const sessionObject = {
@@ -42,28 +40,35 @@ suite('LogStreamClient', () => {
       return undefined;
     });
 
-    stream = new Writable();
-    const readable = Readable.from(
-      (async function* () {
-        let ct = 2;
-        while (ct--) {
-          const line = await new Promise((resolve) => {
-            stream.once('data', (chunk) => {
-              resolve(chunk);
-            });
-          });
-          yield line;
+    lineEmitter = new EventEmitter();
+    sinon.stub(herokuSdkUtil, 'createHerokuSDK').resolves({
+      platform: {
+        logSession: {
+          // eslint-disable-next-line require-jsdoc
+          streamLogs: async function* () {
+            while (true) {
+              const line = await new Promise<string | null>((resolve) => {
+                const onLine = (l: string | null) => resolve(l);
+                lineEmitter.once('line', onLine);
+                lineEmitter.once('end', () => {
+                  lineEmitter.off('line', onLine);
+                  resolve(null);
+                });
+              });
+              if (line === null) break;
+              yield line;
+            }
+          }
         }
-      })()
-    );
-
-    fetchStub = sinon.stub(globalThis, 'fetch');
-    fetchStub.onFirstCall().resolves(new Response(JSON.stringify({ logplex_url: 'https://fake.logplex.com' })));
-    fetchStub.onSecondCall().resolves(new Response(readable));
+      },
+      data: {}
+    } as never);
   });
 
   teardown(() => {
     sinon.restore();
+    lineEmitter.emit('end');
+    lineEmitter.removeAllListeners();
   });
 
   suite('apps setter', () => {
@@ -91,7 +96,7 @@ suite('LogStreamClient', () => {
       logStreamClient.on(LogStreamEvents.STATE_CHANGED, spy);
 
       logStreamClient.apps = [mockApp];
-      await writeToStream('app[web.1]: State changed from starting to up\n');
+      await writeToStream('app[web.1]: State changed from starting to up');
 
       assert.ok(
         spy.calledOnceWith({
@@ -109,7 +114,7 @@ suite('LogStreamClient', () => {
       logStreamClient.on(LogStreamEvents.ATTACHMENT_ATTACHED, spy);
 
       logStreamClient.apps = [mockApp];
-      await writeToStream('app[api]: Attach LOGDNA (@ref:logdna-deep-31633)\n');
+      await writeToStream('app[api]: Attach LOGDNA (@ref:logdna-deep-31633)');
 
       assert.ok(
         spy.calledOnceWith({
@@ -125,7 +130,7 @@ suite('LogStreamClient', () => {
       logStreamClient.on(LogStreamEvents.ATTACHMENT_DETACHED, spy);
 
       logStreamClient.apps = [mockApp];
-      await writeToStream('app[api]: Detach LOGDNA (@ref:logdna-deep-31633)\n');
+      await writeToStream('app[api]: Detach LOGDNA (@ref:logdna-deep-31633)');
 
       assert.ok(
         spy.calledOnceWith({
@@ -141,7 +146,7 @@ suite('LogStreamClient', () => {
       logStreamClient.on(LogStreamEvents.ATTACHMENT_UPDATED, spy);
 
       logStreamClient.apps = [mockApp];
-      await writeToStream('app[api]: Update LOGDNA by user@heroku.com\n');
+      await writeToStream('app[api]: Update LOGDNA by user@heroku.com');
 
       assert.ok(
         spy.calledOnceWith({
@@ -157,7 +162,7 @@ suite('LogStreamClient', () => {
       logStreamClient.on(LogStreamEvents.PROVISIONING_COMPLETED, spy);
 
       logStreamClient.apps = [mockApp];
-      await writeToStream('app[api]: @ref:searchbox-tapered-14398 completed provisioning\n');
+      await writeToStream('app[api]: @ref:searchbox-tapered-14398 completed provisioning');
 
       assert.ok(
         spy.calledOnceWith({
@@ -172,7 +177,7 @@ suite('LogStreamClient', () => {
       logStreamClient.on(LogStreamEvents.SCALED_TO, spy);
 
       logStreamClient.apps = [mockApp];
-      await writeToStream('app[api]: Scaled to web@2:Standard-1X\n');
+      await writeToStream('app[api]: Scaled to web@2:Standard-1X');
 
       assert.ok(
         spy.calledOnceWith({
@@ -189,7 +194,7 @@ suite('LogStreamClient', () => {
       logStreamClient.on(LogStreamEvents.STARTING_PROCESS, spy);
 
       logStreamClient.apps = [mockApp];
-      await writeToStream('app[web.1]: Starting process with command `npm start`\n');
+      await writeToStream('app[web.1]: Starting process with command `npm start`');
 
       assert.ok(
         spy.calledOnceWith({
@@ -198,28 +203,6 @@ suite('LogStreamClient', () => {
           dynoName: 'web.1',
           command: '`npm start`'
         })
-      );
-    });
-
-    test('should handle partial lines', async () => {
-      let state: StateChangedInfo = {} as StateChangedInfo;
-      logStreamClient.on(LogStreamEvents.STATE_CHANGED, (newState) => {
-        state = newState;
-      });
-
-      logStreamClient.apps = [mockApp];
-      await writeToStream('app[web.1]: State changed ');
-      await writeToStream('from starting to up\n');
-
-      const { dynoName, from, to, type } = state;
-      assert.deepEqual(
-        { dynoName, from, to, type },
-        {
-          dynoName: 'web.1',
-          from: 'starting',
-          to: 'up',
-          type: 'app'
-        }
       );
     });
   });

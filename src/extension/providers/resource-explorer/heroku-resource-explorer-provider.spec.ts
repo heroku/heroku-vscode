@@ -120,7 +120,15 @@ suite('HerokuResourceExplorerProvider', () => {
           }
         },
         logSession: {
-          create: async () => ({ logplex_url: 'https://fake.logplex.com' })
+          // eslint-disable-next-line require-jsdoc
+          streamLogs: async function* () {
+            for await (const chunk of readable) {
+              const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString();
+              for (const line of text.split('\n')) {
+                if (line) yield line;
+              }
+            }
+          }
         }
       }
     } as never);

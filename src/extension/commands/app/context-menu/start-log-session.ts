@@ -1,15 +1,14 @@
-import { type ReadableStreamDefaultReader } from 'node:stream/web';
 import * as vscode from 'vscode';
-import type { App, LogSession } from '@heroku-cli/schema';
+import type { App } from '@heroku-cli/schema';
 import { herokuCommand, HerokuOutputChannel, type RunnableCommand } from '../../../meta/command';
 import { logExtensionEvent } from '../../../utils/logger';
-import { createHerokuSDK } from '../../../utils/heroku-sdk';
+import * as herokuSdkUtil from '../../../utils/heroku-sdk';
 
 /**
- * Represents a callback to be executed when a chunk
- * of data is received from the log stream.
+ * Represents a callback to be executed when a line of data is
+ * received from the log stream.
  */
-export type LogStreamCallback = (chunk: string, app: App) => void;
+export type LogStreamCallback = (line: string, app: App) => void;
 
 /**
  * Represents a log session stream.
@@ -20,12 +19,11 @@ export type LogSessionStream = AbortController & {
    */
   app: App | undefined;
   /**
-   * Attaches a callback to the stream. Each
-   * chunk from the stream will trigger the callback
-   * and the string value will be passed as the sole
-   * argument
+   * Attaches a callback to the stream. Each line from the stream
+   * will trigger the callback and the string value will be passed
+   * as the sole argument.
    *
-   * @param cb The callback to execute when a chunk from the stream is received.
+   * @param cb The callback to execute when a line from the stream is received.
    */
   attach: (cb: LogStreamCallback) => void;
   /**
@@ -57,17 +55,20 @@ export type LogSessionStream = AbortController & {
 
 @herokuCommand({ outputChannelId: HerokuOutputChannel.LogOutput, languageId: 'heroku-logs' })
 /**
- * Command used to start a log session for
- * the supplied App object and pipe the output
- * to the output channel when <code>muted</code>
- * is false. Only one log session is written to
- * the output channel at a time.
+ * Command used to start a log session for the supplied App object
+ * and pipe the output to the output channel when `muted` is false.
+ * Only one log session is written to the output channel at a time.
  *
- * Log sessions are appended to the App object using
- * the <code>logSession</code> property. This allows
- * implementors to manage the log session without having
- * to retain a direct reference to it as is the case
- * when this command is executed from a context menu.
+ * Log sessions are appended to the App object using the `logSession`
+ * property so callers managing the lifecycle of the app can manage
+ * the session without retaining a direct reference.
+ *
+ * Internally delegates to the SDK's `platform.logSession.streamLogs`,
+ * which handles session creation, the logplex stream connection, and
+ * platform-timeout recreates. This class adds vscode-specific
+ * behavior on top: output channel routing, a replay buffer for
+ * unmuting, and the singleton `visibleLogSession` so only one
+ * channel writes at a time.
  */
 export class StartLogSession extends AbortController implements LogSessionStream, RunnableCommand<LogSessionStream> {
   public static COMMAND_ID = 'heroku:start-log-session' as const;
@@ -77,9 +78,6 @@ export class StartLogSession extends AbortController implements LogSessionStream
   private streamListeners: Set<LogStreamCallback> = new Set();
   private muteListeners: Set<(muted: boolean) => void> = new Set();
   private maxLines = 100;
-  private heartbeatTimeoutId: NodeJS.Timeout | undefined;
-  private logSessionDuration = 15 * 60 * 1000;
-  private reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 
   // Backing property for the readonly app getter
   #app: (App & { logSession?: StartLogSession }) | undefined;
@@ -186,12 +184,10 @@ export class StartLogSession extends AbortController implements LogSessionStream
   }
 
   /**
-   * Attaches a callback to the stream. Each
-   * chunk from the stream will trigger the callback
-   * and the string value will be passed as the sole
-   * argument
+   * Attaches a callback to the stream. Each line from the stream
+   * will trigger the callback.
    *
-   * @param cb The callback to execute when a chunk from the stream is received.
+   * @param cb The callback to execute when a line from the stream is received.
    */
   public attach(cb: LogStreamCallback): void {
     this.streamListeners.add(cb);
@@ -215,9 +211,9 @@ export class StartLogSession extends AbortController implements LogSessionStream
    * @param app The App object to run the command against.
    * @param muted Boolean indicating whether the log stream should be piped to the output channel.
    * @param lines The number of lines from the log history to show in the output channel.
-   * @returns Promise<void
+   * @returns Promise<LogSessionStream>
    */
-  public async run(app: App & { logSession?: StartLogSession }, muted = false, lines = 100): Promise<LogSessionStream> {
+  public run(app: App & { logSession?: StartLogSession }, muted = false, lines = 100): Promise<LogSessionStream> {
     this.maxLines = lines;
     this.#muted = muted;
     this.#app = app;
@@ -226,16 +222,14 @@ export class StartLogSession extends AbortController implements LogSessionStream
     if (existingLogSession && !existingLogSession.signal.aborted) {
       existingLogSession.maxLines = lines;
       existingLogSession.muted = !existingLogSession.muted ? false : muted; // a value of false becomes 'sticky';
-      return existingLogSession;
-    }
-    try {
-      await this.startLogSession();
-    } catch {
-      this.scheduleHeartbeatTimeout();
+      return Promise.resolve(existingLogSession);
     }
 
     Reflect.set(app, 'logSession', this);
-    return this;
+    // Streams in the background — we don't await it here so callers
+    // can wire up listeners synchronously after run() resolves.
+    void this.streamLogs();
+    return Promise.resolve(this);
   }
 
   /**
@@ -246,107 +240,49 @@ export class StartLogSession extends AbortController implements LogSessionStream
   }
 
   /**
-   * @inheritdoc
+   * Drives the SDK log iterator: prepares the channel (when
+   * unmuted), pumps each line into the buffer / listeners /
+   * channel, and trims the replay buffer to `maxLines`. Returns
+   * when the signal is aborted or the SDK iterator finishes; logs
+   * (without throwing) on unexpected errors.
    */
-  public abort(reason?: unknown): void {
-    super.abort(reason);
-    void this.reader?.cancel();
-  }
+  private async streamLogs(): Promise<void> {
+    const app = this.#app!;
+    if (!this.muted) {
+      StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, app.name);
+    }
 
-  /**
-   * Fetches a log session from the API.
-   *
-   * @param app The app to fetch a log session for.
-   * @param lines The number of lines from the log history to display initially.
-   * @returns The log session.
-   */
-  private async fetchLogSession(app: App, lines = this.maxLines): Promise<LogSession> {
     try {
-      const { platform } = await createHerokuSDK(this.signal);
-      return (await platform.logSession.create(app.id, { tail: true, lines })) as LogSession;
-    } catch (e) {
-      throw new Error(`Failed to create a log session: ${(e as Error).message}`);
-    }
-  }
+      const { platform } = await herokuSdkUtil.createHerokuSDK(this.signal, undefined, ['logSessionExtensions']);
+      const iterator = platform.logSession.streamLogs(app.id, {
+        lines: this.maxLines,
+        signal: this.signal,
+        tail: true
+      });
+      logExtensionEvent(`Log stream started for ${app.name}`);
 
-  /**
-   * Begins reading from the log stream and appends
-   * the output to the output channel.
-   *
-   * @returns Promise<void>
-   */
-  private async beginReading(): Promise<void> {
-    const logSessionStart = Date.now();
-
-    while (!this.signal.aborted) {
-      this.scheduleHeartbeatTimeout();
-      const { done, value } = await this.reader!.read();
-      // Log sessions appear to max out at 15 min
-      // even though a null byte heartbeat will still
-      // be present. If we exceed 15 min, break the loop
-      // and let the heartbeat timeout restart things.
-      if (done || this.signal.aborted || Date.now() - logSessionStart > this.logSessionDuration) {
-        await this.reader?.cancel();
-        break;
-      }
-      if (value.length > 1) {
-        const str = Buffer.from(value).toString();
-        this.streamListeners.forEach((cb) => void cb(str, this.app as App));
-        this.buffer += str;
-
+      for await (const line of iterator) {
+        if (this.signal.aborted) {
+          break;
+        }
+        this.streamListeners.forEach((cb) => cb(line, app));
+        this.buffer += `${line}\n`;
         if (!this.muted) {
-          this.outputChannel?.append(str);
+          this.outputChannel?.appendLine(line);
         }
-        if (this.buffer.split('\n').length > this.maxLines) {
-          this.buffer = this.buffer.split('\n').slice(-this.maxLines).join('\n');
+        const lines = this.buffer.split('\n');
+        if (lines.length > this.maxLines) {
+          this.buffer = lines.slice(-this.maxLines).join('\n');
         }
       }
-    }
-  }
-
-  /**
-   * Starts the log session and if successful, the read stream
-   * is initialized and log data becomes available.
-   */
-  private async startLogSession(): Promise<void> {
-    const logSession = await this.fetchLogSession(this.#app!);
-    const response = await fetch(logSession.logplex_url);
-    if (response.ok) {
-      if (!this.muted) {
-        StartLogSession.prepareOutputChannelForLogSession(this.outputChannel, this.#app!.name);
+    } catch (e) {
+      if (this.signal.aborted) {
+        return;
       }
-      this.reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
-      // Since the stream is a log running process
-      // we want this function to complete without
-      // having to wait for the stream to end.
-      void this.beginReading();
-      logExtensionEvent(`Log stream started for ${this.#app!.name}`);
-    } else {
-      logExtensionEvent(`Failed to start log stream: ${response.statusText}`);
-      throw new Error(`Failed to fetch logs: ${response.statusText}`);
+      logExtensionEvent(`Log stream error for ${app.name}: ${(e as Error).message}`);
+    } finally {
+      app.logSession = undefined;
+      logExtensionEvent(`Log session ended for ${app.name}`);
     }
-  }
-
-  /**
-   * Sets a timeout to restart the log session after
-   * 30 seconds of inactivity. If the log session is
-   * restarted, the existing log session will be disposed.
-   *
-   * This is also used when connectivity is lost and the
-   * log stream reader is no longer sending the null byte
-   * heartbeat.
-   */
-  private scheduleHeartbeatTimeout(): void {
-    clearTimeout(this.heartbeatTimeoutId);
-    if (this.signal.aborted) {
-      this.app!.logSession = undefined;
-      logExtensionEvent(`Log session aborted for ${this.app!.name}`);
-      return;
-    }
-    this.heartbeatTimeoutId = setTimeout(() => {
-      this.app!.logSession = undefined;
-      void this.reader?.cancel();
-      void this.run(this.#app!, this.#muted);
-    }, 30_000);
   }
 }

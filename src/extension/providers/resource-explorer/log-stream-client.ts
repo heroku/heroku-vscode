@@ -1,9 +1,33 @@
 import EventEmitter from 'node:events';
 import type { App, Dyno, Formation, TeamApp } from '@heroku-cli/schema';
 import * as vscode from 'vscode';
+import type { HerokuLogEvent } from '@heroku/sdk/extensions/platform';
 import { StartLogSession, type LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 import { diff } from '../../utils/diff';
 import { logExtensionEvent } from '../../utils/logger';
+
+// `@heroku/sdk` is ESM with top-level await; this extension is CJS,
+// so the parser is loaded once via a dynamic import that evades
+// TS's NodeNext rewrite. Resolved before any log line arrives because
+// streamLogs (which feeds onLogStreamData) is itself async-loaded.
+let parseHerokuLogLine: ((line: string) => HerokuLogEvent | undefined) | undefined;
+
+/**
+ * Lazily resolves the SDK's `parseHerokuLogLine` and caches it.
+ * Called from `attachLogStreams` so `onLogStreamData` can stay
+ * synchronous when log lines arrive.
+ *
+ * @returns The SDK's `parseHerokuLogLine` function.
+ */
+async function loadParser(): Promise<typeof parseHerokuLogLine> {
+  if (parseHerokuLogLine) return parseHerokuLogLine;
+  // eslint-disable-next-line no-eval
+  const mod = (await (0, eval)('import("@heroku/sdk/extensions/platform")')) as {
+    parseHerokuLogLine: (line: string) => HerokuLogEvent | undefined;
+  };
+  parseHerokuLogLine = mod.parseHerokuLogLine;
+  return parseHerokuLogLine;
+}
 
 /**
  * LogStreamEventMap is a type alias for a map of log stream events.
@@ -141,37 +165,6 @@ type ReadOnlyAppArray = ReadonlyArray<(App | TeamApp) & { logSession?: LogSessio
  * @see StartLogSession
  */
 export class LogStreamClient extends EventEmitter {
-  private partialLine = '';
-  /**
-   * The regex library containing matchers
-   * for various log stream events.
-   *
-   * These are used to derive updates and dispatch
-   * events containing the details.
-   */
-  private regexLibrary = {
-    // "app[web.1]: State changed from starting to up" - captures 'app', 'web.1', 'starting' and 'up' values
-    stateChanged: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]: )(?:State changed from )(\w+)(?: to )(\w+)/,
-
-    // "app[heroku-postgres]: Update DATABSE by user@heroku.com" - captures 'app', 'heroku-postgres' and 'DATABASE'
-    attachmentsUpdate: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]: )(?:Update )([A-Z_\s]+)(?:by)/,
-
-    // Detach LOGDNA (@ref:logdna-deep-31633) - captures 'LOGDNA' and 'logdna-deep-31633'
-    attachmentsDetach: /(?:Detach )([A-Z_\s]+)(?:\(@ref:)([a-zA-Z0-9-]+)/,
-
-    // Attach LOGDNA (@ref:logdna-deep-31633) - captures 'LOGDNA' and 'logdna-deep-31633'
-    attachmentsAttach: /(?:Attach )([A-Z_\s]+)(?:\(@ref:)([a-zA-Z0-9-]+)/,
-
-    // "@ref:searchbox-tapered-14398 completed provisioning" - captures 'searchbox-tapered-14398'
-    provisioningCompleted: /(?:@ref:)([a-zA-Z0-9-]+)(?: completed provisioning)/,
-
-    // "Scaled to web@2:Standard-1X" - captures 'web', '2' and 'Standard-1X'
-    scaledTo: /\b(?:Scaled to )([a-zA-Z]+)(?:@)([0-9]+)(?::)([a-zA-Z0-9-_]+)\b/,
-
-    // heroku[web.1]: Starting process with command `npm start` - captures 'app', 'web.1', 'Starting process with command ' and '`npm start`'
-    startingProcess: /([a-zA-Z0-9-]+)(?:\[)([a-zA-Z0-9-.]+)(?:\]: )(?:Starting process with command )(`.*?`)/
-  };
-
   #apps: ReadOnlyAppArray;
 
   /**
@@ -271,6 +264,9 @@ export class LogStreamClient extends EventEmitter {
     if (!toAttach?.length) {
       return;
     }
+    // Warm the parser before any line arrives so `onLogStreamData`
+    // can stay synchronous.
+    await loadParser();
     const logSessions = await Promise.allSettled(
       toAttach.map((app) => vscode.commands.executeCommand<LogSessionStream>(StartLogSession.COMMAND_ID, app, true))
     );
@@ -293,56 +289,72 @@ export class LogStreamClient extends EventEmitter {
   }
 
   /**
-   * Handles the data read from the log stream.
-   * The log stream doesn't always write a complete
-   * line. This method buffers partial lines and
-   * processes them when a complete line is received.
+   * Dispatches structured events for a single log line. Lines are
+   * already split for us by the SDK's `streamLogs` iterator; we
+   * delegate pattern matching to `parseHerokuLogLine`.
    *
-   * @param data The data read from the log stream.
+   * @param line A single log line from the stream.
    * @param app The app associated with the log stream.
    */
-  private onLogStreamData = (data: string, app: App): void => {
-    const lines = data.split('\n');
-    lines[0] = this.partialLine + lines[0];
-    if (!data.endsWith('\n')) {
-      this.partialLine = lines.pop() as string;
+  private onLogStreamData = (line: string, app: App): void => {
+    if (!line || !parseHerokuLogLine) {
+      return;
+    }
+    const event = parseHerokuLogLine(line);
+    if (!event) {
+      return;
     }
 
-    for (const line of lines) {
-      if (!line) {
-        continue;
-      }
-      const [, type, dynoName, from, to] = this.regexLibrary.stateChanged.exec(line) ?? [];
-      const [, , attachmentName, updateConfigVar] = this.regexLibrary.attachmentsUpdate.exec(line) ?? [];
-      const [, detachConfigVar, detachRef] = this.regexLibrary.attachmentsDetach.exec(line) ?? [];
-      const [, attachConfigVar, attachRef] = this.regexLibrary.attachmentsAttach.exec(line) ?? [];
-      const [, provisioningRef] = this.regexLibrary.provisioningCompleted.exec(line) ?? [];
-      const [, dynoType, quantity, size] = this.regexLibrary.scaledTo.exec(line) ?? [];
-      const [, processType, targetDyno, command] = this.regexLibrary.startingProcess.exec(line) ?? [];
-
-      if (from && to) {
-        this.emit(LogStreamEvents.STATE_CHANGED, { app, type, dynoName, from, to });
-      } else if (updateConfigVar) {
-        this.emit(LogStreamEvents.ATTACHMENT_UPDATED, { app, type: attachmentName, configVar: updateConfigVar.trim() });
-      } else if (detachConfigVar) {
+    switch (event.kind) {
+      case 'state-changed':
+        this.emit(LogStreamEvents.STATE_CHANGED, {
+          app,
+          type: event.source,
+          dynoName: event.dynoName,
+          from: event.from,
+          to: event.to
+        });
+        break;
+      case 'attachment-updated':
+        this.emit(LogStreamEvents.ATTACHMENT_UPDATED, {
+          app,
+          type: event.type,
+          configVar: event.configVar
+        });
+        break;
+      case 'attachment-detached':
         this.emit(LogStreamEvents.ATTACHMENT_DETACHED, {
           app,
-          configVar: detachConfigVar.trim(),
-          ref: detachRef
+          configVar: event.configVar,
+          ref: event.ref
         });
-      } else if (attachConfigVar) {
+        break;
+      case 'attachment-attached':
         this.emit(LogStreamEvents.ATTACHMENT_ATTACHED, {
           app,
-          configVar: attachConfigVar.trim(),
-          ref: attachRef
+          configVar: event.configVar,
+          ref: event.ref
         });
-      } else if (provisioningRef) {
-        this.emit(LogStreamEvents.PROVISIONING_COMPLETED, { app, ref: provisioningRef });
-      } else if (size) {
-        this.emit(LogStreamEvents.SCALED_TO, { app, dynoType, quantity: parseInt(quantity, 10), size });
-      } else if (command) {
-        this.emit(LogStreamEvents.STARTING_PROCESS, { app, type: processType, dynoName: targetDyno, command });
-      }
+        break;
+      case 'provisioning-completed':
+        this.emit(LogStreamEvents.PROVISIONING_COMPLETED, { app, ref: event.ref });
+        break;
+      case 'scaled-to':
+        this.emit(LogStreamEvents.SCALED_TO, {
+          app,
+          dynoType: event.dynoType,
+          quantity: event.quantity,
+          size: event.size
+        });
+        break;
+      case 'starting-process':
+        this.emit(LogStreamEvents.STARTING_PROCESS, {
+          app,
+          type: event.source,
+          dynoName: event.dynoName,
+          command: event.command
+        });
+        break;
     }
   };
 }
