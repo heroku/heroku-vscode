@@ -1,8 +1,7 @@
-import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { Formation } from '@heroku-cli/schema';
 import vscode, { EventEmitter } from 'vscode';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
-import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 
 @herokuCommand()
 /**
@@ -11,7 +10,6 @@ import { generateRequestInit } from '../../utils/generate-service-request-init';
 export class ScaleFormationCommand extends AbortController implements RunnableCommand<Promise<void>> {
   public static COMMAND_ID = 'heroku:scale-formation' as const;
 
-  protected formationService = new FormationService(fetch, 'https://api.heroku.com');
   private cancellationToken = new EventEmitter();
 
   /**
@@ -50,15 +48,15 @@ export class ScaleFormationCommand extends AbortController implements RunnableCo
       }
     }
 
-    const requestInit = await generateRequestInit(this.signal);
-
     try {
-      const updatedFormation = await this.formationService.update(
-        formation.app.id as string,
-        formation.id,
-        payload,
-        requestInit
-      );
+      const { platform } = await createHerokuSDK(this.signal, undefined, ['dynoExtensions']);
+      // The resource explorer's existing types are tied to the
+      // legacy @heroku-cli/schema Formation shape; cast at the
+      // boundary so the rest of the file stays unchanged.
+      const updatedFormation = (await platform.dyno.scale(formation.app.id as string, {
+        type: formation.type,
+        quantity: payload.quantity
+      })) as Formation;
       Object.assign(formation, updatedFormation);
     } catch {
       await vscode.window.showErrorMessage(`Could not scale the formation for the ${formation.app.name} app.`);

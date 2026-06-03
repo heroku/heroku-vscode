@@ -1,8 +1,7 @@
 import { Dyno } from '@heroku-cli/schema';
-import DynoService from '@heroku-cli/schema/services/dyno-service.js';
 import vscode from 'vscode';
 import { herokuCommand, RunnableCommand } from '../../meta/command';
-import { generateRequestInit } from '../../utils/generate-service-request-init';
+import { createHerokuSDK } from '../../utils/heroku-sdk';
 
 @herokuCommand()
 /**
@@ -11,7 +10,6 @@ import { generateRequestInit } from '../../utils/generate-service-request-init';
  */
 export class RestartDynoCommand extends AbortController implements RunnableCommand<void> {
   public static COMMAND_ID = 'heroku:dyno:restart' as const;
-  protected dynoService = new DynoService(fetch, 'https://api.heroku.com');
 
   /**
    * Restarts the Dyno after verifying the action
@@ -29,17 +27,18 @@ export class RestartDynoCommand extends AbortController implements RunnableComma
     if (confirmation !== 'Restart') {
       return;
     }
-    const requestInit = await generateRequestInit(this.signal);
 
     try {
-      const { state } = await this.dynoService.info(dyno.app.id as string, dyno.name, requestInit);
-      if (state !== 'starting') {
-        const disposable = vscode.window.setStatusBarMessage(`${dyno.name} is restarting...`);
-        setTimeout(() => {
-          disposable.dispose();
-        }, 4000);
-        await this.dynoService.restart(dyno.app.id as string, dyno.name, requestInit);
-      }
+      const { platform } = await createHerokuSDK(this.signal, undefined, ['dynoExtensions']);
+      vscode.window.setStatusBarMessage(`${dyno.name} is restarting...`, 4000);
+      // The "skip if already starting" guard the previous
+      // implementation carried was a click-debounce. The resource
+      // explorer's view/item/context already gates the restart
+      // action to viewItem === heroku:dyno:(up|down|crashed), so a
+      // dyno in `starting`/`restarting`/`idle` won't surface the
+      // action at all. Matches the CLI's `heroku ps:restart`
+      // behavior and saves a round-trip.
+      await platform.dyno.restart(dyno.app.id as string, { dyno: dyno.name });
     } catch (e) {
       await vscode.window.showErrorMessage(`Could not restart ${dyno.name}.`);
     }
