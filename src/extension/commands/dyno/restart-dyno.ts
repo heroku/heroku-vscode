@@ -31,13 +31,10 @@ export class RestartDynoCommand extends AbortController implements RunnableComma
     try {
       const { platform } = await createHerokuSDK(this.signal, undefined, ['dynoExtensions']);
       vscode.window.setStatusBarMessage(`${dyno.name} is restarting...`, 4000);
-      // The "skip if already starting" guard the previous
-      // implementation carried was a click-debounce. The resource
-      // explorer's view/item/context already gates the restart
-      // action to viewItem === heroku:dyno:(up|down|crashed), so a
-      // dyno in `starting`/`restarting`/`idle` won't surface the
-      // action at all. Matches the CLI's `heroku ps:restart`
-      // behavior and saves a round-trip.
+      // The resource explorer's view/item/context only shows the
+      // restart action when viewItem === heroku:dyno:(up|down|crashed),
+      // so the platform shouldn't see this on a starting/restarting
+      // dyno from the inline path. Matches `heroku ps:restart`.
       await platform.dyno.restart(dyno.app.id as string, { dyno: dyno.name });
     } catch (e) {
       await vscode.window.showErrorMessage(`Could not restart ${dyno.name}.`);

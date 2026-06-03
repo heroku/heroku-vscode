@@ -8,8 +8,6 @@ import { ScaleFormationCommand } from './scale-formation';
 import * as herokuSdkUtil from '../../utils/heroku-sdk';
 
 suite('The ScaleFormationCommand', () => {
-  let getSessionStub: sinon.SinonStub;
-
   let showErrorMessageStub: sinon.SinonStub;
   let setStatusBarMessageStub: sinon.SinonStub;
   let showInputBoxStub: sinon.SinonStub;
@@ -26,25 +24,8 @@ suite('The ScaleFormationCommand', () => {
     }
   } as Formation;
 
-  const sessionObject = {
-    account: {
-      id: 'Heroku',
-      label: 'tester-123@heroku.com'
-    },
-    id: randomUUID(),
-    scopes: [],
-    accessToken: randomUUID()
-  };
-
   setup(() => {
     showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').callsFake(async () => '5');
-
-    getSessionStub = sinon.stub(vscode.authentication, 'getSession').callsFake(async (providerId: string) => {
-      if (providerId === 'heroku:auth:login') {
-        return sessionObject;
-      }
-      return undefined;
-    });
 
     showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
 

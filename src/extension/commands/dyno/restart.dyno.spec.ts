@@ -2,13 +2,11 @@ import * as assert from 'node:assert';
 import sinon from 'sinon';
 
 import * as vscode from 'vscode';
-import { randomUUID } from 'node:crypto';
 import { RestartDynoCommand } from './restart-dyno';
 import { Dyno } from '@heroku-cli/schema';
 import * as herokuSdkUtil from '../../utils/heroku-sdk';
 
 suite('The RestartDynoCommand', () => {
-  let getSessionStub: sinon.SinonStub;
   let showWarningMessageStub: sinon.SinonStub;
   let showErrorMessageStub: sinon.SinonStub;
   let setStatusBarMessageStub: sinon.SinonStub;
@@ -28,24 +26,7 @@ suite('The RestartDynoCommand', () => {
     updated_at: ''
   } as Dyno;
 
-  const sessionObject = {
-    account: {
-      id: 'Heroku',
-      label: 'tester-123@heroku.com'
-    },
-    id: randomUUID(),
-    scopes: [],
-    accessToken: randomUUID()
-  };
-
   setup(() => {
-    getSessionStub = sinon.stub(vscode.authentication, 'getSession').callsFake(async (providerId: string) => {
-      if (providerId === 'heroku:auth:login') {
-        return sessionObject;
-      }
-      return undefined;
-    });
-
     showWarningMessageStub = sinon.stub(vscode.window, 'showWarningMessage');
     showWarningMessageStub.callsFake(async () => 'Restart');
 

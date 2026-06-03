@@ -2388,6 +2388,16 @@
           "group": "0000000aaaaa"
         }
       ],
+      "commandPalette": [
+        {
+          "command": "heroku:dyno:restart",
+          "when": "false"
+        },
+        {
+          "command": "heroku:scale-formation",
+          "when": "false"
+        }
+      ],
       "view/item/context": [
         {
           "when": "viewItem =~ /(heroku:dyno):(up|down|crashed)/",

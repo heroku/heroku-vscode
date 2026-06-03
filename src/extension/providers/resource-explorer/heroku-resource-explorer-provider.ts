@@ -310,6 +310,9 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
           // dyno even after the "Starting process" log line fires.
           // waitForInfo polls past the race; with no `states` filter
           // it returns on first 2xx regardless of state.
+          //
+          // Cast to the legacy schema's Dyno; the rest of the file is
+          // still tied to that shape.
           dyno = (await platform.dyno.waitForInfo(app.id, dynoName, { retries: 5 })) as Dyno;
         } catch {
           // 404 (after retries exhausted), 401, etc.
@@ -362,8 +365,13 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
           try {
             const { platform } = await createHerokuSDK();
             await platform.dyno.info(app.id, dynoName);
-          } catch {
-            // not found - remove it
+          } catch (e) {
+            // Only treat 404 as "the dyno is gone"; auth, network,
+            // and rate-limit errors leave the row alone so a transient
+            // failure doesn't cause spurious removals.
+            if ((e as { statusCode?: number })?.statusCode !== 404) {
+              return;
+            }
             const idx = dynos.findIndex((d) => d.name === dynoName);
             if (idx > -1) {
               dynos.splice(idx, 1);
