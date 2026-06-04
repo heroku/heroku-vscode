@@ -313,9 +313,9 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
           //
           // Cast to the legacy schema's Dyno; the rest of the file is
           // still tied to that shape.
-          dyno = (await platform.dyno.waitForInfo(app.id, dynoName, { retries: 5 })) as Dyno;
+          dyno = (await platform.dyno.waitForInfo(app.id, dynoName, { attempts: 5 })) as Dyno;
         } catch {
-          // 404 (after retries exhausted), 401, etc.
+          // 404 (after attempts exhausted), 401, etc.
           return;
         }
         // Logs do not stream in order sometimes

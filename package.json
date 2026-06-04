@@ -4255,7 +4255,7 @@
   },
   "dependencies": {
     "@heroku-cli/schema": "file:heroku-cli-schema-1.0.25.tgz",
-    "@heroku/sdk": "github:heroku/heroku-sdk#eb/W-22265258/dyno-info-with-retry",
+    "@heroku/sdk": "github:heroku/heroku-sdk#main",
     "@microsoft/fast-element": "^1.14.0",
     "@vscode/codicons": "^0.0.36",
     "@vscode/l10n": "0.0.x",
