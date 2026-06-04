@@ -1,15 +1,12 @@
 import { EventEmitter } from 'node:events';
 import type { AddOn, App, Dyno, Formation } from '@heroku-cli/schema';
-import DynoService from '@heroku-cli/schema/services/dyno-service.js';
 import vscode, { Uri } from 'vscode';
 
-import FormationService from '@heroku-cli/schema/services/formation-service.js';
 import { diff } from '../../utils/diff';
 import { ListAddOnsByApp } from '../../commands/add-on/list-by-app';
 import type { LogSessionStream } from '../../commands/app/context-menu/start-log-session';
 import { getHerokuAppNames, getRootRepository } from '../../utils/git-utils';
 import { logExtensionEvent } from '../../utils/logger';
-import { generateRequestInit } from '../../utils/generate-service-request-init';
 import { createHerokuSDK } from '../../utils/heroku-sdk';
 import {
   LogStreamClient,
@@ -60,9 +57,6 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
   implements vscode.TreeDataProvider<T>
 {
   public onDidChangeTreeData: vscode.Event<T | T[] | undefined> = this.event;
-
-  protected dynoService = new DynoService(fetch, 'https://api.heroku.com');
-  protected formationService = new FormationService(fetch, 'https://api.heroku.com');
 
   protected apps: Map<App['name'], LogSessionCapableApp> = new Map();
   protected appToResourceMap = new WeakMap<App, AppResources>();
@@ -302,12 +296,8 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
    * Handler for the dyno process starting event.
    *
    * @param data The data dispatched when a dyno is starting
-   * @param retryCount The number of times to retry fetching a dyno from the API before giving up
    */
-  private onDynoProcessStartingOrStateChanged = (
-    data: StartingProcessInfo | StateChangedInfo,
-    retryCount = 5
-  ): void => {
+  private onDynoProcessStartingOrStateChanged = (data: StartingProcessInfo | StateChangedInfo): void => {
     const { app, dynoName } = data;
     const dynos = this.appToResourceMap.get(app)!.dynos;
     let dyno = dynos.find((d) => d.name === dynoName);
@@ -315,14 +305,17 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (!dyno) {
       void (async (): Promise<void> => {
         try {
-          dyno = await this.dynoService.info(app.id, dynoName, await generateRequestInit());
+          const { platform } = await createHerokuSDK(undefined, undefined, ['dynoExtensions']);
+          // The platform briefly returns 404 for a newly-provisioning
+          // dyno even after the "Starting process" log line fires.
+          // waitForInfo polls past the race; with no `states` filter
+          // it returns on first 2xx regardless of state.
+          //
+          // Cast to the legacy schema's Dyno; the rest of the file is
+          // still tied to that shape.
+          dyno = (await platform.dyno.waitForInfo(app.id, dynoName, { attempts: 5 })) as Dyno;
         } catch {
-          // Dynos that are newly provisioning are 404
-          // for a little while on some formations...not sure why.
-          if (retryCount > 0) {
-            setTimeout(() => void this.onDynoProcessStartingOrStateChanged(data, retryCount - 1), 1000);
-          }
-          // 404, 401
+          // 404 (after attempts exhausted), 401, etc.
           return;
         }
         // Logs do not stream in order sometimes
@@ -370,9 +363,15 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
         // Does this dyno need to be removed?
         void (async (): Promise<void> => {
           try {
-            await this.dynoService.info(app.id, dynoName, await generateRequestInit());
-          } catch {
-            // not found - remove it
+            const { platform } = await createHerokuSDK();
+            await platform.dyno.info(app.id, dynoName);
+          } catch (e) {
+            // Only treat 404 as "the dyno is gone"; auth, network,
+            // and rate-limit errors leave the row alone so a transient
+            // failure doesn't cause spurious removals.
+            if ((e as { statusCode?: number })?.statusCode !== 404) {
+              return;
+            }
             const idx = dynos.findIndex((d) => d.name === dynoName);
             if (idx > -1) {
               dynos.splice(idx, 1);
@@ -458,7 +457,11 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
     if (cachedFormations?.length) {
       return cachedFormations;
     }
-    const formations = await this.formationService.list(app.id, await generateRequestInit());
+    const { platform } = await createHerokuSDK();
+    // The resource explorer's existing types are tied to the
+    // legacy @heroku-cli/schema Formation shape; cast at the
+    // boundary so the rest of the file stays unchanged.
+    const formations = (await platform.formation.list(app.id)) as Formation[];
     formations.forEach((formation) => {
       this.elementTypeMap.set(formation as T, 'Formation');
       this.childParentMap.set(formation as T, parent);
@@ -483,7 +486,11 @@ export class HerokuResourceExplorerProvider<T extends ExtendedTreeDataTypes = Ex
       return cachedDynos;
     }
 
-    const dynos = await this.dynoService.list(app.id, await generateRequestInit());
+    const { platform } = await createHerokuSDK();
+    // The resource explorer's existing types are tied to the
+    // legacy @heroku-cli/schema Dyno shape; cast at the boundary
+    // so the rest of the file stays unchanged.
+    const dynos = (await platform.dyno.list(app.id)) as Dyno[];
     if (!dynos.length) {
       const empty = {
         type: 'empty'

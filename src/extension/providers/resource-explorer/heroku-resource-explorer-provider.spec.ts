@@ -119,6 +119,29 @@ suite('HerokuResourceExplorerProvider', () => {
             return res.json();
           }
         },
+        dyno: {
+          list: async (appId: string) => {
+            const res = await fetch(`https://api.heroku.com/apps/${appId}/dynos`);
+            return res.json();
+          },
+          info: async (appId: string, dynoIdentity: string) => {
+            const res = await fetch(`https://api.heroku.com/apps/${appId}/dynos/${dynoIdentity}`);
+            return res.json();
+          },
+          // The post-creation 404 race the production code handles
+          // doesn't apply in tests — every fetch stub responds
+          // synchronously — so waitForInfo can just delegate to info.
+          waitForInfo: async (appId: string, dynoIdentity: string) => {
+            const res = await fetch(`https://api.heroku.com/apps/${appId}/dynos/${dynoIdentity}`);
+            return res.json();
+          }
+        },
+        formation: {
+          list: async (appId: string) => {
+            const res = await fetch(`https://api.heroku.com/apps/${appId}/formation`);
+            return res.json();
+          }
+        },
         logSession: {
           // eslint-disable-next-line require-jsdoc
           streamLogs: async function* () {
