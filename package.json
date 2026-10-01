@@ -4220,7 +4220,7 @@
     "@oclif/config": "^1.18.17",
     "@types/mocha": "^10.0.10",
     "@types/mvdan-sh": "^0.10.9",
-    "@types/node": "22.x",
+    "@types/node": "24.x",
     "@types/proxyquire": "^1.3.31",
     "@types/sinon": "^17.0.3",
     "@types/vscode": "1.93.0",
@@ -4229,7 +4229,7 @@
     "@typescript-eslint/parser": "7.18.0",
     "@vscode/l10n-dev": "0.0.x",
     "@vscode/test-cli": "0.0.10",
-    "@vscode/test-electron": "2.4.1",
+    "@vscode/test-electron": "2.5.2",
     "eslint": "^8.56.0",
     "eslint-config-salesforce-typescript": "3.4.0",
     "eslint-plugin-jsdoc": "^50.4.3",
@@ -4241,7 +4241,7 @@
     "proxyquire": "^2.1.3",
     "rewire": "^7.0.0",
     "sinon": "^19.0.2",
-    "typescript": "~5.8.2"
+    "typescript": "~5.9.3"
   },
   "dependencies": {
     "@heroku-cli/schema": "file:heroku-cli-schema-1.0.25.tgz",
