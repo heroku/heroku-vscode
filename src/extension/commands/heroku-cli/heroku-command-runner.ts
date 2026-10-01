@@ -74,7 +74,7 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
       return;
     }
     for (const [, value] of userInputByArg) {
-      command += ` ${value}`;
+      command += ` ${this.escapeShellArg(value)}`;
     }
 
     const userInputByFlag = this.userFlagDefaults ?? new Map<string, string | undefined>();
@@ -88,11 +88,27 @@ export abstract class HerokuCommandRunner<T> extends HerokuCommand<void> {
     for (const [flag, value] of userInputByFlag) {
       command += ` --${flag}`;
       if (value) {
-        command += ` ${value}`;
+        command += ` ${this.escapeShellArg(value)}`;
       }
     }
 
     return command;
+  }
+
+  /**
+   * Escapes a user-supplied value so it can be safely
+   * interpolated into a shell command string, preventing
+   * shell metacharacters (e.g. `;`, `|`, `&`, `$()`, backticks)
+   * from being interpreted by the shell.
+   *
+   * @param value The raw value supplied by the user
+   * @returns The value wrapped and escaped for safe shell interpolation
+   */
+  protected escapeShellArg(value?: string): string {
+    if (!value) {
+      return '';
+    }
+    return `"${value.replaceAll(/(["\\$`])/g, '\\$1')}"`;
   }
 
   /**
