@@ -4233,7 +4233,7 @@
     "eslint": "^8.56.0",
     "eslint-config-salesforce-typescript": "3.4.0",
     "eslint-plugin-jsdoc": "^50.4.3",
-    "git-format-staged": "^3.0.0",
+    "git-format-staged": "^4.0.2",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.0",
     "mocha": "10.8.2",
